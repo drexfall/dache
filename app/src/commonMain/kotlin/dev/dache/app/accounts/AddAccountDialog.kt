@@ -131,11 +131,13 @@ private fun AddAccountForm(
             modifier = Modifier.fillMaxWidth(),
         )
         if (state.isValidating) LinearProgressIndicator(Modifier.fillMaxWidth())
-        Text(
-            stringResource(Res.string.demo_token_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (state.sampleData) {
+            Text(
+                stringResource(Res.string.demo_token_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

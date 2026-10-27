@@ -8,19 +8,30 @@ import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.provider.mock.MockProvider
 import dev.dache.core.security.TokenVault
 import dev.dache.core.settings.SettingsStore
+import dev.dache.plugin.registry.BundledPlugins
+import dev.dache.plugin.runtime.RequestLogger
+import dev.dache.plugin.runtime.http.createPluginHttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-/** Manual DI root, created once per process by the platform entry point. */
+/**
+ * Manual DI root, created once per process by the platform entry point. Pass [requestLogger] only in debug
+ * builds; release builds keep the default and log nothing about requests.
+ */
 class AppContainer(
     vault: TokenVault,
     accountStore: AccountStore,
     val settingsStore: SettingsStore,
     private val scope: CoroutineScope,
+    requestLogger: RequestLogger = RequestLogger.None,
 ) {
-    // Mock data until the manifest engine and real plugins land.
+    private val pluginProviders = BundledPlugins.providers(vault, createPluginHttpClient(), requestLogger)
+
+    /** Providers without a plugin yet. They serve sample data, which is also what the demo connects. */
+    val sampleDataProviders: Set<ProviderId> = ProviderId.entries.toSet() - pluginProviders.keys
+
     private val providers: Map<ProviderId, DevOpsProvider> =
-        ProviderId.entries.associateWith { MockProvider(it, vault) }
+        sampleDataProviders.associateWith { MockProvider(it, vault) } + pluginProviders
 
     val accountRepository = AccountRepository(accountStore, vault, providers)
     val dashboardRepository = DashboardRepository(accountRepository, providers, scope)

@@ -21,6 +21,8 @@ data class AddAccountState(
     val token: String = "",
     val isValidating: Boolean = false,
     val error: Throwable? = null,
+    /** The selected provider serves sample data and accepts any token. */
+    val sampleData: Boolean = false,
 ) {
     val canSubmit: Boolean get() = token.isNotBlank() && !isValidating
 }
@@ -33,6 +35,7 @@ data class AccountsUiState(
 class AccountsViewModel(
     private val accounts: AccountRepository,
     private val dashboard: DashboardRepository,
+    private val sampleDataProviders: Set<ProviderId> = ProviderId.entries.toSet(),
 ) : ViewModel() {
     private val addAccount = MutableStateFlow<AddAccountState?>(null)
     private val connectedEvents = MutableSharedFlow<ConnectedAccount>(extraBufferCapacity = 1)
@@ -45,7 +48,8 @@ class AccountsViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), AccountsUiState())
 
     fun startAdding() {
-        addAccount.value = AddAccountState()
+        val provider = AddAccountState().provider
+        addAccount.value = AddAccountState(provider = provider, sampleData = provider in sampleDataProviders)
     }
 
     fun cancelAdding() {
@@ -53,7 +57,7 @@ class AccountsViewModel(
     }
 
     fun selectProvider(provider: ProviderId) {
-        addAccount.update { it?.copy(provider = provider, error = null) }
+        addAccount.update { it?.copy(provider = provider, error = null, sampleData = provider in sampleDataProviders) }
     }
 
     fun updateToken(token: String) {

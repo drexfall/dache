@@ -2,6 +2,7 @@ package dev.dache.app
 
 import app.cash.turbine.test
 import dev.dache.app.dashboard.DashboardViewModel
+import dev.dache.core.model.ProviderId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,5 +57,20 @@ class DashboardViewModelTest {
                 cancelAndIgnoreRemainingEvents()
             }
             assertEquals(6, graph.vault.tokens.size)
+        }
+
+    @Test
+    fun demoSkipsProvidersBackedByRealPlugins() =
+        runTest(dispatcher) {
+            val graph = TestGraph(CoroutineScope(backgroundScope.coroutineContext + dispatcher))
+            val sample = ProviderId.entries.toSet() - ProviderId.NETLIFY
+            val viewModel = DashboardViewModel(graph.dashboard, graph.accounts, sample)
+
+            viewModel.state.test {
+                viewModel.loadDemoAccounts()
+                val loaded = expectMostRecentItem()
+                assertEquals(sample, loaded.accounts.map { it.providerId }.toSet())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 }

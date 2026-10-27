@@ -45,9 +45,21 @@ import kotlinx.coroutines.launch
 fun DacheApp(container: AppContainer) {
     DacheTheme {
         val dashboardViewModel =
-            viewModel { DashboardViewModel(container.dashboardRepository, container.accountRepository) }
+            viewModel {
+                DashboardViewModel(
+                    container.dashboardRepository,
+                    container.accountRepository,
+                    container.sampleDataProviders,
+                )
+            }
         val accountsViewModel =
-            viewModel { AccountsViewModel(container.accountRepository, container.dashboardRepository) }
+            viewModel {
+                AccountsViewModel(
+                    container.accountRepository,
+                    container.dashboardRepository,
+                    container.sampleDataProviders,
+                )
+            }
         val state by dashboardViewModel.state.collectAsStateWithLifecycle()
         val accountsState by accountsViewModel.state.collectAsStateWithLifecycle()
         val confirmLinks by container.settingsStore.confirmExternalLinks.collectAsStateWithLifecycle(

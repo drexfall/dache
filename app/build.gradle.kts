@@ -35,6 +35,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(projects.core)
+            api(projects.pluginRegistry)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.ui)

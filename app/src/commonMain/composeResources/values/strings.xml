@@ -139,7 +139,7 @@
     <string name="accounts_empty_body">Add an account with a read-only token. Tokens are encrypted on this device and only sent to the provider’s own API.</string>
     <string name="add_account_title">Connect account</string>
     <string name="token_label">API token</string>
-    <string name="demo_token_hint">Demo build: providers return sample data. Any token of 8+ characters works; a token starting with fail- simulates a rate limit.</string>
+    <string name="demo_token_hint">This provider returns sample data for now. Any token of 8+ characters works; a token starting with fail- simulates a rate limit.</string>
     <string name="remove_account_title">Remove %1$s?</string>
     <string name="remove_account_body">The stored token and all cached data for this account will be deleted.</string>
     <string name="remove_account_description">Remove %1$s</string>

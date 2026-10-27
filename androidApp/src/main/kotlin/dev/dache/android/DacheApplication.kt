@@ -1,11 +1,13 @@
 package dev.dache.android
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
 import dev.dache.android.widget.DacheWidgets
 import dev.dache.app.AppContainer
 import dev.dache.core.account.DataStoreAccountStore
 import dev.dache.core.security.TinkTokenVault
 import dev.dache.core.settings.DataStoreSettingsStore
+import dev.dache.plugin.runtime.RequestLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,8 +26,12 @@ class DacheApplication : Application() {
             accountStore = DataStoreAccountStore.create(File(filesDir, "accounts.preferences_pb").absolutePath),
             settingsStore = DataStoreSettingsStore.create(File(filesDir, "settings.preferences_pb").absolutePath),
             scope = appScope,
+            // Request logging is debug-only; release builds never log requests.
+            requestLogger = if (isDebuggable()) RequestLogger.Console else RequestLogger.None,
         )
     }
+
+    private fun isDebuggable() = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
 
     override fun onCreate() {
         super.onCreate()
