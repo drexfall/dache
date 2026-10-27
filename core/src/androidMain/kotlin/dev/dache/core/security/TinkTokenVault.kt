@@ -16,12 +16,18 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import okio.Path.Companion.toPath
 import java.io.File
+import java.io.IOException
+import java.security.GeneralSecurityException
 import java.util.Base64
 
 /**
  * Encrypts tokens with an AES-256-GCM keyset that is itself wrapped by an Android Keystore master key.
  * Only ciphertext is persisted. The token key is bound as associated data, so a ciphertext copied to
  * another slot will not decrypt. Create one instance per process.
+ *
+ * If the Keystore master key is lost (app data restored onto a new device, Keystore reset), stored
+ * ciphertexts can't be decrypted anymore. Those tokens read as missing and are deleted, so the account
+ * shows as unauthorized and the user can reconnect it.
  */
 class TinkTokenVault(
     context: Context,
@@ -29,15 +35,21 @@ class TinkTokenVault(
     private val appContext = context.applicationContext
 
     private val aead: Aead by lazy {
-        AeadConfig.register()
-        AndroidKeysetManager
-            .Builder()
-            .withSharedPref(appContext, KEYSET_NAME, KEYSET_PREFS)
-            .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
-            .withMasterKeyUri(MASTER_KEY_URI)
-            .build()
-            .keysetHandle
-            .getPrimitive(RegistryConfiguration.get(), Aead::class.java)
+        try {
+            AeadConfig.register()
+            AndroidKeysetManager
+                .Builder()
+                .withSharedPref(appContext, KEYSET_NAME, KEYSET_PREFS)
+                .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
+                .withMasterKeyUri(MASTER_KEY_URI)
+                .build()
+                .keysetHandle
+                .getPrimitive(RegistryConfiguration.get(), Aead::class.java)
+        } catch (e: GeneralSecurityException) {
+            throw VaultUnavailableException("Android Keystore is unavailable", e)
+        } catch (e: IOException) {
+            throw VaultUnavailableException("Token keyset could not be read", e)
+        }
     }
 
     private val store: DataStore<Preferences> =
@@ -57,7 +69,12 @@ class TinkTokenVault(
     override suspend fun get(key: TokenKey): String? =
         withContext(Dispatchers.IO) {
             val encoded = store.data.first()[key.prefKey()] ?: return@withContext null
-            String(aead.decrypt(Base64.getDecoder().decode(encoded), key.associatedData()))
+            try {
+                String(aead.decrypt(Base64.getDecoder().decode(encoded), key.associatedData()))
+            } catch (_: GeneralSecurityException) {
+                store.edit { it.remove(key.prefKey()) }
+                null
+            }
         }
 
     override suspend fun delete(key: TokenKey) =
