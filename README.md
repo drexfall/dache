@@ -2,13 +2,17 @@
 
 One dashboard for the hosting, DNS, CI, server and uptime services you use. Kotlin Multiplatform: Android and Linux desktop share one Compose UI.
 
-**Status: MVP with mock data.** Every provider is a `MockProvider` serving a fictional "acme" org (`core/.../provider/mock/MockFixtures.kt`). No network calls are made yet. The manifest engine and real plugins come next (see the project board).
+**Status: Phase 1a.** Netlify is real: it runs as a declarative plugin through the manifest engine and talks to `api.netlify.com` with your token. The other providers are still `MockProvider`s serving a fictional "acme" org (`core/.../provider/mock/MockFixtures.kt`) until their plugins land (see the project board).
 
 ## Modules
 
 | Module | What's in it |
 |---|---|
 | `core` | KMP (Android + JVM). Unified models, `DevOpsProvider`, mock providers, cross-provider linking, dashboard and account repositories, `TokenVault` (Tink + Keystore on Android, libsecret `secret-tool` on Linux). |
+| `plugin-api` | KMP. The plugin manifest schema (`PluginManifest`) and its strict JSON codec. No code runs from a manifest. |
+| `plugin-runtime` | KMP. The declarative engine: manifest validator, mapping expressions, `ManifestProvider` (a `DevOpsProvider` that runs a manifest), and the HTTP layer with `HostGuard`, `AuthInjector` and redaction. Ktor with OkHttp on both targets. |
+| `plugin-registry` | KMP. Bundled plugins. Manifests live in `plugin-registry/manifests/*.json` and are compiled into the app at build time. |
+| `tools/plugin-cli` | JVM command line for plugin authors: `dache-plugin validate <manifest.json>...`. |
 | `app` | KMP Compose Multiplatform UI: sidebar navigation (overview + one page per account), Canvas charts, adaptive phone/desktop layouts. Also the desktop entry point (`jvmMain/Main.kt`). |
 | `androidApp` | Android shell: `Application`, `MainActivity`, and three Glance home-screen widgets (status summary, deploys, monitors). |
 
@@ -23,9 +27,31 @@ export JAVA_HOME=~/.local/share/JetBrains/Toolbox/apps/android-studio/jbr   # ad
 ./gradlew :androidApp:installDebug  # Android device/emulator
 ./gradlew test                      # shared unit tests on Android (host JVM) and desktop
 ./gradlew ktlintCheck detekt        # lint
+./gradlew :tools:plugin-cli:run --args="validate plugin-registry/manifests/netlify.json"
 ```
 
-On Linux, connecting an account stores the token in your keyring via `secret-tool` (package `libsecret` / `libsecret-tools`).
+On Linux, connecting an account stores the token in your keyring via `secret-tool` (package `libsecret` / `libsecret-tools`). A running Secret Service (GNOME Keyring or KWallet) is required; without one, connecting fails with an explanation.
+
+Debug request logging: debuggable Android builds log every plugin request to Logcat; on desktop set `DACHE_LOG_HTTP=1`. Tokens are redacted from URLs, headers and bodies before anything is logged. Release builds log nothing.
+
+## Plugins
+
+A plugin is a JSON manifest, not code. It declares the exact hosts it may call (HTTPS only, checked on every request and redirect), where the token goes (`bearer`, a named `header`, or a `query` parameter), a request that validates the token, and for each resource the list endpoint, paging, and how fields map onto Dache's models:
+
+```json
+"fields": {
+  "nativeId": "id",
+  "primaryUrl": "ssl_url",
+  "customDomains": ["custom_domain | lower", "domain_aliases"],
+  "deployments": {
+    "from": "published_deploy",
+    "fields": { "status": "state", "createdAt": "created_at | date" },
+    "statusMap": { "ready": "SUCCESS", "error": "FAILED" }
+  }
+}
+```
+
+Expressions are a dot path into the response (`build_settings.repo_url`, `items.0.id`) followed by pipes: `host`, `lower`, `date` and `default:<text>`. See `plugin-registry/manifests/netlify.json` for a complete example.
 
 ## Layouts
 
@@ -49,6 +75,7 @@ Every chart has a **Table** toggle with the same numbers.
 
 ## Trying it
 
-- On the empty overview, **Try with demo data** connects one account per provider.
-- Or add accounts by hand: any token with 8+ characters is accepted. A token starting with `fail-` makes that account fail every refresh with a rate-limit error, so you can see how one provider failing looks.
+- On the empty overview, **Try with demo data** connects one account per provider that still serves sample data (everything but Netlify).
+- Netlify needs a real personal access token. Add it under **Manage accounts**.
+- For sample-data providers, any token with 8+ characters is accepted. A token starting with `fail-` makes that account fail every refresh with a rate-limit error, so you can see how one provider failing looks.
 - Widgets: long-press the home screen → Widgets → Dache.
