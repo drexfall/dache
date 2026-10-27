@@ -21,7 +21,7 @@ export JAVA_HOME=~/.local/share/JetBrains/Toolbox/apps/android-studio/jbr   # ad
 
 ./gradlew :app:run                  # desktop (Linux)
 ./gradlew :androidApp:installDebug  # Android device/emulator
-./gradlew test                      # shared unit tests on the JVM
+./gradlew test                      # shared unit tests on Android (host JVM) and desktop
 ./gradlew ktlintCheck detekt        # lint
 ```
 

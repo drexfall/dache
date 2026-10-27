@@ -17,7 +17,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Lint
         run: ./gradlew ktlintCheck detekt
-      - name: Unit tests (shared code on JVM)
+      - name: Unit tests (shared code on Android host and desktop JVM)
         run: ./gradlew test
-      - name: Build Android and desktop
-        run: ./gradlew :androidApp:assembleDebug :app:jvmJar
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+      - name: Build Android, desktop and plugin-cli
+        run: ./gradlew :androidApp:assembleDebug :app:jvmJar :tools:plugin-cli:installDist

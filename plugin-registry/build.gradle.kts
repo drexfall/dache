@@ -18,6 +18,7 @@ kotlin {
             libs.versions.android.minSdk
                 .get()
                 .toInt()
+        withHostTest {}
         compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
     }
     jvm {
@@ -36,8 +37,8 @@ kotlin {
     }
 }
 
-// KMP has no `test` task; alias it so `./gradlew test` runs the shared tests on the JVM.
+// KMP has no `test` task; alias it so `./gradlew test` runs the shared tests on both targets.
 tasks.register("test") {
     group = "verification"
-    dependsOn("jvmTest")
+    dependsOn("jvmTest", "testAndroidHostTest")
 }
