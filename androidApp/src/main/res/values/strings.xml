@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">Dache</string>
+
+    <string name="widget_summary_name">Dache status</string>
+    <string name="widget_summary_description">Failing deploys, down monitors, expiring domains and failed CI runs at a glance.</string>
+    <string name="widget_deploys_name">Dache deploys</string>
+    <string name="widget_deploys_description">Latest deploy status for every site and project.</string>
+    <string name="widget_monitors_name">Dache monitors</string>
+    <string name="widget_monitors_description">Up and down status of your uptime monitors.</string>
+
+    <string name="widget_title_status">Status</string>
+    <string name="widget_title_deploys">Deploys</string>
+    <string name="widget_title_monitors">Monitors</string>
+    <string name="widget_empty">Open Dache to connect an account.</string>
+    <string name="widget_none">Nothing to show yet.</string>
+    <string name="widget_all_good">All good</string>
+    <string name="widget_updated">Updated %1$s</string>
+    <string name="widget_monitor_counts">%1$d up · %2$d down</string>
+    <string name="widget_account_errors">%1$d account(s) failed to refresh</string>
+
+    <string name="summary_failing_deploys">Failing deploys</string>
+    <string name="summary_down_monitors">Down monitors</string>
+    <string name="summary_expiring_domains">Expiring domains</string>
+    <string name="summary_failed_ci">Failed CI runs</string>
+
+    <string name="status_success">✓ Success</string>
+    <string name="status_building">● Building</string>
+    <string name="status_failed">✕ Failed</string>
+    <string name="status_cancelled">– Cancelled</string>
+    <string name="status_unknown">\? Unknown</string>
+    <string name="status_up">✓ Up</string>
+    <string name="status_down">✕ Down</string>
+    <string name="status_paused">– Paused</string>
+</resources>

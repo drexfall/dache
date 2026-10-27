@@ -1,0 +1,209 @@
+<resources>
+    <string name="app_name">Dache</string>
+
+    <string name="nav_overview">Overview</string>
+    <string name="nav_accounts_header">Accounts</string>
+    <string name="nav_add_account">Add account</string>
+    <string name="nav_manage_accounts">Manage accounts</string>
+    <string name="nav_no_accounts">No accounts connected</string>
+    <string name="nav_problems">%1$d problems</string>
+    <string name="nav_refresh_failed">Refresh failed</string>
+    <string name="action_open_navigation">Open navigation</string>
+
+    <string name="overview_activity">Activity</string>
+    <string name="overview_resources">Resources</string>
+    <string name="section_count">%1$s (%2$d)</string>
+
+    <string name="chart_show_table">Table</string>
+    <string name="chart_show_chart">Chart</string>
+    <string name="chart_no_data">No data</string>
+    <string name="chart_last_14_days">Last 14 days</string>
+    <string name="chart_col_day">Day</string>
+    <string name="chart_col_hour">Time</string>
+    <string name="chart_col_cancelled">Cancelled</string>
+    <string name="chart_col_cost">Cost</string>
+    <string name="chart_col_median">Median</string>
+    <string name="chart_col_runs">Builds</string>
+    <string name="series_succeeded">Succeeded</string>
+    <string name="series_failed">Failed</string>
+    <string name="series_response_time">Response time</string>
+    <string name="series_cost">Cost</string>
+    <string name="chart_deploys_title">Deploys per day</string>
+    <string name="chart_deploys_description">Deploys per day over the last 14 days: %1$d in total, %2$d failed.</string>
+    <string name="chart_ci_title">CI runs per day</string>
+    <string name="chart_ci_description">CI runs per day over the last 14 days: %1$d in total, %2$d failed.</string>
+    <string name="chart_build_time_title">Median build time</string>
+    <string name="chart_build_time_subtitle">Per site, last 14 days</string>
+    <string name="chart_run_time_title">Median run time</string>
+    <string name="chart_run_time_subtitle">Per workflow, last 14 days</string>
+    <string name="chart_uptime_title">Uptime</string>
+    <string name="chart_uptime_subtitle">Last 30 days, one cell per day</string>
+    <string name="chart_uptime_downtime">Downtime</string>
+    <string name="chart_uptime_no_downtime">No downtime</string>
+    <string name="chart_uptime_day">%1$s: %2$s</string>
+    <string name="chart_uptime_description">%1$s: %2$s average uptime, %3$d days with downtime in the last 30 days.</string>
+    <string name="chart_response_title">Response time</string>
+    <string name="chart_response_subtitle">Last 24 hours, per monitor</string>
+    <string name="chart_response_description">%1$s response time over the last 24 hours: latest %2$s, peak %3$s.</string>
+    <string name="chart_cost_title">Daily cost</string>
+    <string name="chart_cost_subtitle">Last 14 days · %1$s month to date</string>
+    <string name="chart_cost_description">Daily cost over the last 14 days, %1$s in total.</string>
+
+    <string name="value_ms">%1$s ms</string>
+    <string name="value_seconds">%1$ss</string>
+    <string name="value_minutes_seconds">%1$sm %2$ss</string>
+
+    <string name="stat_sites">Sites</string>
+    <string name="stat_deploys">Deploys, 14 days</string>
+    <string name="stat_failed_14d">Failed, 14 days</string>
+    <string name="stat_median_build">Median build</string>
+    <string name="stat_workflows">Workflows</string>
+    <string name="stat_runs">Runs, 14 days</string>
+    <string name="stat_median_run">Median run</string>
+    <string name="stat_servers_running">Servers running</string>
+    <string name="stat_of_total">of %1$d</string>
+    <string name="stat_month_to_date">Month to date</string>
+    <string name="stat_account_balance">Balance</string>
+    <string name="stat_monitors_up">Monitors up</string>
+    <string name="stat_avg_response">Avg response</string>
+    <string name="stat_downtime_days">Downtime days, 30 days</string>
+    <string name="stat_domains">Domains</string>
+    <string name="stat_dns_records">DNS records</string>
+
+    <string name="overview_title">Overview</string>
+    <string name="overview_empty_title">No accounts connected</string>
+    <string name="overview_empty_body">Connect Netlify, Vercel, Cloudflare, GitHub, DigitalOcean or UptimeRobot with a read-only token to see everything in one place.</string>
+    <string name="updated_at">Updated %1$s</string>
+
+    <string name="summary_failing_deploys">Failing deploys</string>
+    <string name="summary_down_monitors">Down monitors</string>
+    <string name="summary_expiring_domains">Expiring domains</string>
+    <string name="summary_failed_ci">Failed CI runs</string>
+
+    <string name="section_sites">Sites &amp; deployments</string>
+    <string name="section_ci">CI runs</string>
+    <string name="section_domains">Domains</string>
+    <string name="section_dns">DNS records</string>
+    <string name="section_servers">Servers</string>
+    <string name="section_monitors">Monitors</string>
+
+    <string name="status_success">Success</string>
+    <string name="status_building">Building</string>
+    <string name="status_failed">Failed</string>
+    <string name="status_cancelled">Cancelled</string>
+    <string name="status_unknown">Unknown</string>
+    <string name="status_up">Up</string>
+    <string name="status_down">Down</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_active">Active</string>
+    <string name="status_off">Off</string>
+    <string name="status_provisioning">Provisioning</string>
+    <string name="status_expiring">Expiring</string>
+
+    <string name="open_in">Open in %1$s</string>
+    <string name="linked_to">Linked: %1$s</string>
+    <string name="domain_expires_in">Expires in %1$d days</string>
+    <string name="domain_no_expiry">Registered elsewhere</string>
+    <string name="monitor_uptime">%1$s uptime</string>
+    <string name="monitor_response_time">%1$d ms</string>
+    <string name="provider_error">%1$s (%2$s)</string>
+
+    <string name="time_just_now">just now</string>
+    <string name="time_minutes_ago">%1$d min ago</string>
+    <string name="time_hours_ago">%1$d h ago</string>
+    <string name="time_days_ago">%1$d d ago</string>
+    <string name="time_in_days">in %1$d d</string>
+
+    <string name="error_unauthorized">Token rejected. Re-enter the token for this account.</string>
+    <string name="error_missing_scope">The token is missing a permission this screen needs.</string>
+    <string name="error_rate_limited">Rate limited by the provider. Try again later.</string>
+    <string name="error_rate_limited_retry">Rate limited by the provider. Try again in %1$d s.</string>
+    <string name="error_not_found">Not found.</string>
+    <string name="error_network">Can’t reach the provider. Check your connection.</string>
+    <string name="error_server">The provider returned an error (%1$d).</string>
+    <string name="error_unknown">Something went wrong.</string>
+
+    <string name="action_refresh">Refresh</string>
+    <string name="action_connect_account">Connect an account</string>
+    <string name="action_try_demo">Try with demo data</string>
+    <string name="action_fix_token">Re-enter token</string>
+    <string name="action_add_account">Add account</string>
+    <string name="action_connect">Connect</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_create_token">Create a %1$s token</string>
+
+    <string name="accounts_title">Manage accounts</string>
+    <string name="accounts_empty_title">No accounts yet</string>
+    <string name="accounts_empty_body">Add an account with a read-only token. Tokens are encrypted on this device and only sent to the provider’s own API.</string>
+    <string name="add_account_title">Connect account</string>
+    <string name="token_label">API token</string>
+    <string name="demo_token_hint">Demo build: providers return sample data. Any token of 8+ characters works; a token starting with fail- simulates a rate limit.</string>
+    <string name="remove_account_title">Remove %1$s?</string>
+    <string name="remove_account_body">The stored token and all cached data for this account will be deleted.</string>
+    <string name="remove_account_description">Remove %1$s</string>
+
+    <string name="scope_netlify">Netlify personal access tokens can’t be scoped. Give it an expiry date and use it only for Dache.</string>
+    <string name="scope_vercel">Scope the token to the one team you want to see and give it an expiry date.</string>
+    <string name="scope_cloudflare">Create a custom token with read-only permissions: Zone Read, DNS Read, Cloudflare Pages Read, Workers Scripts Read.</string>
+    <string name="scope_github">Use a fine-grained token with read-only access to Metadata, Actions and Deployments on the repos you pick.</string>
+    <string name="scope_digitalocean">Use custom scopes, read only: droplet, app, domain, account and billing.</string>
+    <string name="scope_uptimerobot">Use the read-only API key, not the main API key.</string>
+
+    <string name="state_expanded">Expanded</string>
+    <string name="state_collapsed">Collapsed</string>
+    <string name="action_expand">Show details</string>
+    <string name="action_collapse">Hide details</string>
+    <string name="action_retry">Retry</string>
+
+    <string name="link_dialog_title">Leave Dache?</string>
+    <string name="link_dialog_body">This opens %1$s in your browser.</string>
+    <string name="link_dialog_dont_ask">Don’t ask again</string>
+    <string name="link_dialog_open">Open</string>
+    <string name="link_opens_externally">Opens in your browser</string>
+    <string name="link_open_build">Open %1$s build in browser</string>
+    <string name="link_open_monitor">Open %1$s monitor in browser</string>
+    <string name="link_open_repo">Open repository in browser</string>
+    <string name="link_visit">Visit %1$s in browser</string>
+    <string name="link_go_to_account">Go to %1$s</string>
+    <string name="pref_confirm_links">Ask before opening links</string>
+    <string name="pref_confirm_links_body">Show a prompt before anything opens in your browser.</string>
+
+    <string name="chart_hint_columns">Tap or click a column to see that day’s builds.</string>
+    <string name="chart_hint_columns_cost">Tap or click a column for that day’s cost.</string>
+    <string name="chart_hint_bars">Tap or click a bar to see its recent builds.</string>
+    <string name="chart_hint_cells">Tap or click a day to see what happened.</string>
+    <string name="chart_hint_points">Tap or click a point to pin its value.</string>
+    <string name="detail_day_summary">%1$s · %2$d builds, %3$d failed</string>
+    <string name="detail_nothing_that_day">No builds that day.</string>
+    <string name="detail_recent_builds">Recent builds · %1$s</string>
+    <string name="detail_uptime_day">%1$s on %2$s: %3$s uptime, about %4$d min down.</string>
+    <string name="detail_cost_day">%1$s: %2$s, %3$s of the 14-day total.</string>
+    <string name="detail_more">+%1$d more</string>
+    <string name="detail_url">URL</string>
+    <string name="detail_domains">Domains</string>
+    <string name="detail_repo">Repository</string>
+    <string name="detail_branch">Branch</string>
+    <string name="detail_commit">Commit</string>
+    <string name="detail_duration">Duration</string>
+    <string name="detail_started">Started</string>
+    <string name="detail_name">Name</string>
+    <string name="detail_expires">Expires</string>
+    <string name="detail_type">Type</string>
+    <string name="detail_content">Points to</string>
+    <string name="detail_zone">Zone</string>
+    <string name="detail_region">Region</string>
+    <string name="detail_ip">Public IP</string>
+    <string name="detail_uptime_30d">Uptime, 30 days</string>
+    <string name="detail_response_24h">Response, 24 h</string>
+    <string name="detail_response_range">min %1$s · avg %2$s · max %3$s</string>
+    <string name="detail_recent_deploys">Recent deploys</string>
+    <string name="detail_recent_runs">Recent runs</string>
+    <string name="detail_linked">Linked resources</string>
+    <string name="error_help_unauthorized">The provider rejected the token. Create a new read-only token and connect the account again.</string>
+    <string name="error_help_rate_limited">The provider asked Dache to slow down. Data from the last successful refresh stays on screen.</string>
+    <string name="error_help_unknown">Something unexpected happened. Retry, and if it keeps failing, check the provider’s status page.</string>
+    <string name="stat_nothing_listed">Nothing to list.</string>
+    <string name="stat_last_14_days_total">Last 14 days</string>
+    <string name="stat_avg_per_day">Average per day</string>
+</resources>

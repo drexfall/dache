@@ -1,0 +1,28 @@
+# Only deviations from the default detekt config live here.
+naming:
+  FunctionNaming:
+    # Composables are PascalCase by convention.
+    ignoreAnnotated: ['Composable']
+  MatchingDeclarationName:
+    # Compose files pair a composable with its small model type (ChartSeries + StackedColumnChart).
+    active: false
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][A-Za-z0-9_]*'
+
+complexity:
+  LongParameterList:
+    ignoreDefaultParameters: true
+    ignoreAnnotated: ['Composable']
+    # Canvas helpers take geometry plus paint; fixture specs are data.
+    functionThreshold: 7
+    excludes: ['**/provider/mock/**']
+  LongMethod:
+    ignoreAnnotated: ['Composable']
+
+style:
+  MagicNumber:
+    # Mock fixtures and tests are full of sample numbers; theme files of color literals.
+    excludes: ['**/test/**', '**/commonTest/**', '**/jvmTest/**', '**/provider/mock/**', '**/ui/theme/**', '**/widget/**']
+    ignorePropertyDeclaration: true
+  UnusedPrivateMember:
+    ignoreAnnotated: ['Preview']
