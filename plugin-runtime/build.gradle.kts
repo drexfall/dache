@@ -30,7 +30,7 @@ kotlin {
         commonMain.dependencies {
             api(projects.core)
             api(projects.pluginApi)
-            implementation(libs.ktor.client.core)
+            api(libs.ktor.client.core)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

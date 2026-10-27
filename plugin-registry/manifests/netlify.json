@@ -1,0 +1,60 @@
+{
+  "manifestVersion": 1,
+  "id": "netlify",
+  "name": "Netlify",
+  "version": "1.0.0",
+  "hosts": ["api.netlify.com"],
+  "auth": { "type": "bearer" },
+  "capabilities": ["SITES", "DEPLOYMENTS"],
+  "validate": {
+    "request": { "url": "https://api.netlify.com/api/v1/user" },
+    "displayName": "email | default:Netlify"
+  },
+  "resources": [
+    {
+      "kind": "site",
+      "request": {
+        "url": "https://api.netlify.com/api/v1/sites",
+        "query": { "filter": "all" },
+        "paging": { "type": "page", "param": "page", "sizeParam": "per_page", "size": 100, "maxPages": 10 }
+      },
+      "fields": {
+        "nativeId": "id",
+        "name": "name",
+        "webUrl": "admin_url",
+        "primaryUrl": "ssl_url",
+        "customDomains": ["custom_domain | lower", "domain_aliases"],
+        "repoUrl": "build_settings.repo_url",
+        "deployments": {
+          "from": "published_deploy",
+          "fields": {
+            "nativeId": "id",
+            "webUrl": "deploy_ssl_url",
+            "status": "state",
+            "branch": "branch",
+            "commitMessage": "title",
+            "createdAt": "created_at | date",
+            "durationSeconds": "deploy_time"
+          },
+          "statusMap": {
+            "ready": "SUCCESS",
+            "error": "FAILED",
+            "rejected": "CANCELLED",
+            "new": "BUILDING",
+            "pending_review": "BUILDING",
+            "accepted": "BUILDING",
+            "enqueued": "BUILDING",
+            "building": "BUILDING",
+            "uploading": "BUILDING",
+            "uploaded": "BUILDING",
+            "preparing": "BUILDING",
+            "prepared": "BUILDING",
+            "processing": "BUILDING",
+            "processed": "BUILDING",
+            "retrying": "BUILDING"
+          }
+        }
+      }
+    }
+  ]
+}
