@@ -1,12 +1,15 @@
 package dev.dache.core.security
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
 /**
  * Stores tokens in the desktop keyring (GNOME Keyring, KWallet) through libsecret's `secret-tool`.
  * The token is passed on stdin, never on the command line, so it does not show up in process listings.
+ * Running without a keyring is not supported: [put] fails with [VaultUnavailableException].
  */
 class SecretServiceTokenVault(
     private val secretTool: String = "secret-tool",
@@ -15,8 +18,12 @@ class SecretServiceTokenVault(
         key: TokenKey,
         token: String,
     ) {
-        val exit = run(listOf("store", "--label=Dache token ($key)") + key.attributes(), stdin = token).exitCode
-        check(exit == 0) { "secret-tool store failed with exit code $exit" }
+        val result = run(listOf("store", "--label=Dache token ($key)") + key.attributes(), stdin = token)
+        if (result.exitCode != 0) {
+            throw VaultUnavailableException(
+                "secret-tool store failed with exit code ${result.exitCode}: ${result.stderr.take(MAX_STDERR)}",
+            )
+        }
     }
 
     override suspend fun get(key: TokenKey): String? {
@@ -34,6 +41,7 @@ class SecretServiceTokenVault(
     private class ProcessResult(
         val exitCode: Int,
         val stdout: String,
+        val stderr: String,
     )
 
     private suspend fun run(
@@ -43,16 +51,25 @@ class SecretServiceTokenVault(
         withContext(Dispatchers.IO) {
             val process =
                 try {
-                    ProcessBuilder(listOf(secretTool) + args).redirectError(ProcessBuilder.Redirect.DISCARD).start()
+                    ProcessBuilder(listOf(secretTool) + args).start()
                 } catch (e: IOException) {
-                    throw IllegalStateException("secret-tool not found; install libsecret-tools to store tokens", e)
+                    throw VaultUnavailableException("secret-tool not found; install libsecret-tools to store tokens", e)
                 }
-            process.outputStream.use { out -> stdin?.let { out.write(it.toByteArray()) } }
-            val stdout = process.inputStream.bufferedReader().use { it.readText() }
-            ProcessResult(process.waitFor(), stdout)
+            try {
+                process.outputStream.use { out -> stdin?.let { out.write(it.toByteArray()) } }
+            } catch (_: IOException) {
+                // secret-tool exited before reading stdin (e.g. no D-Bus session); its exit code says why.
+            }
+            // Drain both pipes concurrently so a chatty stderr can't block the process.
+            coroutineScope {
+                val stderr = async { process.errorStream.bufferedReader().use { it.readText() } }
+                val stdout = process.inputStream.bufferedReader().use { it.readText() }
+                ProcessResult(process.waitFor(), stdout, stderr.await().trim())
+            }
         }
 
     private companion object {
         const val APPLICATION = "dev.dache"
+        const val MAX_STDERR = 200
     }
 }
