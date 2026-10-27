@@ -21,3 +21,7 @@ dependencyResolutionManagement {
 include(":core")
 include(":app")
 include(":androidApp")
+include(":plugin-api")
+include(":plugin-runtime")
+include(":plugin-registry")
+include(":tools:plugin-cli")
