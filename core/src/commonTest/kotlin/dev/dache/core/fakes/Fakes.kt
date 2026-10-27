@@ -4,6 +4,7 @@ import dev.dache.core.account.AccountStore
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.security.TokenKey
 import dev.dache.core.security.TokenVault
+import dev.dache.core.security.VaultUnavailableException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -22,10 +23,14 @@ class InMemoryAccountStore(
 class InMemoryTokenVault : TokenVault {
     val tokens = mutableMapOf<TokenKey, String>()
 
+    /** Simulates a missing keyring: [put] throws. */
+    var unavailable = false
+
     override suspend fun put(
         key: TokenKey,
         token: String,
     ) {
+        if (unavailable) throw VaultUnavailableException("no keyring")
         tokens[key] = token
     }
 

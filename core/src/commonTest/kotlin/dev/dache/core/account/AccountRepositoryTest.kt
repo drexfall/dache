@@ -5,6 +5,7 @@ import dev.dache.core.fakes.InMemoryTokenVault
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
 import dev.dache.core.provider.mock.MockProvider
+import dev.dache.core.security.VaultUnavailableException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -41,6 +42,17 @@ class AccountRepositoryTest {
 
             assertIs<ProviderError.Unauthorized>(result.exceptionOrNull())
             assertTrue(vault.tokens.isEmpty())
+            assertTrue(store.accounts.first().isEmpty())
+        }
+
+    @Test
+    fun vaultFailureIsReturnedAndNoAccountIsAdded() =
+        runTest {
+            vault.unavailable = true
+
+            val result = repository.connect(ProviderId.NETLIFY, "fake-token-123")
+
+            assertIs<VaultUnavailableException>(result.exceptionOrNull())
             assertTrue(store.accounts.first().isEmpty())
         }
 

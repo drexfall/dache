@@ -6,6 +6,7 @@ import dev.dache.core.model.ProviderId
 import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.security.TokenKey
 import dev.dache.core.security.TokenVault
+import dev.dache.core.security.VaultUnavailableException
 import kotlinx.coroutines.flow.Flow
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -19,19 +20,35 @@ class AccountRepository(
 ) {
     val accounts: Flow<List<ConnectedAccount>> = store.accounts
 
-    /** Validates [token] with the provider, then stores the token and the account. */
+    /**
+     * Validates [token] with the provider, then stores the token and the account. Fails with
+     * [VaultUnavailableException] when the token can't be stored; no account is added then.
+     */
     suspend fun connect(
         providerId: ProviderId,
         token: String,
     ): Result<ConnectedAccount> {
         val provider = providers[providerId] ?: return Result.failure(ProviderError.NotFound())
         val trimmed = token.trim()
-        return provider.validateCredentials(trimmed).map { info ->
-            val account = ConnectedAccount(id = newId(), providerId = providerId, displayName = info.displayName)
-            vault.put(account.tokenKey(), trimmed)
-            store.update { it + account }
-            account
+        return provider.validateCredentials(trimmed).fold(
+            onSuccess = { info ->
+                save(ConnectedAccount(id = newId(), providerId = providerId, displayName = info.displayName), trimmed)
+            },
+            onFailure = { Result.failure(it) },
+        )
+    }
+
+    private suspend fun save(
+        account: ConnectedAccount,
+        token: String,
+    ): Result<ConnectedAccount> {
+        try {
+            vault.put(account.tokenKey(), token)
+        } catch (e: VaultUnavailableException) {
+            return Result.failure(e)
         }
+        store.update { it + account }
+        return Result.success(account)
     }
 
     suspend fun remove(account: ConnectedAccount) {

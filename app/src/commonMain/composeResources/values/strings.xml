@@ -122,6 +122,7 @@
     <string name="error_network">Can’t reach the provider. Check your connection.</string>
     <string name="error_server">The provider returned an error (%1$d).</string>
     <string name="error_unknown">Something went wrong.</string>
+    <string name="error_vault_unavailable">Couldn’t save the token securely. On Linux, start GNOME Keyring or KWallet and install secret-tool (libsecret).</string>
 
     <string name="action_refresh">Refresh</string>
     <string name="action_connect_account">Connect an account</string>

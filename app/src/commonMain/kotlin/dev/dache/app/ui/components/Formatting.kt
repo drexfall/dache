@@ -10,6 +10,7 @@ import dev.dache.app.resources.error_rate_limited_retry
 import dev.dache.app.resources.error_server
 import dev.dache.app.resources.error_unauthorized
 import dev.dache.app.resources.error_unknown
+import dev.dache.app.resources.error_vault_unavailable
 import dev.dache.app.resources.time_days_ago
 import dev.dache.app.resources.time_hours_ago
 import dev.dache.app.resources.time_in_days
@@ -21,6 +22,7 @@ import dev.dache.app.resources.value_seconds
 import dev.dache.app.ui.chart.compactNumber
 import dev.dache.app.ui.chart.formatDecimal
 import dev.dache.core.model.ProviderError
+import dev.dache.core.security.VaultUnavailableException
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
 import kotlin.time.Clock
@@ -53,6 +55,7 @@ fun errorMessage(error: Throwable): String =
         is ProviderError.NotFound -> stringResource(Res.string.error_not_found)
         is ProviderError.Network -> stringResource(Res.string.error_network)
         is ProviderError.Server -> stringResource(Res.string.error_server, error.code)
+        is VaultUnavailableException -> stringResource(Res.string.error_vault_unavailable)
         else -> stringResource(Res.string.error_unknown)
     }
 
