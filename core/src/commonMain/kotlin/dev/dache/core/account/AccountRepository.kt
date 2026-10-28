@@ -1,5 +1,6 @@
 package dev.dache.core.account
 
+import dev.dache.core.model.AccountSetting
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
@@ -20,19 +21,31 @@ class AccountRepository(
 ) {
     val accounts: Flow<List<ConnectedAccount>> = store.accounts
 
+    /** The settings [providerId] asks for besides the token. */
+    fun settings(providerId: ProviderId): List<AccountSetting> = providers[providerId]?.accountSettings.orEmpty()
+
     /**
-     * Validates [token] with the provider, then stores the token and the account. Fails with
+     * Validates [token] and [settings] with the provider, then stores the token and the account. Fails with
      * [VaultUnavailableException] when the token can't be stored; no account is added then.
      */
     suspend fun connect(
         providerId: ProviderId,
         token: String,
+        settings: Map<String, String> = emptyMap(),
     ): Result<ConnectedAccount> {
         val provider = providers[providerId] ?: return Result.failure(ProviderError.NotFound())
         val trimmed = token.trim()
-        return provider.validateCredentials(trimmed).fold(
+        val values = settings.mapValues { it.value.trim() }.filterValues { it.isNotEmpty() }
+        return provider.validateCredentials(trimmed, values).fold(
             onSuccess = { info ->
-                save(ConnectedAccount(id = newId(), providerId = providerId, displayName = info.displayName), trimmed)
+                val account =
+                    ConnectedAccount(
+                        id = newId(),
+                        providerId = providerId,
+                        displayName = info.displayName,
+                        settings = values,
+                    )
+                save(account, trimmed)
             },
             onFailure = { Result.failure(it) },
         )

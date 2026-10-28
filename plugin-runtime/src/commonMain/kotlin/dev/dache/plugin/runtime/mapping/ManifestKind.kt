@@ -39,7 +39,8 @@ enum class ManifestKind(
             mapOf(
                 "nativeId" to FieldDef(FieldType.TEXT, required = true),
                 "name" to FieldDef(FieldType.TEXT, required = true),
-                "webUrl" to FieldDef(FieldType.TEXT, required = true),
+                // Without it, the site links to the provider's dashboard.
+                "webUrl" to FieldDef(FieldType.TEXT, required = false),
                 "primaryUrl" to FieldDef(FieldType.TEXT, required = true),
                 "customDomains" to FieldDef(FieldType.TEXT_LIST, required = false),
                 "repoUrl" to FieldDef(FieldType.TEXT, required = false),

@@ -77,6 +77,28 @@ class ExpressionTest {
     }
 
     @Test
+    fun millisPipeReadsEpochMilliseconds() {
+        val millis = Expression.parse("$ | millis")
+
+        assertEquals(Instant.parse("2026-10-27T09:30:00.120Z"), millis.evaluate(json("1793093400120"))?.asInstant())
+        assertEquals(Instant.parse("2026-10-27T09:30:00.120Z"), millis.evaluate(json("\"1793093400120\""))?.asInstant())
+        assertNull(eval("name | millis"))
+    }
+
+    @Test
+    fun keysOnAnArrayReadEveryItem() {
+        val aliases = """{"domain": "a.example.com"}, {"other": 1}, {"domain": null}, {"domain": "b.example.com"}"""
+        val project = json("""{"alias": [$aliases]}""")
+
+        assertEquals(
+            listOf("a.example.com", "b.example.com"),
+            Expression.parse("alias.domain").evaluate(project)?.asTextList(),
+        )
+        assertEquals(Value.Text("a.example.com"), Expression.parse("alias.0.domain").evaluate(project))
+        assertNull(Expression.parse("alias.9.domain").evaluate(project))
+    }
+
+    @Test
     fun defaultPipeFillsNullAndEmpty() {
         assertEquals(Value.Text("none"), eval("custom_domain | default:none"))
         assertEquals(Value.Text("none"), Expression.parse("$ | default:none").evaluate(json("\"\"")))
@@ -99,7 +121,7 @@ class ExpressionTest {
     @Test
     fun parseErrorsExplainTheProblem() {
         assertEquals(
-            "unknown pipe \"upper\" in \"name | upper\"; available: host, lower, date, default",
+            "unknown pipe \"upper\" in \"name | upper\"; available: host, lower, date, millis, default",
             assertFailsWith<ExpressionException> { Expression.parse("name | upper") }.message,
         )
         assertFailsWith<ExpressionException> { Expression.parse("") }

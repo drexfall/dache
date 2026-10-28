@@ -7,6 +7,7 @@ import dev.dache.plugin.api.PagingSpec
 import dev.dache.plugin.api.PluginManifest
 import dev.dache.plugin.api.RequestSpec
 import dev.dache.plugin.api.ResourceSpec
+import dev.dache.plugin.api.SettingSpec
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -212,6 +213,88 @@ class ManifestValidatorTest {
             "fields.deployments.request.url: host evil.example.net is not declared",
             withRequest("https://evil.example.net/sites/{id}/deploys"),
         )
+    }
+
+    @Test
+    fun settingsAreDeclaredOnceWithAKeyAndLabel() {
+        assertProblem(
+            "settings[0].key: must match",
+            valid.copy(settings = listOf(SettingSpec("Team!", "Team"))),
+        )
+        assertProblem(
+            "settings[1].key: \"team\" is declared twice",
+            valid.copy(settings = listOf(SettingSpec("team", "Team"), SettingSpec("team", "Team again"))),
+        )
+        assertProblem("settings[0].label: must not be blank", valid.copy(settings = listOf(SettingSpec("team", " "))))
+    }
+
+    @Test
+    fun settingPlaceholdersMustBeDeclaredAndOptionalOnesWholeQueryValues() {
+        val optional = valid.copy(settings = listOf(SettingSpec("team", "Team")))
+        val required = valid.copy(settings = listOf(SettingSpec("team", "Team", required = true)))
+
+        fun ResourceSpec.withQuery(value: String) = copy(request = request.copy(query = mapOf("team" to value)))
+
+        fun PluginManifest.withSite(transform: ResourceSpec.() -> ResourceSpec) =
+            copy(resources = listOf(site.transform()))
+
+        assertEquals(emptyList(), problems(optional.withSite { withQuery("{@team}") }))
+        assertProblem("query.team: unknown setting @team", withSite { withQuery("{@team}") })
+        assertProblem(
+            "query.team: optional setting @team can only be a whole query value",
+            optional.withSite { withQuery("t-{@team}") },
+        )
+        assertProblem(
+            "request.url: optional setting @team can only be a whole query value",
+            optional.withSite { copy(request = request.copy(url = "https://api.example.com/{@team}/sites")) },
+        )
+        assertEquals(
+            emptyList(),
+            problems(required.withSite { copy(request = request.copy(url = "https://api.example.com/{@team}/sites")) }),
+        )
+    }
+
+    @Test
+    fun textFieldsCanBeTemplates() {
+        val withTeam = valid.copy(settings = listOf(SettingSpec("team", "Team")))
+        val template = FieldSpec.Expr("https://app.example.com/{@team}/{name}")
+
+        assertEquals(
+            emptyList(),
+            problems(withTeam.copy(resources = listOf(site.copy(fields = site.fields + ("webUrl" to template))))),
+        )
+        assertProblem("fields.webUrl: unknown setting @team", withFields { put("webUrl", template) })
+        assertProblem(
+            "fields.customDomains[0]: unmatched brace",
+            withFields { put("customDomains", FieldSpec.ExprList(listOf("{name"))) },
+        )
+        val deployments = site.fields["deployments"]
+        assertIs<FieldSpec.Nested>(deployments)
+        assertProblem(
+            "fields.deployments.fields.createdAt: only text fields can be templates",
+            withFields {
+                put(
+                    "deployments",
+                    deployments.copy(fields = deployments.fields + ("createdAt" to FieldSpec.Expr("{x}"))),
+                )
+            },
+        )
+    }
+
+    @Test
+    fun timeFieldsCanUseMillis() {
+        val deployments = site.fields["deployments"]
+        assertIs<FieldSpec.Nested>(deployments)
+
+        val manifest =
+            withFields {
+                put(
+                    "deployments",
+                    deployments.copy(fields = deployments.fields + ("createdAt" to FieldSpec.Expr("created | millis"))),
+                )
+            }
+
+        assertEquals(emptyList(), problems(manifest))
     }
 
     @Test

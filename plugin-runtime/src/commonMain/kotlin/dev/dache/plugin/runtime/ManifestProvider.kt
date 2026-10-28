@@ -2,6 +2,7 @@ package dev.dache.plugin.runtime
 
 import dev.dache.core.account.tokenKey
 import dev.dache.core.model.AccountInfo
+import dev.dache.core.model.AccountSetting
 import dev.dache.core.model.Capability
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderError
@@ -58,9 +59,17 @@ class ManifestProvider(
                 }.toMap()
     }
 
-    override suspend fun validateCredentials(token: String): Result<AccountInfo> =
+    override val accountSettings: List<AccountSetting> =
+        manifest.settings.map { AccountSetting(it.key, it.label, it.hint, it.required) }
+
+    override suspend fun validateCredentials(
+        token: String,
+        settings: Map<String, String>,
+    ): Result<AccountInfo> =
         attempt {
-            val url = checkNotNull(validate.url(null)) { "manifest was not validated" }
+            val missing = manifest.settings.filter { it.required && settings[it.key].isNullOrBlank() }
+            if (missing.isNotEmpty()) throw ProviderError.Unknown(MissingSettingException(missing.map { it.label }))
+            val url = validate.url(null, settings) ?: throw ProviderError.Unknown(InvalidSettingException())
             val body = http.getJson(url, validate.headers, token)
             AccountInfo(displayName = displayName.evaluate(body)?.asText()?.ifBlank { null } ?: manifest.name)
         }
@@ -68,9 +77,10 @@ class ManifestProvider(
     override suspend fun fetchSnapshot(account: ConnectedAccount): Result<ProviderSnapshot> =
         attempt {
             val token = vault.get(account.tokenKey()) ?: throw ProviderError.Unauthorized()
+            val context = AccountContext(token, account.settings)
             val sites = mutableListOf<Site>()
             resources.forEach { resource ->
-                val records = records(resource, items(resource, token), token)
+                val records = records(resource, items(resource, context), context)
                 when (resource.kind) {
                     ManifestKind.SITE -> sites += records.mapNotNull { Binder.site(it, id, account.id) }
                 }
@@ -80,25 +90,28 @@ class ManifestProvider(
 
     private suspend fun items(
         resource: CompiledResource,
-        token: String,
+        account: AccountContext,
     ): List<JsonElement> {
-        val parents = resource.parents?.let { lists.fetch(it, token) } ?: return lists.fetch(resource.list, token)
-        return fanOut(parents) { parent -> lists.fetch(resource.list, token, parent) }.flatten()
+        val parents = resource.parents?.let { lists.fetch(it, account) } ?: return lists.fetch(resource.list, account)
+        return fanOut(parents) { parent -> lists.fetch(resource.list, account, parent) }.flatten()
     }
 
     /** Items past the fan-out limit keep their own fields but get no requested nested records. */
     private suspend fun records(
         resource: CompiledResource,
         items: List<JsonElement>,
-        token: String,
+        account: AccountContext,
     ): List<Mapping.Record> {
-        if (resource.requested.isEmpty()) return items.map { resource.mapping.Record(it) }
+        val settings = account.settings
+        if (resource.requested.isEmpty()) return items.map { resource.mapping.Record(it, settings) }
         val fetched =
             fanOut(items) { item ->
-                resource.requested.mapValues { (_, list) -> lists.fetch(list, token, parent = item) }
+                resource.requested.mapValues { (_, list) -> lists.fetch(list, account, parent = item) }
             }
         val none = emptyMap<String, List<JsonElement>>()
-        return items.mapIndexed { index, item -> resource.mapping.Record(item, fetched.getOrElse(index) { none }) }
+        return items.mapIndexed { index, item ->
+            resource.mapping.Record(item, settings, fetched.getOrElse(index) { none })
+        }
     }
 
     private inline fun <T> attempt(block: () -> T): Result<T> =
@@ -108,3 +121,11 @@ class ManifestProvider(
             Result.failure(e)
         }
 }
+
+/** A required account setting was left blank. Names the settings by label, never by value. */
+class MissingSettingException(
+    labels: List<String>,
+) : Exception("missing ${labels.joinToString()}")
+
+/** A setting's value can't be used in a request, e.g. `..` in a path. */
+class InvalidSettingException : Exception("a setting can't be used in a request")

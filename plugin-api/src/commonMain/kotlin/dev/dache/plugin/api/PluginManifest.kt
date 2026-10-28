@@ -17,10 +17,24 @@ data class PluginManifest(
     /** Exact hostnames the plugin may call over HTTPS. No wildcards. */
     val hosts: List<String>,
     val auth: AuthSpec,
+    /** What the user fills in besides the token, used in requests and fields as `{@key}`. */
+    val settings: List<SettingSpec> = emptyList(),
     /** Names of `Capability` values the plugin provides. */
     val capabilities: List<String>,
     val validate: ValidateSpec,
     val resources: List<ResourceSpec>,
+)
+
+/**
+ * A non-secret account value, such as a team slug. An optional setting left blank fills no placeholder: a query
+ * parameter that is only `{@key}` is dropped, and anything else using it has no value.
+ */
+@Serializable
+data class SettingSpec(
+    val key: String,
+    val label: String,
+    val hint: String? = null,
+    val required: Boolean = false,
 )
 
 /** The request that checks a token, and the expression that names the account it belongs to. */
@@ -56,9 +70,10 @@ data class ListSpec(
 )
 
 /**
- * A GET request. When it is sent once per item of another list, [url] path segments and [query] values may hold
- * `{expression}` placeholders evaluated against that item, e.g. `/projects/{id}/deployments`. Values filled into
- * the path are percent-encoded whole, so they can't add path segments.
+ * A GET request. [url] path segments and [query] values may hold `{@key}` placeholders for account settings and,
+ * when it is sent once per item of another list, `{expression}` placeholders evaluated against that item, e.g.
+ * `/projects/{id}/deployments`. Values filled into the path are percent-encoded whole, so they can't add path
+ * segments.
  */
 @Serializable
 data class RequestSpec(

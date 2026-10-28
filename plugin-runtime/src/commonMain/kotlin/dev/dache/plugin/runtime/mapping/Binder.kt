@@ -16,7 +16,7 @@ internal object Binder {
                 providerId = providerId,
                 accountId = accountId,
                 nativeId = record.required("nativeId"),
-                webUrl = record.required("webUrl"),
+                webUrl = record.text("webUrl") ?: providerId.dashboardUrl,
                 name = record.required("name"),
                 primaryUrl = record.required("primaryUrl"),
                 customDomains = record.textList("customDomains").distinct(),

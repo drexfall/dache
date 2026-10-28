@@ -36,6 +36,26 @@ class TemplateTest {
     }
 
     @Test
+    fun settingPlaceholdersFillFromSettings() {
+        val template = Template.parse("https://example.com/{@team}/{name}")
+
+        assertEquals("https://example.com/acme/My Site", template.fill(item, mapOf("team" to "acme")))
+        assertEquals(listOf("team"), template.settings)
+        assertEquals(listOf("name"), template.placeholders.map { it.source })
+        assertNull(template.fill(item, emptyMap()))
+        assertNull(template.fill(item, mapOf("team" to " ")))
+    }
+
+    @Test
+    fun soleSettingIsOnlyForAWholeSettingTemplate() {
+        assertEquals("team", Template.parse("{@team}").soleSetting)
+        assertNull(Template.parse("t-{@team}").soleSetting)
+        assertNull(Template.parse("{id}").soleSetting)
+        assertFailsWith<ExpressionException> { Template.parse("{@}") }
+        assertFailsWith<ExpressionException> { Template.parse("{@team | lower}") }
+    }
+
+    @Test
     fun textWithoutPlaceholdersFillsToItself() {
         val template = Template.parse("https://api.example.com/sites")
 

@@ -39,6 +39,7 @@ import dev.dache.app.resources.scope_github
 import dev.dache.app.resources.scope_netlify
 import dev.dache.app.resources.scope_uptimerobot
 import dev.dache.app.resources.scope_vercel
+import dev.dache.app.resources.setting_optional_label
 import dev.dache.app.resources.token_label
 import dev.dache.app.ui.components.ExternalLinkButton
 import dev.dache.app.ui.components.errorMessage
@@ -54,10 +55,13 @@ fun AddAccountFlow(
     state: AddAccountState,
     onProviderSelected: (ProviderId) -> Unit,
     onTokenChanged: (String) -> Unit,
+    onSettingChanged: (key: String, value: String) -> Unit,
     onSubmit: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val form: @Composable () -> Unit = { AddAccountForm(state, onProviderSelected, onTokenChanged, onSubmit) }
+    val form: @Composable () -> Unit = {
+        AddAccountForm(state, onProviderSelected, onTokenChanged, onSettingChanged, onSubmit)
+    }
     if (LocalFormFactor.current == FormFactor.COMPACT) {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
@@ -101,8 +105,10 @@ private fun AddAccountForm(
     state: AddAccountState,
     onProviderSelected: (ProviderId) -> Unit,
     onTokenChanged: (String) -> Unit,
+    onSettingChanged: (key: String, value: String) -> Unit,
     onSubmit: () -> Unit,
 ) {
+    val tokenIme = if (state.settings.isEmpty()) ImeAction.Done else ImeAction.Next
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ProviderId.entries.forEach { provider ->
@@ -124,12 +130,33 @@ private fun AddAccountForm(
             label = { Text(stringResource(Res.string.token_label)) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = tokenIme),
             keyboardActions = KeyboardActions(onDone = { onSubmit() }),
             isError = state.error != null,
             supportingText = state.error?.let { { Text(errorMessage(it)) } },
             modifier = Modifier.fillMaxWidth(),
         )
+        state.settings.forEachIndexed { index, setting ->
+            val last = index == state.settings.lastIndex
+            OutlinedTextField(
+                value = state.settingValues[setting.key].orEmpty(),
+                onValueChange = { onSettingChanged(setting.key, it) },
+                label = {
+                    Text(
+                        if (setting.required) {
+                            setting.label
+                        } else {
+                            stringResource(Res.string.setting_optional_label, setting.label)
+                        },
+                    )
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = if (last) ImeAction.Done else ImeAction.Next),
+                keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+                supportingText = setting.hint?.let { { Text(it) } },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         if (state.isValidating) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (state.sampleData) {
             Text(

@@ -2,13 +2,15 @@ package dev.dache.plugin.runtime.mapping
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 
 /**
  * A parsed mapping expression: `path.to.field | pipe | pipe:argument`.
  *
- * The path is dot-separated keys, with numeric segments indexing into arrays (`deploys.0.id`).
- * `$` alone is the element itself. Pipes run left to right.
+ * The path is dot-separated keys, with numeric segments indexing into arrays (`deploys.0.id`). A key applied to
+ * an array reads it from every object in the array (`alias.domain` is each alias's domain), skipping the ones
+ * without it. `$` alone is the element itself. Pipes run left to right.
  */
 class Expression private constructor(
     val source: String,
@@ -27,9 +29,20 @@ class Expression private constructor(
         path.fold(element as JsonElement?) { current, segment ->
             when (current) {
                 is JsonObject -> current[segment]
-                is JsonArray -> segment.toIntOrNull()?.let(current::getOrNull)
+                is JsonArray -> segment.toIntOrNull()?.let(current::getOrNull) ?: project(current, segment)
                 else -> null
             }
+        }
+
+    /** [segment] read from every object in [array]; null for a numeric [segment], which is an index. */
+    private fun project(
+        array: JsonArray,
+        segment: String,
+    ): JsonArray? =
+        if (segment.toIntOrNull() != null) {
+            null
+        } else {
+            JsonArray(array.mapNotNull { item -> (item as? JsonObject)?.get(segment)?.takeUnless { it is JsonNull } })
         }
 
     override fun toString(): String = source

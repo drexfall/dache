@@ -28,6 +28,12 @@ internal const val MAX_FAN_OUT = 100
 /** Fan-out requests in flight at once, per fan-out. */
 private const val MAX_CONCURRENT = 4
 
+/** What every request for one account is sent with. */
+internal class AccountContext(
+    val token: String,
+    val settings: Map<String, String>,
+)
+
 /** A list request with its placeholders and expressions parsed. Build only from validated specs. */
 internal class CompiledList(
     request: RequestSpec,
@@ -40,11 +46,18 @@ internal class CompiledList(
     val paging = request.paging
     val cursor = (paging as? PagingSpec.Cursor)?.next?.let(Expression::parse)
 
-    /** The first request's URL, placeholders filled from [item]; null when [item] can't fill them. */
-    fun url(item: JsonElement?): Url? {
-        val base = url.fill(item, ::encodePathSegment)
-        val params = query.mapNotNull { (name, value) -> value.fill(item)?.let { name to it } }
-        if (base == null || params.size < query.size) return null
+    /**
+     * The first request's URL, placeholders filled from [item] and [settings]; null when they can't fill them.
+     * A query parameter that is only an unset setting is left out.
+     */
+    fun url(
+        item: JsonElement?,
+        settings: Map<String, String>,
+    ): Url? {
+        val base = url.fill(item, settings, ::encodePathSegment)
+        val sent = query.filterValues { value -> value.soleSetting?.let { !settings[it].isNullOrBlank() } ?: true }
+        val params = sent.mapNotNull { (name, value) -> value.fill(item, settings)?.let { name to it } }
+        if (base == null || params.size < sent.size) return null
         return URLBuilder(base).apply { params.forEach { (name, value) -> parameters.append(name, value) } }.build()
     }
 
@@ -71,10 +84,11 @@ internal class ListFetcher(
      */
     suspend fun fetch(
         list: CompiledList,
-        token: String,
+        account: AccountContext,
         parent: JsonElement? = null,
     ): List<JsonElement> {
-        val first = list.url(parent) ?: return emptyList()
+        val first = list.url(parent, account.settings) ?: return emptyList()
+        val token = account.token
         return try {
             when (val paging = list.paging) {
                 null -> list.items(http.getJson(first, list.headers, token))

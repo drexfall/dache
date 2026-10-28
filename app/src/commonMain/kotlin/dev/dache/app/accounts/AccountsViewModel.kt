@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.dache.core.account.AccountRepository
 import dev.dache.core.dashboard.DashboardRepository
+import dev.dache.core.model.AccountSetting
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderId
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -19,12 +20,19 @@ import kotlinx.coroutines.launch
 data class AddAccountState(
     val provider: ProviderId = ProviderId.NETLIFY,
     val token: String = "",
+    /** What the selected provider asks for besides the token. */
+    val settings: List<AccountSetting> = emptyList(),
+    val settingValues: Map<String, String> = emptyMap(),
     val isValidating: Boolean = false,
     val error: Throwable? = null,
     /** The selected provider serves sample data and accepts any token. */
     val sampleData: Boolean = false,
 ) {
-    val canSubmit: Boolean get() = token.isNotBlank() && !isValidating
+    val canSubmit: Boolean
+        get() =
+            token.isNotBlank() &&
+                !isValidating &&
+                settings.none { it.required && settingValues[it.key].isNullOrBlank() }
 }
 
 data class AccountsUiState(
@@ -48,8 +56,7 @@ class AccountsViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), AccountsUiState())
 
     fun startAdding() {
-        val provider = AddAccountState().provider
-        addAccount.value = AddAccountState(provider = provider, sampleData = provider in sampleDataProviders)
+        addAccount.value = forProvider(AddAccountState(), AddAccountState().provider)
     }
 
     fun cancelAdding() {
@@ -57,12 +64,31 @@ class AccountsViewModel(
     }
 
     fun selectProvider(provider: ProviderId) {
-        addAccount.update { it?.copy(provider = provider, error = null, sampleData = provider in sampleDataProviders) }
+        addAccount.update { it?.let { state -> forProvider(state, provider) } }
     }
 
     fun updateToken(token: String) {
         addAccount.update { it?.copy(token = token, error = null) }
     }
+
+    fun updateSetting(
+        key: String,
+        value: String,
+    ) {
+        addAccount.update { it?.copy(settingValues = it.settingValues + (key to value), error = null) }
+    }
+
+    /** Settings belong to one provider, so switching clears them; the token is kept. */
+    private fun forProvider(
+        state: AddAccountState,
+        provider: ProviderId,
+    ) = state.copy(
+        provider = provider,
+        settings = accounts.settings(provider),
+        settingValues = emptyMap(),
+        error = null,
+        sampleData = provider in sampleDataProviders,
+    )
 
     fun submit() {
         val current = addAccount.value ?: return
@@ -70,7 +96,7 @@ class AccountsViewModel(
         addAccount.value = current.copy(isValidating = true, error = null)
         viewModelScope.launch {
             accounts
-                .connect(current.provider, current.token)
+                .connect(current.provider, current.token, current.settingValues)
                 .onSuccess { account ->
                     addAccount.value = null
                     connectedEvents.tryEmit(account)

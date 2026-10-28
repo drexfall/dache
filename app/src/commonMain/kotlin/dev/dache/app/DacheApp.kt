@@ -151,6 +151,7 @@ fun DacheApp(container: AppContainer) {
                             state = addState,
                             onProviderSelected = accountsViewModel::selectProvider,
                             onTokenChanged = accountsViewModel::updateToken,
+                            onSettingChanged = accountsViewModel::updateSetting,
                             onSubmit = accountsViewModel::submit,
                             onDismiss = accountsViewModel::cancelAdding,
                         )

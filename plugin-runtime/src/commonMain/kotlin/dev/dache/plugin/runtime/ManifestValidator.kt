@@ -14,7 +14,6 @@ import dev.dache.plugin.runtime.mapping.FieldDef
 import dev.dache.plugin.runtime.mapping.FieldType
 import dev.dache.plugin.runtime.mapping.ManifestKind
 import dev.dache.plugin.runtime.mapping.Pipe
-import dev.dache.plugin.runtime.mapping.Template
 import dev.dache.plugin.runtime.security.HostGuard
 
 /** One thing wrong with a manifest. [path] points into the JSON, e.g. `resources[0].fields.name`. */
@@ -44,11 +43,24 @@ object ManifestValidator {
 
     fun validate(manifest: PluginManifest): List<ManifestProblem> = Checker(manifest).run()
 
+    private val timePipes = setOf(Pipe.DATE, Pipe.MILLIS)
+
+    private fun authProblem(auth: AuthSpec): ManifestProblem? =
+        when (auth) {
+            AuthSpec.Bearer -> null
+            is AuthSpec.Header ->
+                ManifestProblem("auth.name", "\"${auth.name}\" can't carry a token").takeIf {
+                    !headerNamePattern.matches(auth.name) || auth.name.lowercase() in setOf("host", "cookie")
+                }
+            is AuthSpec.Query -> ManifestProblem("auth.name", "must not be blank").takeIf { auth.name.isBlank() }
+        }
+
     private class Checker(
         private val manifest: PluginManifest,
     ) {
         private val problems = mutableListOf<ManifestProblem>()
         private val guard = HostGuard(manifest.hosts)
+        private val placeholders = PlaceholderRules(guard, manifest.settings)
 
         private fun problem(
             path: String,
@@ -59,7 +71,8 @@ object ManifestValidator {
 
         fun run(): List<ManifestProblem> {
             checkHeader()
-            checkAuth()
+            authProblem(manifest.auth)?.let { problems += it }
+            placeholders.settings().forEach { (path, message) -> problem(path, message) }
             checkRequest("validate.request", manifest.validate.request, fannedOut = false)
             checkExpression("validate.displayName", manifest.validate.displayName)
             if (manifest.resources.isEmpty()) problem("resources", "declare at least one resource")
@@ -114,17 +127,6 @@ object ManifestValidator {
             }
         }
 
-        private fun checkAuth() {
-            when (val auth = manifest.auth) {
-                AuthSpec.Bearer -> Unit
-                is AuthSpec.Header ->
-                    if (!headerNamePattern.matches(auth.name) || auth.name.lowercase() in setOf("host", "cookie")) {
-                        problem("auth.name", "\"${auth.name}\" can't carry a token")
-                    }
-                is AuthSpec.Query -> if (auth.name.isBlank()) problem("auth.name", "must not be blank")
-            }
-        }
-
         /** [fannedOut]: the request is sent once per item of another list, so it may use placeholders. */
         private fun checkRequest(
             path: String,
@@ -132,12 +134,9 @@ object ManifestValidator {
             fannedOut: Boolean,
         ) {
             if (request.method != "GET") problem("$path.method", "only GET is supported")
-            urlProblems(request.url, fannedOut, guard).forEach { problem("$path.url", it) }
+            placeholders.url(request.url, fannedOut).forEach { problem("$path.url", it) }
             request.query.forEach { (name, value) ->
-                listOfNotNull(
-                    "parameter names can't have placeholders".takeIf { '{' in name || '}' in name },
-                    templateProblem(value, fannedOut),
-                ).forEach { problem("$path.query.$name", it) }
+                placeholders.query(name, value, fannedOut).forEach { problem("$path.query.$name", it) }
             }
             request.headers.keys.forEach { name ->
                 val lower = name.lowercase()
@@ -208,19 +207,10 @@ object ManifestValidator {
             topLevel: Boolean,
         ) {
             when (spec) {
-                is FieldSpec.Expr -> {
-                    if (def.type == FieldType.RECORDS) {
-                        problem(path, "expects a nested mapping object")
-                        return
-                    }
-                    val expression = checkExpression(path, spec.expr) ?: return
-                    if (def.type == FieldType.TIME && expression.pipes.lastOrNull()?.pipe != Pipe.DATE) {
-                        problem(path, "a time field must end with the date pipe")
-                    }
-                }
+                is FieldSpec.Expr -> checkSource(path, spec.expr, def.type)
                 is FieldSpec.ExprList ->
                     if (def.type == FieldType.TEXT_LIST) {
-                        spec.exprs.forEachIndexed { index, expr -> checkExpression("$path[$index]", expr) }
+                        spec.exprs.forEachIndexed { index, expr -> checkSource("$path[$index]", expr, FieldType.TEXT) }
                     } else {
                         problem(path, "only list fields take an array of expressions")
                     }
@@ -258,6 +248,24 @@ object ManifestValidator {
             }
         }
 
+        /** One field value written as a string: a template, or an expression whose result fits [type]. */
+        private fun checkSource(
+            path: String,
+            source: String,
+            type: FieldType,
+        ) {
+            when {
+                type == FieldType.RECORDS -> problem(path, "expects a nested mapping object")
+                '{' in source -> placeholders.field(source, type).forEach { problem(path, it) }
+                else -> {
+                    val pipes = checkExpression(path, source)?.pipes ?: return
+                    if (type == FieldType.TIME && pipes.lastOrNull()?.pipe !in timePipes) {
+                        problem(path, "a time field must end with the date pipe or millis")
+                    }
+                }
+            }
+        }
+
         private fun checkExpression(
             path: String,
             source: String,
@@ -270,33 +278,6 @@ object ManifestValidator {
             }
     }
 }
-
-/** [fannedOut]: the request is sent once per item of another list, so placeholders have something to fill them. */
-private fun urlProblems(
-    url: String,
-    fannedOut: Boolean,
-    guard: HostGuard,
-): List<String> {
-    val authorityEnd = url.indexOf('/', url.indexOf("://") + "://".length).takeIf { it >= 0 } ?: url.length
-    return listOfNotNull(
-        templateProblem(url, fannedOut),
-        runCatching { Template.parse(url) }.getOrNull()?.let { guard.violation(it.sample()) },
-        "put query parameters in \"query\"".takeIf { '?' in url },
-        "placeholders can only be in the path".takeIf { '{' in url.substring(0, authorityEnd) },
-    )
-}
-
-private fun templateProblem(
-    source: String,
-    fannedOut: Boolean,
-): String? =
-    try {
-        val placeholders = Template.parse(source).placeholders
-        "placeholders need an item to fill them; use forEach or a nested request"
-            .takeIf { !fannedOut && placeholders.isNotEmpty() }
-    } catch (e: ExpressionException) {
-        e.message.orEmpty()
-    }
 
 /** The lowercase header that carries the token, if any. */
 private fun AuthSpec.headerName(): String? =

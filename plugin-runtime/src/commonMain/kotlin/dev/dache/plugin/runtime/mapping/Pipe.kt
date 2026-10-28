@@ -36,6 +36,14 @@ enum class Pipe(
             }
     },
 
+    /** Unix time in milliseconds, as a number or numeric text, to a point in time. */
+    MILLIS("millis", takesArgument = false) {
+        override fun apply(
+            value: Value?,
+            argument: String?,
+        ): Value? = value?.asText()?.toLongOrNull()?.let { Value.Time(Instant.fromEpochMilliseconds(it)) }
+    },
+
     /** Replaces null or an empty string with the literal argument: `default:unknown`. */
     DEFAULT("default", takesArgument = true) {
         override fun apply(

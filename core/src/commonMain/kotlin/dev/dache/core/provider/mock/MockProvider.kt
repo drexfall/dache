@@ -29,7 +29,10 @@ class MockProvider(
 ) : DevOpsProvider {
     override val capabilities: Set<Capability> = MockFixtures.capabilities(id)
 
-    override suspend fun validateCredentials(token: String): Result<AccountInfo> {
+    override suspend fun validateCredentials(
+        token: String,
+        settings: Map<String, String>,
+    ): Result<AccountInfo> {
         delay(latency)
         if (token.length < MIN_TOKEN_LENGTH) return Result.failure(ProviderError.Unauthorized())
         return Result.success(AccountInfo(displayName = "acme · ${id.displayName}"))

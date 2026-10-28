@@ -12,11 +12,11 @@ class Mapping(
 ) {
     private sealed interface Compiled {
         class Single(
-            val expression: Expression,
+            val source: FieldSource,
         ) : Compiled
 
         class Multi(
-            val expressions: List<Expression>,
+            val sources: List<FieldSource>,
         ) : Compiled
 
         class Nested(
@@ -29,8 +29,8 @@ class Mapping(
     private val compiled: Map<String, Compiled> =
         fields.mapValues { (_, spec) ->
             when (spec) {
-                is FieldSpec.Expr -> Compiled.Single(Expression.parse(spec.expr))
-                is FieldSpec.ExprList -> Compiled.Multi(spec.exprs.map(Expression::parse))
+                is FieldSpec.Expr -> Compiled.Single(FieldSource.parse(spec.expr))
+                is FieldSpec.ExprList -> Compiled.Multi(spec.exprs.map(FieldSource::parse))
                 is FieldSpec.Nested ->
                     Compiled.Nested(
                         Expression.parse(spec.from),
@@ -41,14 +41,17 @@ class Mapping(
         }
 
     /**
-     * Reads mapped fields from one item of a response. [fetched] holds the items of each nested field that has
-     * its own request, fetched for this item; a requested field missing from it has no records.
+     * Reads mapped fields from one item of a response. [settings] fill `{@key}` placeholders. [fetched] holds the
+     * items of each nested field that has its own request, fetched for this item; a requested field missing from
+     * it has no records.
      */
     inner class Record(
         private val element: JsonElement,
+        private val settings: Map<String, String> = emptyMap(),
         private val fetched: Map<String, List<JsonElement>> = emptyMap(),
     ) {
-        private fun value(field: String): Value? = (compiled[field] as? Compiled.Single)?.expression?.evaluate(element)
+        private fun value(field: String): Value? =
+            (compiled[field] as? Compiled.Single)?.source?.evaluate(element, settings)
 
         fun text(field: String): String? = value(field)?.asText()
 
@@ -66,11 +69,11 @@ class Mapping(
         fun textList(field: String): List<String> =
             when (val spec = compiled[field]) {
                 is Compiled.Single ->
-                    spec.expression
-                        .evaluate(element)
+                    spec.source
+                        .evaluate(element, settings)
                         ?.asTextList()
                         .orEmpty()
-                is Compiled.Multi -> spec.expressions.flatMap { it.evaluate(element)?.asTextList().orEmpty() }
+                is Compiled.Multi -> spec.sources.flatMap { it.evaluate(element, settings)?.asTextList().orEmpty() }
                 else -> emptyList()
             }
 
@@ -86,7 +89,30 @@ class Mapping(
                         else -> emptyList()
                     }
                 }
-            return items.map { spec.mapping.Record(it) }
+            return items.map { spec.mapping.Record(it, settings) }
         }
+    }
+}
+
+/** One field value: an expression, or a template when it has `{placeholders}`. Templates always produce text. */
+class FieldSource private constructor(
+    val expression: Expression?,
+    val template: Template?,
+) {
+    fun evaluate(
+        element: JsonElement,
+        settings: Map<String, String>,
+    ): Value? = template?.fill(element, settings)?.let(Value::Text) ?: expression?.evaluate(element)
+
+    companion object {
+        /** @throws ExpressionException */
+        fun parse(source: String): FieldSource =
+            if ('{' in
+                source
+            ) {
+                FieldSource(null, Template.parse(source))
+            } else {
+                FieldSource(Expression.parse(source), null)
+            }
     }
 }

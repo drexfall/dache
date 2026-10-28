@@ -139,13 +139,14 @@
     <string name="accounts_empty_body">Add an account with a read-only token. Tokens are encrypted on this device and only sent to the provider’s own API.</string>
     <string name="add_account_title">Connect account</string>
     <string name="token_label">API token</string>
+    <string name="setting_optional_label">%1$s (optional)</string>
     <string name="demo_token_hint">This provider returns sample data for now. Any token of 8+ characters works; a token starting with fail- simulates a rate limit.</string>
     <string name="remove_account_title">Remove %1$s?</string>
     <string name="remove_account_body">The stored token and all cached data for this account will be deleted.</string>
     <string name="remove_account_description">Remove %1$s</string>
 
     <string name="scope_netlify">Netlify personal access tokens can’t be scoped. Give it an expiry date and use it only for Dache.</string>
-    <string name="scope_vercel">Scope the token to the one team you want to see and give it an expiry date.</string>
+    <string name="scope_vercel">Scope the token to the one team you want to see and give it an expiry date. Enter that team’s slug below.</string>
     <string name="scope_cloudflare">Create a custom token with read-only permissions: Zone Read, DNS Read, Cloudflare Pages Read, Workers Scripts Read.</string>
     <string name="scope_github">Use a fine-grained token with read-only access to Metadata, Actions and Deployments on the repos you pick.</string>
     <string name="scope_digitalocean">Use custom scopes, read only: droplet, app, domain, account and billing.</string>

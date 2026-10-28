@@ -2,8 +2,11 @@ package dev.dache.app
 
 import app.cash.turbine.test
 import dev.dache.app.accounts.AccountsViewModel
+import dev.dache.core.model.AccountSetting
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
+import dev.dache.core.provider.DevOpsProvider
+import dev.dache.core.provider.mock.MockProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,6 +23,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AccountsViewModelTest {
@@ -98,6 +102,65 @@ class AccountsViewModelTest {
                 viewModel.submit()
 
                 assertEquals(ProviderId.UPTIMEROBOT, awaitItem().providerId)
+            }
+        }
+
+    @Test
+    fun providerSettingsAreAskedForAndSavedWithTheAccount() =
+        runTest(dispatcher) {
+            val validated = mutableListOf<Map<String, String>>()
+            val graph =
+                TestGraph(CoroutineScope(backgroundScope.coroutineContext + dispatcher)) { vault ->
+                    val mock = MockProvider(ProviderId.VERCEL, vault, latency = Duration.ZERO)
+                    val withSettings =
+                        object : DevOpsProvider by mock {
+                            override val accountSettings =
+                                listOf(
+                                    AccountSetting("team", "Team slug"),
+                                    AccountSetting("region", "Region", required = true),
+                                )
+
+                            override suspend fun validateCredentials(
+                                token: String,
+                                settings: Map<String, String>,
+                            ) = mock.validateCredentials(token, settings).also { validated += settings }
+                        }
+                    mapOf(ProviderId.VERCEL to withSettings)
+                }
+            val viewModel = AccountsViewModel(graph.accounts, graph.dashboard)
+
+            viewModel.state.test {
+                viewModel.startAdding()
+                assertTrue(assertNotNull(expectMostRecentItem().addAccount).settings.isEmpty())
+                viewModel.selectProvider(ProviderId.VERCEL)
+                viewModel.updateToken("fake-token-123")
+                viewModel.updateSetting("team", "  ")
+                val missingRegion = assertNotNull(expectMostRecentItem().addAccount)
+                assertEquals(listOf("team", "region"), missingRegion.settings.map { it.key })
+                assertFalse(missingRegion.canSubmit)
+
+                viewModel.updateSetting("region", " eu ")
+                assertTrue(assertNotNull(expectMostRecentItem().addAccount).canSubmit)
+                viewModel.submit()
+
+                assertEquals(mapOf("region" to "eu"), expectMostRecentItem().accounts.single().settings)
+                cancelAndIgnoreRemainingEvents()
+            }
+            assertEquals(listOf(mapOf("region" to "eu")), validated)
+        }
+
+    @Test
+    fun switchingProviderClearsSettings() =
+        runTest(dispatcher) {
+            val graph = TestGraph(CoroutineScope(backgroundScope.coroutineContext + dispatcher))
+            val viewModel = AccountsViewModel(graph.accounts, graph.dashboard)
+
+            viewModel.state.test {
+                viewModel.startAdding()
+                viewModel.updateSetting("team", "acme")
+                viewModel.selectProvider(ProviderId.GITHUB)
+                assertTrue(assertNotNull(expectMostRecentItem().addAccount).settingValues.isEmpty())
+                cancelAndIgnoreRemainingEvents()
             }
         }
 

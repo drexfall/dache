@@ -19,7 +19,8 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * How one target field is filled. In JSON it is written as:
- * - a string: one expression, e.g. `"created_at | date"`;
+ * - a string: one expression, e.g. `"created_at | date"`, or, for text fields, a template whose placeholders
+ *   are expressions or `{@setting}`s, e.g. `"https://example.com/{@team}/{name}"`;
  * - an array of strings: expressions whose results are concatenated into a list, nulls dropped;
  * - an object: a nested list of records, e.g. a site's deployments.
  */

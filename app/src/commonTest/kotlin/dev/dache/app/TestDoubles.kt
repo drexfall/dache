@@ -5,6 +5,7 @@ import dev.dache.core.account.AccountStore
 import dev.dache.core.dashboard.DashboardRepository
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderId
+import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.provider.mock.MockProvider
 import dev.dache.core.security.TokenKey
 import dev.dache.core.security.TokenVault
@@ -50,9 +51,12 @@ class InMemorySettingsStore : SettingsStore {
 
 class TestGraph(
     scope: CoroutineScope,
+    /** Replaces the mock provider for its id. */
+    overrides: (InMemoryTokenVault) -> Map<ProviderId, DevOpsProvider> = { emptyMap() },
 ) {
     val vault = InMemoryTokenVault()
-    private val providers = ProviderId.entries.associateWith { MockProvider(it, vault, latency = Duration.ZERO) }
+    private val providers =
+        ProviderId.entries.associateWith { MockProvider(it, vault, latency = Duration.ZERO) } + overrides(vault)
     val accounts = AccountRepository(InMemoryAccountStore(), vault, providers)
     val dashboard = DashboardRepository(accounts, providers, scope)
 }
