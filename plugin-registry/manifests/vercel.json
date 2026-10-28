@@ -1,0 +1,69 @@
+{
+  "manifestVersion": 1,
+  "id": "vercel",
+  "name": "Vercel",
+  "version": "1.0.0",
+  "hosts": ["api.vercel.com"],
+  "auth": { "type": "bearer" },
+  "settings": [
+    {
+      "key": "team",
+      "label": "Team slug",
+      "hint": "The part after vercel.com/ on your team's dashboard. Leave blank for your personal account."
+    }
+  ],
+  "capabilities": ["SITES", "DEPLOYMENTS"],
+  "validate": {
+    "request": { "url": "https://api.vercel.com/v2/user" },
+    "displayName": "user.email | default:Vercel"
+  },
+  "resources": [
+    {
+      "kind": "site",
+      "request": {
+        "url": "https://api.vercel.com/v10/projects",
+        "query": { "slug": "{@team}" },
+        "paging": {
+          "type": "cursor",
+          "param": "until",
+          "next": "pagination.next",
+          "sizeParam": "limit",
+          "size": 100,
+          "maxPages": 10
+        }
+      },
+      "items": "projects",
+      "fields": {
+        "nativeId": "id",
+        "name": "name",
+        "webUrl": "https://vercel.com/{@team}/{name}",
+        "primaryUrl": "https://{alias.0.domain}",
+        "customDomains": "alias.domain",
+        "repoUrl": "https://github.com/{link.org}/{link.repo}",
+        "deployments": {
+          "request": {
+            "url": "https://api.vercel.com/v7/deployments",
+            "query": { "projectId": "{id}", "limit": "5", "slug": "{@team}" }
+          },
+          "from": "deployments",
+          "fields": {
+            "nativeId": "uid",
+            "webUrl": "inspectorUrl",
+            "status": "readyState",
+            "branch": "meta.githubCommitRef",
+            "commitMessage": "meta.githubCommitMessage",
+            "createdAt": "created | millis"
+          },
+          "statusMap": {
+            "READY": "SUCCESS",
+            "ERROR": "FAILED",
+            "CANCELED": "CANCELLED",
+            "QUEUED": "BUILDING",
+            "INITIALIZING": "BUILDING",
+            "BUILDING": "BUILDING"
+          }
+        }
+      }
+    }
+  ]
+}

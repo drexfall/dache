@@ -7,8 +7,6 @@ import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
 import dev.dache.core.provider.DevOpsProvider
-import dev.dache.core.security.TokenKey
-import dev.dache.core.security.TokenVault
 import dev.dache.plugin.runtime.http.createPluginHttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -118,21 +116,4 @@ class NetlifyPluginTest {
             assertTrue(requests.isNotEmpty())
             assertTrue(requests.all { it.url.protocol == URLProtocol.HTTPS && it.url.host == "api.netlify.com" })
         }
-
-    private class MapTokenVault : TokenVault {
-        val tokens = mutableMapOf<TokenKey, String>()
-
-        override suspend fun put(
-            key: TokenKey,
-            token: String,
-        ) {
-            tokens[key] = token
-        }
-
-        override suspend fun get(key: TokenKey): String? = tokens[key]
-
-        override suspend fun delete(key: TokenKey) {
-            tokens.remove(key)
-        }
-    }
 }

@@ -2,7 +2,7 @@
 
 One dashboard for the hosting, DNS, CI, server and uptime services you use. Kotlin Multiplatform: Android and Linux desktop share one Compose UI.
 
-**Status: Phase 1a.** Netlify is real: it runs as a declarative plugin through the manifest engine and talks to `api.netlify.com` with your token. The other providers are still `MockProvider`s serving a fictional "acme" org (`core/.../provider/mock/MockFixtures.kt`) until their plugins land (see the project board).
+**Status: Phase 1b.** Netlify and Vercel are real: they run as declarative plugins through the manifest engine and talk to the provider's API with your token. The other providers are still `MockProvider`s serving a fictional "acme" org (`core/.../provider/mock/MockFixtures.kt`) until their plugins land (see the project board).
 
 ## Modules
 
@@ -65,6 +65,8 @@ A request can also run once per item of an earlier list. `forEach` on a resource
 }
 ```
 
+A manifest can also ask for account `settings` besides the token, such as Vercel's optional team slug. `{@team}` fills them into requests and text fields. A query parameter that is only an unset optional setting is left out, and a text field can be a template like `"https://vercel.com/{@team}/{name}"`. Times in epoch milliseconds use the `millis` pipe, and a key on an array reads it from every item (`alias.domain`).
+
 Values filled into the path are percent-encoded whole, so they can't add path segments, and placeholders can't appear in the host. A fan-out sends at most 100 requests, four at a time; a parent whose list returns 404 just has no items.
 
 ## Layouts
@@ -89,7 +91,7 @@ Every chart has a **Table** toggle with the same numbers.
 
 ## Trying it
 
-- On the empty overview, **Try with demo data** connects one account per provider that still serves sample data (everything but Netlify).
-- Netlify needs a real personal access token. Add it under **Manage accounts**.
+- On the empty overview, **Try with demo data** connects one account per provider that still serves sample data (everything but Netlify and Vercel).
+- Netlify and Vercel need a real token. Add it under **Manage accounts**. For a Vercel team, also enter the team slug (the part after `vercel.com/` on the team's dashboard); leave it blank for your personal account.
 - For sample-data providers, any token with 8+ characters is accepted. A token starting with `fail-` makes that account fail every refresh with a rate-limit error, so you can see how one provider failing looks.
 - Widgets: long-press the home screen → Widgets → Dache.
