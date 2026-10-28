@@ -6,8 +6,6 @@ import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
-import dev.dache.core.security.TokenKey
-import dev.dache.core.security.TokenVault
 import dev.dache.plugin.api.PluginManifest
 import dev.dache.plugin.runtime.http.createPluginHttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -174,21 +172,4 @@ class ManifestProviderTest {
 
             assertIs<ProviderError.Unknown>(result.exceptionOrNull())
         }
-
-    private class MapTokenVault : TokenVault {
-        val tokens = mutableMapOf<TokenKey, String>()
-
-        override suspend fun put(
-            key: TokenKey,
-            token: String,
-        ) {
-            tokens[key] = token
-        }
-
-        override suspend fun get(key: TokenKey): String? = tokens[key]
-
-        override suspend fun delete(key: TokenKey) {
-            tokens.remove(key)
-        }
-    }
 }

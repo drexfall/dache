@@ -34,6 +34,12 @@ class InvalidResponseException(
     message: String,
 ) : Exception(message)
 
+/** A successful response: its JSON body, and headers for paging. */
+internal class JsonResponse(
+    val body: JsonElement,
+    val headers: Headers,
+)
+
 /**
  * Sends one plugin's GET requests. Every hop, redirects included, passes [HostGuard] before it is sent; the
  * token is injected per hop by [AuthInjector]; HTTP and network failures become [ProviderError]s.
@@ -56,14 +62,21 @@ internal class PluginHttp(
         url: Url,
         headers: Map<String, String>,
         secret: String,
-    ): JsonElement {
+    ): JsonElement = get(url, headers, secret).body
+
+    /** @throws ProviderError */
+    suspend fun get(
+        url: Url,
+        headers: Map<String, String>,
+        secret: String,
+    ): JsonResponse {
         val redactor = Redactor(manifest.auth, secret)
         var target = url
         repeat(MAX_REDIRECTS + 1) {
             val response = send(target, headers, secret, redactor)
             val location = response.headers[HttpHeaders.Location]
             if (response.status !in REDIRECT_CODES || location == null) return decode(response)
-            target = URLBuilder(target).takeFrom(location).build()
+            target = target.resolve(location)
         }
         throw ProviderError.Unknown(InvalidResponseException("too many redirects"))
     }
@@ -106,7 +119,7 @@ internal class PluginHttp(
         }
     }
 
-    private fun decode(response: RawResponse): JsonElement =
+    private fun decode(response: RawResponse): JsonResponse =
         when (response.status) {
             in SUCCESS_CODES ->
                 try {
@@ -114,6 +127,7 @@ internal class PluginHttp(
                 } catch (_: SerializationException) {
                     null
                 }.takeIf { it is JsonObject || it is JsonArray }
+                    ?.let { JsonResponse(it, response.headers) }
                     ?: throw ProviderError.Unknown(InvalidResponseException("response is not a JSON object or array"))
             UNAUTHORIZED -> throw ProviderError.Unauthorized()
             FORBIDDEN -> throw ProviderError.MissingScope(scope = null)
@@ -154,3 +168,17 @@ internal class PluginHttp(
         val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
     }
 }
+
+/**
+ * [reference] (absolute, or relative like `/sites?page=2`) resolved against this URL. Unlike a bare
+ * `URLBuilder.takeFrom`, the base URL's query isn't carried over, except for a fragment-only reference.
+ *
+ * @throws io.ktor.http.URLParserException
+ */
+internal fun Url.resolve(reference: String): Url =
+    URLBuilder(this)
+        .apply {
+            if (!reference.startsWith("#")) parameters.clear()
+            fragment = ""
+            takeFrom(reference)
+        }.build()

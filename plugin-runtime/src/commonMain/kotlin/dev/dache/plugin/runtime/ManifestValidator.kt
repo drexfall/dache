@@ -14,6 +14,7 @@ import dev.dache.plugin.runtime.mapping.FieldDef
 import dev.dache.plugin.runtime.mapping.FieldType
 import dev.dache.plugin.runtime.mapping.ManifestKind
 import dev.dache.plugin.runtime.mapping.Pipe
+import dev.dache.plugin.runtime.mapping.Template
 import dev.dache.plugin.runtime.security.HostGuard
 
 /** One thing wrong with a manifest. [path] points into the JSON, e.g. `resources[0].fields.name`. */
@@ -27,7 +28,8 @@ data class ManifestProblem(
 /**
  * Checks everything about a decoded manifest that the type system can't: ids, hosts, that every URL passes
  * [HostGuard], that the auth slot can't be overwritten by declared headers or query parameters, paging
- * limits, and that field mappings fit the target model and parse.
+ * limits, that placeholders only appear where there is an item to fill them, and that field mappings fit the
+ * target model and parse.
  */
 object ManifestValidator {
     const val MAX_PAGES = 50
@@ -58,7 +60,7 @@ object ManifestValidator {
         fun run(): List<ManifestProblem> {
             checkHeader()
             checkAuth()
-            checkRequest("validate.request", manifest.validate.request)
+            checkRequest("validate.request", manifest.validate.request, fannedOut = false)
             checkExpression("validate.displayName", manifest.validate.displayName)
             if (manifest.resources.isEmpty()) problem("resources", "declare at least one resource")
             manifest.resources.forEachIndexed { index, resource ->
@@ -75,10 +77,14 @@ object ManifestValidator {
                     if (kind.capability.name !in manifest.capabilities) {
                         problem("$path.kind", "kind ${kind.kindName} needs capability ${kind.capability.name}")
                     }
-                    checkFields("$path.fields", resource.fields, kind.fields)
+                    checkFields("$path.fields", resource.fields, kind.fields, topLevel = true)
                     checkStatusMap(path, resource.statusMap, resource.fields, kind.fields)
                 }
-                checkRequest("$path.request", resource.request)
+                resource.forEach?.let { parents ->
+                    checkRequest("$path.forEach.request", parents.request, fannedOut = false)
+                    parents.items?.let { checkExpression("$path.forEach.items", it) }
+                }
+                checkRequest("$path.request", resource.request, fannedOut = resource.forEach != null)
                 resource.items?.let { checkExpression("$path.items", it) }
             }
             return problems
@@ -119,13 +125,20 @@ object ManifestValidator {
             }
         }
 
+        /** [fannedOut]: the request is sent once per item of another list, so it may use placeholders. */
         private fun checkRequest(
             path: String,
             request: RequestSpec,
+            fannedOut: Boolean,
         ) {
             if (request.method != "GET") problem("$path.method", "only GET is supported")
-            guard.violation(request.url)?.let { problem("$path.url", it) }
-            if ('?' in request.url) problem("$path.url", "put query parameters in \"query\"")
+            urlProblems(request.url, fannedOut, guard).forEach { problem("$path.url", it) }
+            request.query.forEach { (name, value) ->
+                listOfNotNull(
+                    "parameter names can't have placeholders".takeIf { '{' in name || '}' in name },
+                    templateProblem(value, fannedOut),
+                ).forEach { problem("$path.query.$name", it) }
+            }
             request.headers.keys.forEach { name ->
                 val lower = name.lowercase()
                 if (!headerNamePattern.matches(name) ||
@@ -146,26 +159,34 @@ object ManifestValidator {
             paging: PagingSpec,
             request: RequestSpec,
         ) {
-            when (paging) {
-                is PagingSpec.Page -> {
-                    if (paging.maxPages !in 1..MAX_PAGES) problem("$path.maxPages", "must be 1..$MAX_PAGES")
-                    if (paging.size !in 1..MAX_PAGE_SIZE) problem("$path.size", "must be 1..$MAX_PAGE_SIZE")
-                    if (paging.start < 0) problem("$path.start", "must not be negative")
-                    val params = listOfNotNull(paging.param, paging.sizeParam)
-                    if (params.any { it.isBlank() } || params.size != params.toSet().size) {
-                        problem(path, "param and sizeParam must be distinct and not blank")
+            if (paging.maxPages !in 1..MAX_PAGES) problem("$path.maxPages", "must be 1..$MAX_PAGES")
+            if (paging.size !in 1..MAX_PAGE_SIZE) problem("$path.size", "must be 1..$MAX_PAGE_SIZE")
+            val params =
+                when (paging) {
+                    is PagingSpec.Page -> {
+                        if (paging.start < 0) problem("$path.start", "must not be negative")
+                        listOfNotNull(paging.param, paging.sizeParam)
                     }
-                    params
-                        .filter { it in request.query || it == manifest.auth.queryName() }
-                        .forEach { problem(path, "\"$it\" is also set elsewhere") }
+                    is PagingSpec.Cursor -> {
+                        checkExpression("$path.next", paging.next)
+                        listOfNotNull(paging.param, paging.sizeParam)
+                    }
+                    is PagingSpec.Link -> listOfNotNull(paging.sizeParam)
                 }
+            if (params.any { it.isBlank() } || params.size != params.toSet().size) {
+                problem(path, "param and sizeParam must be distinct and not blank")
             }
+            params
+                .filter { it in request.query || it == manifest.auth.queryName() }
+                .forEach { problem(path, "\"$it\" is also set elsewhere") }
         }
 
+        /** [topLevel]: fields of a resource, the only ones a nested request can be sent for. */
         private fun checkFields(
             path: String,
             fields: Map<String, FieldSpec>,
             schema: Map<String, FieldDef>,
+            topLevel: Boolean,
         ) {
             schema
                 .filter { (name, def) -> def.required && name !in fields }
@@ -175,7 +196,7 @@ object ManifestValidator {
                 if (def == null) {
                     problem("$path.$name", "unknown field; expected one of ${schema.keys.joinToString()}")
                 } else {
-                    checkField("$path.$name", spec, def)
+                    checkField("$path.$name", spec, def, topLevel)
                 }
             }
         }
@@ -184,6 +205,7 @@ object ManifestValidator {
             path: String,
             spec: FieldSpec,
             def: FieldDef,
+            topLevel: Boolean,
         ) {
             when (spec) {
                 is FieldSpec.Expr -> {
@@ -205,8 +227,12 @@ object ManifestValidator {
                 is FieldSpec.Nested ->
                     if (def.type == FieldType.RECORDS) {
                         checkExpression("$path.from", spec.from)
-                        checkFields("$path.fields", spec.fields, def.nested)
+                        checkFields("$path.fields", spec.fields, def.nested, topLevel = false)
                         checkStatusMap(path, spec.statusMap, spec.fields, def.nested)
+                        if (spec.request != null && !topLevel) {
+                            problem("$path.request", "only a resource's own fields can have a request")
+                        }
+                        spec.request?.takeIf { topLevel }?.let { checkRequest("$path.request", it, fannedOut = true) }
                     } else {
                         problem(path, "only record fields take a nested mapping")
                     }
@@ -244,6 +270,33 @@ object ManifestValidator {
             }
     }
 }
+
+/** [fannedOut]: the request is sent once per item of another list, so placeholders have something to fill them. */
+private fun urlProblems(
+    url: String,
+    fannedOut: Boolean,
+    guard: HostGuard,
+): List<String> {
+    val authorityEnd = url.indexOf('/', url.indexOf("://") + "://".length).takeIf { it >= 0 } ?: url.length
+    return listOfNotNull(
+        templateProblem(url, fannedOut),
+        runCatching { Template.parse(url) }.getOrNull()?.let { guard.violation(it.sample()) },
+        "put query parameters in \"query\"".takeIf { '?' in url },
+        "placeholders can only be in the path".takeIf { '{' in url.substring(0, authorityEnd) },
+    )
+}
+
+private fun templateProblem(
+    source: String,
+    fannedOut: Boolean,
+): String? =
+    try {
+        val placeholders = Template.parse(source).placeholders
+        "placeholders need an item to fill them; use forEach or a nested request"
+            .takeIf { !fannedOut && placeholders.isNotEmpty() }
+    } catch (e: ExpressionException) {
+        e.message.orEmpty()
+    }
 
 /** The lowercase header that carries the token, if any. */
 private fun AuthSpec.headerName(): String? =

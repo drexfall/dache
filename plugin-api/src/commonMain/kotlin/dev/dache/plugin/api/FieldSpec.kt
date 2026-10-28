@@ -33,12 +33,18 @@ sealed interface FieldSpec {
         val exprs: List<String>,
     ) : FieldSpec
 
-    /** Maps the object or array at [from] with [fields]. A single object becomes a one-item list. */
+    /**
+     * Maps the object or array at [from] with [fields]. A single object becomes a one-item list.
+     *
+     * With [request], the engine sends it once per item, its placeholders filled from that item, and [from] is
+     * read from the response instead of the item (e.g. a project's deployments from their own endpoint).
+     */
     @Serializable
     data class Nested(
         val from: String,
         val fields: Map<String, FieldSpec>,
         val statusMap: Map<String, String> = emptyMap(),
+        val request: RequestSpec? = null,
     ) : FieldSpec
 }
 

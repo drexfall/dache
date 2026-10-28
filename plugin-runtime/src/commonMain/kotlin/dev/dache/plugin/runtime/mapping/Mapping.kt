@@ -22,6 +22,7 @@ class Mapping(
         class Nested(
             val from: Expression,
             val mapping: Mapping,
+            val requested: Boolean,
         ) : Compiled
     }
 
@@ -34,13 +35,18 @@ class Mapping(
                     Compiled.Nested(
                         Expression.parse(spec.from),
                         Mapping(spec.fields, spec.statusMap),
+                        requested = spec.request != null,
                     )
             }
         }
 
-    /** Reads mapped fields from one item of a response. */
+    /**
+     * Reads mapped fields from one item of a response. [fetched] holds the items of each nested field that has
+     * its own request, fetched for this item; a requested field missing from it has no records.
+     */
     inner class Record(
         private val element: JsonElement,
+        private val fetched: Map<String, List<JsonElement>> = emptyMap(),
     ) {
         private fun value(field: String): Value? = (compiled[field] as? Compiled.Single)?.expression?.evaluate(element)
 
@@ -70,11 +76,17 @@ class Mapping(
 
         fun records(field: String): List<Mapping.Record> {
             val spec = compiled[field] as? Compiled.Nested ?: return emptyList()
-            return when (val value = spec.from.evaluate(element)) {
-                is Value.Items -> value.values.map { spec.mapping.Record(it) }
-                is Value.Record -> listOf(spec.mapping.Record(value.value))
-                else -> emptyList()
-            }
+            val items =
+                if (spec.requested) {
+                    fetched[field].orEmpty()
+                } else {
+                    when (val value = spec.from.evaluate(element)) {
+                        is Value.Items -> value.values
+                        is Value.Record -> listOf(value.value)
+                        else -> emptyList()
+                    }
+                }
+            return items.map { spec.mapping.Record(it) }
         }
     }
 }

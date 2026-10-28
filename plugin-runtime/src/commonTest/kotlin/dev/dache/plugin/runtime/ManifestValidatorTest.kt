@@ -2,8 +2,10 @@ package dev.dache.plugin.runtime
 
 import dev.dache.plugin.api.AuthSpec
 import dev.dache.plugin.api.FieldSpec
+import dev.dache.plugin.api.ListSpec
 import dev.dache.plugin.api.PagingSpec
 import dev.dache.plugin.api.PluginManifest
+import dev.dache.plugin.api.RequestSpec
 import dev.dache.plugin.api.ResourceSpec
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -109,6 +111,106 @@ class ManifestValidatorTest {
         assertProblem(
             "paging: \"filter\" is also set elsewhere",
             withSite { copy(request = request.copy(paging = PagingSpec.Page(param = "filter"))) },
+        )
+    }
+
+    @Test
+    fun cursorAndLinkPagingAreCheckedToo() {
+        assertProblem(
+            "paging.next: unknown pipe",
+            withSite {
+                copy(
+                    request = request.copy(paging = PagingSpec.Cursor(param = "until", next = "next | nope")),
+                )
+            },
+        )
+        assertProblem(
+            "paging: param and sizeParam must be distinct",
+            withSite {
+                copy(
+                    request = request.copy(paging = PagingSpec.Cursor(param = "c", next = "n", sizeParam = "c")),
+                )
+            },
+        )
+        assertProblem(
+            "paging.size: must be 1..1000",
+            withSite { copy(request = request.copy(paging = PagingSpec.Link(size = 0))) },
+        )
+        assertProblem(
+            "paging: \"filter\" is also set elsewhere",
+            withSite { copy(request = request.copy(paging = PagingSpec.Link(sizeParam = "filter"))) },
+        )
+    }
+
+    @Test
+    fun placeholdersNeedAnItemToFillThem() {
+        assertProblem(
+            "resources[0].request.url: placeholders need an item",
+            withSite { copy(request = request.copy(url = "https://api.example.com/sites/{id}")) },
+        )
+        assertProblem(
+            "validate.request.query.u: placeholders need an item",
+            valid.copy(
+                validate = valid.validate.copy(request = valid.validate.request.copy(query = mapOf("u" to "{id}"))),
+            ),
+        )
+        assertProblem(
+            "resources[0].forEach.request.url: placeholders need an item",
+            withSite {
+                copy(forEach = ListSpec(RequestSpec(url = "https://api.example.com/accounts/{id}")))
+            },
+        )
+    }
+
+    @Test
+    fun fannedOutRequestsMayUsePlaceholdersInThePathAndQuery() {
+        val manifest =
+            withSite {
+                copy(
+                    forEach = ListSpec(RequestSpec(url = "https://api.example.com/accounts"), items = "result"),
+                    request =
+                        request.copy(
+                            url = "https://api.example.com/accounts/{id}/sites",
+                            query =
+                                mapOf(
+                                    "o" to "{name}",
+                                ),
+                        ),
+                )
+            }
+
+        assertEquals(emptyList(), problems(manifest))
+    }
+
+    @Test
+    fun placeholdersCannotChooseTheHost() {
+        val parents = ListSpec(RequestSpec(url = "https://api.example.com/accounts"))
+        assertProblem(
+            "resources[0].request.url: placeholders can only be in the path",
+            withSite { copy(forEach = parents, request = request.copy(url = "https://{host}/sites")) },
+        )
+        assertProblem(
+            "resources[0].request.url: unmatched brace",
+            withSite { copy(forEach = parents, request = request.copy(url = "https://api.example.com/{id/sites")) },
+        )
+        assertProblem(
+            "resources[0].request.query.{id}: parameter names can't have placeholders",
+            withSite { copy(forEach = parents, request = request.copy(query = mapOf("{id}" to "x"))) },
+        )
+    }
+
+    @Test
+    fun nestedRequestsAreCheckedLikeAnyOther() {
+        val deployments = site.fields["deployments"]
+        assertIs<FieldSpec.Nested>(deployments)
+
+        fun withRequest(url: String) =
+            withFields { put("deployments", deployments.copy(request = RequestSpec(url = url))) }
+
+        assertEquals(emptyList(), problems(withRequest("https://api.example.com/sites/{id}/deploys")))
+        assertProblem(
+            "fields.deployments.request.url: host evil.example.net is not declared",
+            withRequest("https://evil.example.net/sites/{id}/deploys"),
         )
     }
 

@@ -134,6 +134,23 @@ class PluginHttpTest {
         }
 
     @Test
+    fun redirectTargetDoesNotKeepTheOriginalQuery() =
+        runTest {
+            val http =
+                http { request ->
+                    if (request.url.encodedPath == "/user") {
+                        json("", HttpStatusCode.Found, mapOf(HttpHeaders.Location to "/v2/user?page=2"))
+                    } else {
+                        json("""{"ok":true}""")
+                    }
+                }
+
+            http.getJson(Url("https://api.example.com/user?page=1&filter=all"), emptyMap(), secret)
+
+            assertEquals("page=2", requests.last().url.encodedQuery)
+        }
+
+    @Test
     fun refusesRedirectsToOtherHostsWithoutSendingAnything() =
         runTest {
             val http =

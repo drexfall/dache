@@ -33,17 +33,33 @@ data class ValidateSpec(
 /**
  * One list endpoint and how each of its items becomes a unified model of [kind].
  * [items] is the path to the array in the response; null means the response itself is the array.
+ *
+ * With [forEach], [request] is sent once per item of that earlier list (e.g. Pages projects per account), and
+ * its `{expression}` placeholders are filled from that item.
  */
 @Serializable
 data class ResourceSpec(
     val kind: String,
     val request: RequestSpec,
     val items: String? = null,
+    val forEach: ListSpec? = null,
     val fields: Map<String, FieldSpec>,
     /** Provider status string to `DeployStatus` name, applied to the `status` field. */
     val statusMap: Map<String, String> = emptyMap(),
 )
 
+/** A list endpoint on its own: the request and the path to the array in its response, null for the response. */
+@Serializable
+data class ListSpec(
+    val request: RequestSpec,
+    val items: String? = null,
+)
+
+/**
+ * A GET request. When it is sent once per item of another list, [url] path segments and [query] values may hold
+ * `{expression}` placeholders evaluated against that item, e.g. `/projects/{id}/deployments`. Values filled into
+ * the path are percent-encoded whole, so they can't add path segments.
+ */
 @Serializable
 data class RequestSpec(
     val url: String,

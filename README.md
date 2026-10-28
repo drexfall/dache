@@ -53,6 +53,20 @@ A plugin is a JSON manifest, not code. It declares the exact hosts it may call (
 
 Expressions are a dot path into the response (`build_settings.repo_url`, `items.0.id`) followed by pipes: `host`, `lower`, `date` and `default:<text>`. See `plugin-registry/manifests/netlify.json` for a complete example.
 
+Paging is `page` (numbered pages), `cursor` (an expression such as `pagination.next` names the next cursor) or `link` (follows the `Link: rel="next"` header). Every style stops after `maxPages`.
+
+A request can also run once per item of an earlier list. `forEach` on a resource lists parents first (Cloudflare accounts, say) and sends the resource request per parent; a `request` on a nested field fetches that field per item (a project's deployments). Placeholders fill the path and query values from that item:
+
+```json
+"deployments": {
+  "request": { "url": "https://api.example.com/v6/deployments", "query": { "projectId": "{id}" } },
+  "from": "deployments",
+  "fields": { "nativeId": "uid", "createdAt": "created | date" }
+}
+```
+
+Values filled into the path are percent-encoded whole, so they can't add path segments, and placeholders can't appear in the host. A fan-out sends at most 100 requests, four at a time; a parent whose list returns 404 just has no items.
+
 ## Layouts
 
 The layout follows window width, not platform, so a narrow desktop window gets the phone UI.
