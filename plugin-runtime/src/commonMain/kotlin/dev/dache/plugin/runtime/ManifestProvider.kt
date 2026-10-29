@@ -8,7 +8,6 @@ import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
-import dev.dache.core.model.Site
 import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.security.TokenVault
 import dev.dache.plugin.api.FieldSpec
@@ -78,14 +77,19 @@ class ManifestProvider(
         attempt {
             val token = vault.get(account.tokenKey()) ?: throw ProviderError.Unauthorized()
             val context = AccountContext(token, account.settings)
-            val sites = mutableListOf<Site>()
-            resources.forEach { resource ->
+            val binder = Binder(id, account.id)
+            resources.fold(ProviderSnapshot()) { snapshot, resource ->
                 val records = records(resource, items(resource, context), context)
                 when (resource.kind) {
-                    ManifestKind.SITE -> sites += records.mapNotNull { Binder.site(it, id, account.id) }
+                    ManifestKind.SITE -> snapshot.copy(sites = snapshot.sites + records.mapNotNull(binder::site))
+                    ManifestKind.DOMAIN ->
+                        snapshot.copy(domains = snapshot.domains + records.mapNotNull(binder::domain))
+                    ManifestKind.DNS_RECORD ->
+                        snapshot.copy(dnsRecords = snapshot.dnsRecords + records.mapNotNull(binder::dnsRecord))
+                    ManifestKind.WORKER ->
+                        snapshot.copy(workers = snapshot.workers + records.mapNotNull(binder::worker))
                 }
             }
-            ProviderSnapshot(sites = sites)
         }
 
     private suspend fun items(

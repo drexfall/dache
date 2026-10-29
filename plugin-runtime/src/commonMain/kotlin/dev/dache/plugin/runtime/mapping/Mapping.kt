@@ -1,6 +1,5 @@
 package dev.dache.plugin.runtime.mapping
 
-import dev.dache.core.model.DeployStatus
 import dev.dache.plugin.api.FieldSpec
 import kotlinx.serialization.json.JsonElement
 import kotlin.time.Instant
@@ -59,12 +58,8 @@ class Mapping(
 
         fun time(field: String): Instant? = value(field)?.asInstant()
 
-        /** Unmapped and unlisted provider values are [DeployStatus.UNKNOWN]. */
-        fun status(field: String): DeployStatus =
-            text(field)
-                ?.let(statusMap::get)
-                ?.let { name -> DeployStatus.entries.firstOrNull { it.name == name } }
-                ?: DeployStatus.UNKNOWN
+        /** The status name [field]'s provider value maps to; null when it is missing or not in the statusMap. */
+        fun status(field: String): String? = text(field)?.let(statusMap::get)
 
         fun textList(field: String): List<String> =
             when (val spec = compiled[field]) {

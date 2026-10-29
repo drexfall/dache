@@ -1,7 +1,6 @@
 package dev.dache.plugin.runtime
 
 import dev.dache.core.model.Capability
-import dev.dache.core.model.DeployStatus
 import dev.dache.plugin.api.AuthSpec
 import dev.dache.plugin.api.FieldSpec
 import dev.dache.plugin.api.ManifestJson
@@ -235,15 +234,18 @@ object ManifestValidator {
             fields: Map<String, FieldSpec>,
             schema: Map<String, FieldDef>,
         ) {
-            val mapsStatus = fields.keys.any { schema[it]?.type == FieldType.STATUS }
-            if (mapsStatus && statusMap.isEmpty()) problem("$path.statusMap", "map provider states to a status")
-            if (!mapsStatus && statusMap.isNotEmpty()) problem("$path.statusMap", "no status field to apply it to")
+            val statuses =
+                fields.keys.firstNotNullOfOrNull {
+                    schema[it]?.takeIf { def ->
+                        def.type == FieldType.STATUS
+                    }
+                }
+            if (statuses != null && statusMap.isEmpty()) problem("$path.statusMap", "map provider states to a status")
+            if (statuses == null && statusMap.isNotEmpty()) problem("$path.statusMap", "no status field to apply it to")
+            val allowed = statuses?.statuses.orEmpty()
             statusMap.forEach { (from, to) ->
-                if (DeployStatus.entries.none { it.name == to }) {
-                    problem(
-                        "$path.statusMap.$from",
-                        "unknown status \"$to\"; use one of ${DeployStatus.entries.joinToString { it.name }}",
-                    )
+                if (statuses != null && to !in allowed) {
+                    problem("$path.statusMap.$from", "unknown status \"$to\"; use one of ${allowed.joinToString()}")
                 }
             }
         }

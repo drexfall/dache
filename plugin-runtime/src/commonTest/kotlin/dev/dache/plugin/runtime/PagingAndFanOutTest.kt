@@ -274,6 +274,37 @@ class PagingAndFanOutTest {
             assertIs<ProviderError.NotFound>(result.exceptionOrNull())
         }
 
+    @Test
+    fun fannedOutItemsReadTheirParentAsCaret() =
+        runTest {
+            val resource =
+                """
+                {
+                  "kind": "site",
+                  "forEach": { "request": { "url": "https://api.example.com/accounts" }, "items": "result" },
+                  "request": { "url": "https://api.example.com/accounts/{id}/projects" },
+                  "items": "result",
+                  "fields": {
+                    "nativeId": "id",
+                    "name": "^.name",
+                    "webUrl": "https://dash.example.com/{^.id}/{id}",
+                    "primaryUrl": "url"
+                  }
+                }
+                """.trimIndent()
+
+            val sites =
+                fetch(resource) { request ->
+                    when (request.url.encodedPath) {
+                        "/accounts" -> json("""{"result": [{"id": "a1", "name": "One"}]}""")
+                        else -> json("""{"result": ${sites("x")}}""")
+                    }
+                }.getOrThrow()
+
+            assertEquals("One", sites.single().name)
+            assertEquals("https://dash.example.com/a1/x", sites.single().webUrl)
+        }
+
     private val deploymentsPerSiteResource =
         """
         {

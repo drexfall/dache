@@ -20,6 +20,7 @@ enum class ResourceKind {
     DNS_RECORD,
     CI_RUN,
     SERVER,
+    WORKER,
     MONITOR,
 }
 

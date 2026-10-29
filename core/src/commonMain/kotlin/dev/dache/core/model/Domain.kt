@@ -10,9 +10,30 @@ data class Domain(
     override val webUrl: String,
     val name: String,
     val expiresAt: Instant?,
+    /** TLS certificates the provider manages for the domain, empty when it doesn't report them. */
+    val certificates: List<Certificate> = emptyList(),
 ) : Resource {
     override val kind: ResourceKind get() = ResourceKind.DOMAIN
     override val displayName: String get() = name
+}
+
+/** A TLS certificate covering [hosts]. [expiresAt] is null until one is issued. */
+data class Certificate(
+    val nativeId: String,
+    val status: CertificateStatus,
+    val hosts: List<String>,
+    val expiresAt: Instant?,
+)
+
+enum class CertificateStatus {
+    ACTIVE,
+    PENDING,
+    EXPIRED,
+    FAILED,
+
+    /** Deleted or switched off; it isn't serving and isn't meant to. */
+    INACTIVE,
+    UNKNOWN,
 }
 
 data class DnsRecord(

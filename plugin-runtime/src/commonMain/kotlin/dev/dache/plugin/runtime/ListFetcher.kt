@@ -21,6 +21,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 
 /** Most items one fan-out sends requests for. Items past it are left out, which bounds requests per refresh. */
 internal const val MAX_FAN_OUT = 100
@@ -77,8 +78,9 @@ internal class ListFetcher(
     private val http: PluginHttp,
 ) {
     /**
-     * With [parent], the list is one branch of a fan-out: placeholders are filled from [parent], and a parent that
-     * can't fill them, or whose list is gone (404), has no items rather than failing the whole refresh.
+     * With [parent], the list is one branch of a fan-out: placeholders are filled from [parent], each item carries
+     * it under `^`, and a parent that can't fill them, or whose list is gone (404), has no items rather than
+     * failing the whole refresh.
      *
      * @throws ProviderError
      */
@@ -89,18 +91,24 @@ internal class ListFetcher(
     ): List<JsonElement> {
         val first = list.url(parent, account.settings) ?: return emptyList()
         val token = account.token
-        return try {
-            when (val paging = list.paging) {
-                null -> list.items(http.getJson(first, list.headers, token))
-                is PagingSpec.Page -> numbered(list, paging, first, token)
-                is PagingSpec.Cursor -> cursor(list, paging, first, token)
-                is PagingSpec.Link -> linked(list, paging, first, token)
+        val items =
+            try {
+                when (val paging = list.paging) {
+                    null -> list.items(http.getJson(first, list.headers, token))
+                    is PagingSpec.Page -> numbered(list, paging, first, token)
+                    is PagingSpec.Cursor -> cursor(list, paging, first, token)
+                    is PagingSpec.Link -> linked(list, paging, first, token)
+                }
+            } catch (e: ProviderError.NotFound) {
+                if (parent == null) throw e
+                emptyList()
             }
-        } catch (e: ProviderError.NotFound) {
-            if (parent == null) throw e
-            emptyList()
-        }
+        return if (parent == null) items else items.map { it.withParent(parent) }
     }
+
+    /** An object item carries [parent] under `^`, so expressions can read it (`^.name`). */
+    private fun JsonElement.withParent(parent: JsonElement): JsonElement =
+        (this as? JsonObject)?.let { JsonObject(it + (Expression.PARENT to parent)) } ?: this
 
     /** Stops at a short page (or an empty one when the page size isn't sent), or after `maxPages`. */
     private suspend fun numbered(

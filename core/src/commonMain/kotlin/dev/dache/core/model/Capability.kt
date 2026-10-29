@@ -8,5 +8,6 @@ enum class Capability {
     DNS,
     CI,
     SERVERS,
+    WORKERS,
     MONITORS,
 }

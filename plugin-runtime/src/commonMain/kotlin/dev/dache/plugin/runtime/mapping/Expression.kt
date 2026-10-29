@@ -11,6 +11,9 @@ import kotlinx.serialization.json.JsonObject
  * The path is dot-separated keys, with numeric segments indexing into arrays (`deploys.0.id`). A key applied to
  * an array reads it from every object in the array (`alias.domain` is each alias's domain), skipping the ones
  * without it. `$` alone is the element itself. Pipes run left to right.
+ *
+ * An item fetched once per item of another list (a fan-out or a nested request) carries that item as `^`, so
+ * `^.name` is the parent's name and `^.^.id` its parent's id.
  */
 class Expression private constructor(
     val source: String,
@@ -48,7 +51,10 @@ class Expression private constructor(
     override fun toString(): String = source
 
     companion object {
-        private val keyPattern = Regex("[A-Za-z_][A-Za-z0-9_-]*|[0-9]+")
+        /** The key a fanned-out item keeps the item it was fetched for under. */
+        const val PARENT = "^"
+
+        private val keyPattern = Regex("[A-Za-z_][A-Za-z0-9_-]*|[0-9]+|\\^")
 
         /** @throws ExpressionException with a message that says what is wrong with [source]. */
         fun parse(source: String): Expression {
