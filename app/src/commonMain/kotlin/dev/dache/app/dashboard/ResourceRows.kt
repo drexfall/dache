@@ -40,6 +40,7 @@ import dev.dache.app.ui.components.StatusTone
 import dev.dache.app.ui.components.relativeTime
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.dashboard.DashboardSummary
+import dev.dache.core.model.CertificateStatus
 import dev.dache.core.model.CiRun
 import dev.dache.core.model.DnsRecord
 import dev.dache.core.model.Domain
@@ -47,6 +48,7 @@ import dev.dache.core.model.Monitor
 import dev.dache.core.model.Resource
 import dev.dache.core.model.Server
 import dev.dache.core.model.Site
+import dev.dache.core.model.Worker
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Clock
 
@@ -100,12 +102,22 @@ fun DomainRow(
             stringResource(Res.string.domain_no_expiry)
         }
     val expiring = expiresAt != null && expiresAt - now <= DashboardSummary.EXPIRY_WINDOW
+    val brokenCertificate =
+        domain.certificates.firstOrNull {
+            it.status == CertificateStatus.FAILED ||
+                it.status == CertificateStatus.EXPIRED
+        }
     ResourceRow(
         resource = domain,
         state = state,
         title = domain.name,
         summary = listOf("${domain.providerId.displayName}$SEPARATOR$expiry"),
-        trailing = { if (expiring) StatusChip(StatusTone.UNKNOWN, Res.string.status_expiring) },
+        trailing = {
+            when {
+                brokenCertificate != null -> StatusChip(brokenCertificate.status)
+                expiring -> StatusChip(StatusTone.UNKNOWN, Res.string.status_expiring)
+            }
+        },
     ) { DomainDetails(domain, expiry) }
 }
 
@@ -137,6 +149,23 @@ fun ServerRow(
             ),
         trailing = { StatusChip(server.status) },
     ) { ServerDetails(server) }
+}
+
+@Composable
+fun WorkerRow(
+    worker: Worker,
+    state: DashboardState,
+) {
+    ResourceRow(
+        resource = worker,
+        state = state,
+        title = worker.name,
+        summary =
+            listOf(
+                listOfNotNull(worker.providerId.displayName, worker.modifiedAt?.let { relativeTime(it) })
+                    .joinToString(SEPARATOR),
+            ) + worker.routes.take(1),
+    ) { WorkerDetails(worker) }
 }
 
 @Composable

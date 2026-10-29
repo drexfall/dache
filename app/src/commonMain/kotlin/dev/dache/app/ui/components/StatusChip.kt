@@ -34,6 +34,7 @@ import dev.dache.app.resources.status_success
 import dev.dache.app.resources.status_unknown
 import dev.dache.app.resources.status_up
 import dev.dache.app.ui.theme.LocalStatusColors
+import dev.dache.core.model.CertificateStatus
 import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.MonitorStatus
 import dev.dache.core.model.ServerStatus
@@ -110,6 +111,22 @@ fun StatusChip(
             ServerStatus.UNKNOWN -> StatusTone.UNKNOWN to Res.string.status_unknown
         }
     StatusChip(tone, label, modifier)
+}
+
+@Composable
+fun StatusChip(
+    status: CertificateStatus,
+    modifier: Modifier = Modifier,
+) {
+    val tone =
+        when (status) {
+            CertificateStatus.ACTIVE -> StatusTone.SUCCESS
+            CertificateStatus.PENDING -> StatusTone.BUILDING
+            CertificateStatus.EXPIRED, CertificateStatus.FAILED -> StatusTone.FAILED
+            CertificateStatus.INACTIVE -> StatusTone.CANCELLED
+            CertificateStatus.UNKNOWN -> StatusTone.UNKNOWN
+        }
+    StatusChip(tone, certificateStatusText(status), modifier)
 }
 
 @Composable

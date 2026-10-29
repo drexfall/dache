@@ -14,19 +14,24 @@ import androidx.compose.ui.unit.dp
 import dev.dache.app.dashboard.charts.EventList
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.detail_branch
+import dev.dache.app.resources.detail_certificate
+import dev.dache.app.resources.detail_certificates
 import dev.dache.app.resources.detail_commit
 import dev.dache.app.resources.detail_content
 import dev.dache.app.resources.detail_domains
 import dev.dache.app.resources.detail_duration
 import dev.dache.app.resources.detail_expires
 import dev.dache.app.resources.detail_ip
+import dev.dache.app.resources.detail_modified
 import dev.dache.app.resources.detail_name
+import dev.dache.app.resources.detail_no_routes
 import dev.dache.app.resources.detail_recent_deploys
 import dev.dache.app.resources.detail_recent_runs
 import dev.dache.app.resources.detail_region
 import dev.dache.app.resources.detail_repo
 import dev.dache.app.resources.detail_response_24h
 import dev.dache.app.resources.detail_response_range
+import dev.dache.app.resources.detail_routes
 import dev.dache.app.resources.detail_started
 import dev.dache.app.resources.detail_type
 import dev.dache.app.resources.detail_uptime_30d
@@ -35,17 +40,20 @@ import dev.dache.app.resources.detail_zone
 import dev.dache.app.resources.link_open_repo
 import dev.dache.app.resources.link_visit
 import dev.dache.app.ui.components.ExternalLinkIconButton
+import dev.dache.app.ui.components.certificateStatusLabel
 import dev.dache.app.ui.components.formatDay
 import dev.dache.app.ui.components.formatHour
 import dev.dache.app.ui.components.rememberValueFormats
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.dashboard.StatusEvent
+import dev.dache.core.model.CertificateStatus
 import dev.dache.core.model.CiRun
 import dev.dache.core.model.DnsRecord
 import dev.dache.core.model.Domain
 import dev.dache.core.model.Monitor
 import dev.dache.core.model.Server
 import dev.dache.core.model.Site
+import dev.dache.core.model.Worker
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Instant
 
@@ -175,6 +183,18 @@ fun DomainDetails(
             stringResource(Res.string.detail_expires),
             domain.expiresAt?.let { "${formatDay(it)} · $expiry" } ?: expiry,
         )
+        val certificates = domain.certificates.filter { it.status != CertificateStatus.INACTIVE }
+        if (certificates.isNotEmpty()) {
+            DetailHeading(stringResource(Res.string.detail_certificates))
+            certificates.forEach { certificate ->
+                val status = certificateStatusLabel(certificate.status)
+                DetailLine(
+                    certificate.hosts.joinToString(", ").ifEmpty { domain.name },
+                    certificate.expiresAt?.let { stringResource(Res.string.detail_certificate, status, formatDay(it)) }
+                        ?: status,
+                )
+            }
+        }
     }
 }
 
@@ -193,6 +213,17 @@ fun ServerDetails(server: Server) {
     Column {
         DetailLine(stringResource(Res.string.detail_region), server.region)
         server.publicIpv4?.let { DetailLine(stringResource(Res.string.detail_ip), it) }
+    }
+}
+
+@Composable
+fun WorkerDetails(worker: Worker) {
+    Column {
+        DetailLine(
+            stringResource(Res.string.detail_routes),
+            worker.routes.joinToString("\n").ifEmpty { stringResource(Res.string.detail_no_routes) },
+        )
+        worker.modifiedAt?.let { DetailLine(stringResource(Res.string.detail_modified), dateTime(it)) }
     }
 }
 

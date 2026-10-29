@@ -22,6 +22,7 @@ import dev.dache.app.resources.stat_of_total
 import dev.dache.app.resources.stat_runs
 import dev.dache.app.resources.stat_servers_running
 import dev.dache.app.resources.stat_sites
+import dev.dache.app.resources.stat_workers
 import dev.dache.app.resources.stat_workflows
 import dev.dache.app.ui.components.ValueFormats
 import dev.dache.app.ui.components.deployStatusLabel
@@ -66,6 +67,15 @@ fun accountStats(
             add(Stat(stringResource(Res.string.stat_account_balance), money(billing.accountBalance), details = spend))
         }
         if (snapshot.monitors.isNotEmpty()) addAll(monitorStats(snapshot, formats))
+        if (snapshot.workers.isNotEmpty()) {
+            add(
+                Stat(
+                    stringResource(Res.string.stat_workers),
+                    snapshot.workers.size.toString(),
+                    details = snapshot.workers.map { StatDetail(it.name, it.routes.firstOrNull()) },
+                ),
+            )
+        }
         if (snapshot.domains.isNotEmpty()) {
             add(
                 Stat(

@@ -1,0 +1,152 @@
+{
+  "manifestVersion": 1,
+  "id": "cloudflare",
+  "name": "Cloudflare",
+  "version": "1.0.0",
+  "hosts": ["api.cloudflare.com"],
+  "auth": { "type": "bearer" },
+  "capabilities": ["DOMAINS", "DNS", "SITES", "DEPLOYMENTS", "WORKERS"],
+  "validate": {
+    "request": { "url": "https://api.cloudflare.com/client/v4/accounts", "query": { "per_page": "5" } },
+    "displayName": "result.0.name | default:Cloudflare"
+  },
+  "resources": [
+    {
+      "kind": "domain",
+      "request": {
+        "url": "https://api.cloudflare.com/client/v4/zones",
+        "paging": { "type": "page", "sizeParam": "per_page", "size": 50, "maxPages": 10 }
+      },
+      "items": "result",
+      "fields": {
+        "nativeId": "id",
+        "name": "name",
+        "webUrl": "https://dash.cloudflare.com/{account.id}/{name}",
+        "certificates": {
+          "request": {
+            "url": "https://api.cloudflare.com/client/v4/zones/{id}/ssl/certificate_packs",
+            "query": { "status": "all" }
+          },
+          "from": "result",
+          "fields": {
+            "nativeId": "id",
+            "status": "status",
+            "hosts": "hosts",
+            "expiresAt": "certificates.0.expires_on | date"
+          },
+          "statusMap": {
+            "active": "ACTIVE",
+            "staging_active": "ACTIVE",
+            "backup_issued": "ACTIVE",
+            "initializing": "PENDING",
+            "pending_validation": "PENDING",
+            "pending_issuance": "PENDING",
+            "pending_deployment": "PENDING",
+            "staging_deployment": "PENDING",
+            "holding_deployment": "PENDING",
+            "pending_expiration": "ACTIVE",
+            "expired": "EXPIRED",
+            "initializing_timed_out": "FAILED",
+            "validation_timed_out": "FAILED",
+            "issuance_timed_out": "FAILED",
+            "deployment_timed_out": "FAILED",
+            "deletion_timed_out": "FAILED",
+            "deleted": "INACTIVE",
+            "pending_deletion": "INACTIVE",
+            "pending_cleanup": "INACTIVE",
+            "deactivating": "INACTIVE",
+            "inactive": "INACTIVE"
+          }
+        }
+      }
+    },
+    {
+      "kind": "dnsRecord",
+      "forEach": {
+        "request": {
+          "url": "https://api.cloudflare.com/client/v4/zones",
+          "paging": { "type": "page", "sizeParam": "per_page", "size": 50, "maxPages": 10 }
+        },
+        "items": "result"
+      },
+      "request": {
+        "url": "https://api.cloudflare.com/client/v4/zones/{id}/dns_records",
+        "paging": { "type": "page", "sizeParam": "per_page", "size": 500, "maxPages": 10 }
+      },
+      "items": "result",
+      "fields": {
+        "nativeId": "id",
+        "webUrl": "https://dash.cloudflare.com/{^.account.id}/{^.name}/dns/records",
+        "zoneName": "^.name",
+        "type": "type",
+        "name": "name",
+        "content": "content"
+      }
+    },
+    {
+      "kind": "site",
+      "forEach": {
+        "request": {
+          "url": "https://api.cloudflare.com/client/v4/accounts",
+          "paging": { "type": "page", "sizeParam": "per_page", "size": 50, "maxPages": 4 }
+        },
+        "items": "result"
+      },
+      "request": {
+        "url": "https://api.cloudflare.com/client/v4/accounts/{id}/pages/projects",
+        "paging": { "type": "page", "sizeParam": "per_page", "size": 10, "maxPages": 10 }
+      },
+      "items": "result",
+      "fields": {
+        "nativeId": "id",
+        "name": "name",
+        "webUrl": "https://dash.cloudflare.com/{^.id}/pages/view/{name}",
+        "primaryUrl": "https://{subdomain}",
+        "customDomains": "domains",
+        "repoUrl": "https://{source.type}.com/{source.config.owner}/{source.config.repo_name}",
+        "deployments": {
+          "request": {
+            "url": "https://api.cloudflare.com/client/v4/accounts/{^.id}/pages/projects/{name}/deployments",
+            "query": { "per_page": "10" }
+          },
+          "from": "result",
+          "fields": {
+            "nativeId": "id",
+            "webUrl": "https://dash.cloudflare.com/{^.^.id}/pages/view/{^.name}/{id}",
+            "status": "latest_stage.status",
+            "branch": "deployment_trigger.metadata.branch",
+            "commitMessage": "deployment_trigger.metadata.commit_message",
+            "createdAt": "created_on | date"
+          },
+          "statusMap": {
+            "success": "SUCCESS",
+            "failure": "FAILED",
+            "canceled": "CANCELLED",
+            "skipped": "CANCELLED",
+            "active": "BUILDING",
+            "idle": "BUILDING"
+          }
+        }
+      }
+    },
+    {
+      "kind": "worker",
+      "forEach": {
+        "request": {
+          "url": "https://api.cloudflare.com/client/v4/accounts",
+          "paging": { "type": "page", "sizeParam": "per_page", "size": 50, "maxPages": 4 }
+        },
+        "items": "result"
+      },
+      "request": { "url": "https://api.cloudflare.com/client/v4/accounts/{id}/workers/scripts" },
+      "items": "result",
+      "fields": {
+        "nativeId": "id",
+        "name": "id",
+        "webUrl": "https://dash.cloudflare.com/{^.id}/workers/services/view/{id}/production",
+        "routes": "routes.pattern",
+        "modifiedAt": "modified_on | date"
+      }
+    }
+  ]
+}

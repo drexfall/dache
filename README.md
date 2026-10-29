@@ -2,7 +2,7 @@
 
 One dashboard for the hosting, DNS, CI, server and uptime services you use. Kotlin Multiplatform: Android and Linux desktop share one Compose UI.
 
-**Status: Phase 1b.** Netlify and Vercel are real: they run as declarative plugins through the manifest engine and talk to the provider's API with your token. The other providers are still `MockProvider`s serving a fictional "acme" org (`core/.../provider/mock/MockFixtures.kt`) until their plugins land (see the project board).
+**Status: Phase 1b.** Netlify, Vercel and Cloudflare are real: they run as declarative plugins through the manifest engine and talk to the provider's API with your token. The other providers are still `MockProvider`s serving a fictional "acme" org (`core/.../provider/mock/MockFixtures.kt`) until their plugins land (see the project board).
 
 ## Modules
 
@@ -55,7 +55,9 @@ Expressions are a dot path into the response (`build_settings.repo_url`, `items.
 
 Paging is `page` (numbered pages), `cursor` (an expression such as `pagination.next` names the next cursor) or `link` (follows the `Link: rel="next"` header). Every style stops after `maxPages`.
 
-A request can also run once per item of an earlier list. `forEach` on a resource lists parents first (Cloudflare accounts, say) and sends the resource request per parent; a `request` on a nested field fetches that field per item (a project's deployments). Placeholders fill the path and query values from that item:
+A resource's `kind` is `site`, `domain` (with TLS `certificates` as nested records), `dnsRecord` or `worker`. Each status field has a `statusMap` from the provider's values to Dache's, e.g. `DeployStatus` names for deployments and `CertificateStatus` names for certificates.
+
+A request can also run once per item of an earlier list. `forEach` on a resource lists parents first (Cloudflare accounts, say) and sends the resource request per parent; a `request` on a nested field fetches that field per item (a project's deployments). Placeholders fill the path and query values from that item, and every item fetched this way carries its parent as `^`, so `^.name` is the zone a DNS record came from and `^.^.id` reaches two levels up:
 
 ```json
 "deployments": {
@@ -91,7 +93,7 @@ Every chart has a **Table** toggle with the same numbers.
 
 ## Trying it
 
-- On the empty overview, **Try with demo data** connects one account per provider that still serves sample data (everything but Netlify and Vercel).
-- Netlify and Vercel need a real token. Add it under **Manage accounts**. For a Vercel team, also enter the team slug (the part after `vercel.com/` on the team's dashboard); leave it blank for your personal account.
+- On the empty overview, **Try with demo data** connects one account per provider that still serves sample data (everything but Netlify, Vercel and Cloudflare).
+- Netlify, Vercel and Cloudflare need a real token. Add it under **Manage accounts**. For a Vercel team, also enter the team slug (the part after `vercel.com/` on the team's dashboard); leave it blank for your personal account.
 - For sample-data providers, any token with 8+ characters is accepted. A token starting with `fail-` makes that account fail every refresh with a rate-limit error, so you can see how one provider failing looks.
 - Widgets: long-press the home screen → Widgets → Dache.

@@ -25,6 +25,7 @@ import dev.dache.app.resources.section_domains
 import dev.dache.app.resources.section_monitors
 import dev.dache.app.resources.section_servers
 import dev.dache.app.resources.section_sites
+import dev.dache.app.resources.section_workers
 import dev.dache.app.ui.components.ExpandableBody
 import dev.dache.app.ui.components.ExpandableHeader
 import dev.dache.core.dashboard.DashboardState
@@ -45,39 +46,26 @@ fun resourceSections(
     val domains = snapshots.flatMap { it.domains }
     val records = snapshots.flatMap { it.dnsRecords }
     val servers = snapshots.flatMap { it.servers }
+    val workers = snapshots.flatMap { it.workers }
     val monitors = snapshots.flatMap { it.monitors }.sortedBy { it.status != MonitorStatus.DOWN }
     return buildList {
-        if (sites.isNotEmpty()) {
-            add {
-                SectionCard(Res.string.section_sites, sites.size) { sites.forEach { SiteRow(it, state) } }
-            }
-        }
-        if (runs.isNotEmpty()) {
-            add {
-                SectionCard(
-                    Res.string.section_ci,
-                    runs.size,
-                ) { runs.forEach { CiRunRow(it, state) } }
-            }
-        }
-        if (monitors.isNotEmpty()) {
-            add {
-                SectionCard(
-                    Res.string.section_monitors,
-                    monitors.size,
-                ) { monitors.forEach { MonitorRow(it, state) } }
-            }
-        }
-        if (servers.isNotEmpty()) {
-            add { SectionCard(Res.string.section_servers, servers.size) { servers.forEach { ServerRow(it, state) } } }
-        }
-        if (domains.isNotEmpty()) {
-            add { SectionCard(Res.string.section_domains, domains.size) { domains.forEach { DomainRow(it, state) } } }
-        }
-        if (records.isNotEmpty()) {
-            add { SectionCard(Res.string.section_dns, records.size) { records.forEach { DnsRecordRow(it, state) } } }
-        }
+        section(Res.string.section_sites, sites) { SiteRow(it, state) }
+        section(Res.string.section_ci, runs) { CiRunRow(it, state) }
+        section(Res.string.section_monitors, monitors) { MonitorRow(it, state) }
+        section(Res.string.section_servers, servers) { ServerRow(it, state) }
+        section(Res.string.section_workers, workers) { WorkerRow(it, state) }
+        section(Res.string.section_domains, domains) { DomainRow(it, state) }
+        section(Res.string.section_dns, records) { DnsRecordRow(it, state) }
     }
+}
+
+/** Adds a card for [items] unless there are none. */
+private fun <T> MutableList<@Composable () -> Unit>.section(
+    title: StringResource,
+    items: List<T>,
+    row: @Composable (T) -> Unit,
+) {
+    if (items.isNotEmpty()) add { SectionCard(title, items.size) { items.forEach { row(it) } } }
 }
 
 /** Collapsible card of rows. Starts expanded; the header shows the count so a collapsed card still informs. */

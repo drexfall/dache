@@ -6,13 +6,17 @@ import dev.dache.app.resources.status_active
 import dev.dache.app.resources.status_building
 import dev.dache.app.resources.status_cancelled
 import dev.dache.app.resources.status_down
+import dev.dache.app.resources.status_expired
 import dev.dache.app.resources.status_failed
+import dev.dache.app.resources.status_inactive
 import dev.dache.app.resources.status_off
 import dev.dache.app.resources.status_paused
+import dev.dache.app.resources.status_pending
 import dev.dache.app.resources.status_provisioning
 import dev.dache.app.resources.status_success
 import dev.dache.app.resources.status_unknown
 import dev.dache.app.resources.status_up
+import dev.dache.core.model.CertificateStatus
 import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.MonitorStatus
 import dev.dache.core.model.ServerStatus
@@ -52,3 +56,16 @@ fun serverStatusLabel(status: ServerStatus): String =
             ServerStatus.UNKNOWN -> Res.string.status_unknown
         },
     )
+
+@Composable
+fun certificateStatusLabel(status: CertificateStatus): String = stringResource(certificateStatusText(status))
+
+internal fun certificateStatusText(status: CertificateStatus) =
+    when (status) {
+        CertificateStatus.ACTIVE -> Res.string.status_active
+        CertificateStatus.PENDING -> Res.string.status_pending
+        CertificateStatus.EXPIRED -> Res.string.status_expired
+        CertificateStatus.FAILED -> Res.string.status_failed
+        CertificateStatus.INACTIVE -> Res.string.status_inactive
+        CertificateStatus.UNKNOWN -> Res.string.status_unknown
+    }
