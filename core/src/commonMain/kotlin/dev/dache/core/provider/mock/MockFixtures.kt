@@ -14,6 +14,7 @@ import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.Server
 import dev.dache.core.model.ServerStatus
 import dev.dache.core.model.Site
+import dev.dache.core.model.Worker
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
@@ -30,7 +31,8 @@ object MockFixtures {
     fun capabilities(id: ProviderId): Set<Capability> =
         when (id) {
             ProviderId.NETLIFY, ProviderId.VERCEL -> setOf(Capability.SITES, Capability.DEPLOYMENTS, Capability.DOMAINS)
-            ProviderId.CLOUDFLARE -> setOf(Capability.DOMAINS, Capability.DNS, Capability.SITES, Capability.DEPLOYMENTS)
+            ProviderId.CLOUDFLARE ->
+                setOf(Capability.DOMAINS, Capability.DNS, Capability.SITES, Capability.DEPLOYMENTS, Capability.WORKERS)
             ProviderId.GITHUB -> setOf(Capability.CI, Capability.DEPLOYMENTS)
             ProviderId.DIGITALOCEAN -> setOf(Capability.SERVERS, Capability.DOMAINS, Capability.DNS, Capability.SITES)
             ProviderId.UPTIMEROBOT -> setOf(Capability.MONITORS)
@@ -249,6 +251,18 @@ object MockFixtures {
                     record("rec-status", "CNAME", "status.acme.dev", "cname.vercel-dns.com"),
                     record("rec-blog", "CNAME", "blog.acme.dev", "acme-blog.pages.dev"),
                     record("rec-api", "A", "api.acme.dev", "203.0.113.10"),
+                ),
+            workers =
+                listOf(
+                    Worker(
+                        providerId = ProviderId.CLOUDFLARE,
+                        accountId = accountId,
+                        nativeId = "acme-edge",
+                        webUrl = "https://dash.cloudflare.com/acme/workers/services/view/acme-edge/production",
+                        name = "acme-edge",
+                        routes = listOf("api.acme.dev/v2/*"),
+                        modifiedAt = now - 2.days,
+                    ),
                 ),
             sites =
                 listOf(

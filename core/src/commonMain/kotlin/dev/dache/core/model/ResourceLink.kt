@@ -15,7 +15,7 @@ data class ResourceLink(
 }
 
 enum class LinkReason {
-    /** DNS record or monitor points at a site's hostname, or a hostname sits under a domain. */
+    /** DNS record, monitor or worker route points at the same hostname, or a hostname sits under a domain. */
     HOSTNAME,
 
     /** Site builds from the same repository a CI run belongs to. */

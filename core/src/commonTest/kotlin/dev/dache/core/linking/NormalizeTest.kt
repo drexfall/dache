@@ -31,4 +31,16 @@ class NormalizeTest {
         assertEquals(expected, normalizeRepoUrl("git@github.com:acme/web.git"))
         assertEquals(expected, normalizeRepoUrl("https://token@github.com/acme/web"))
     }
+
+    @Test
+    fun routePatternsCoverTheirHostnames() {
+        assertTrue(routeCovers("api.acme.dev/*", "api.acme.dev"))
+        assertTrue(routeCovers("https://API.acme.dev/v2/*", "api.acme.dev"))
+        assertFalse(routeCovers("api.acme.dev/*", "www.acme.dev"))
+        assertTrue(routeCovers("*.acme.dev/*", "api.acme.dev"))
+        assertFalse(routeCovers("*.acme.dev/*", "acme.dev"))
+        assertTrue(routeCovers("*acme.dev/*", "acme.dev"))
+        assertFalse(routeCovers("*acme.dev/*", "notacme.dev"))
+        assertFalse(routeCovers("*/*", "acme.dev"))
+    }
 }

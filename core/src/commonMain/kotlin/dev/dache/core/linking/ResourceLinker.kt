@@ -15,6 +15,8 @@ import dev.dache.core.model.Site
  * - Domain → site when a site hostname sits under the domain.
  * - Monitor → site when the monitored URL's host is one of the site's hostnames.
  * - Site → CI run when both point at the same repository.
+ * - Worker → DNS record, site or monitor when one of its routes covers their hostname; domain → worker when a
+ *   route sits under the domain.
  */
 object ResourceLinker {
     fun link(snapshots: Collection<ProviderSnapshot>): List<ResourceLink> {
@@ -25,6 +27,7 @@ object ResourceLinker {
         linkDomainsToSites(snapshots, siteHosts, links)
         linkMonitorsToSites(snapshots, siteHosts, links)
         linkSitesToCiRuns(snapshots, links)
+        linkWorkers(snapshots, siteHosts, links)
         return links.toList()
     }
 
@@ -98,6 +101,29 @@ object ResourceLinker {
                     run.repoUrl,
                 ),
             ].orEmpty().forEach { links.add(it.ref, run.ref, LinkReason.REPO_URL) }
+        }
+    }
+
+    private fun linkWorkers(
+        snapshots: Collection<ProviderSnapshot>,
+        siteHosts: SiteHosts,
+        links: LinkSet,
+    ) {
+        val hosts =
+            snapshots.flatMap { it.dnsRecords }.map { it.ref to setOfNotNull(normalizeHost(it.name)) } +
+                snapshots.flatMap { it.monitors }.map { it.ref to setOfNotNull(normalizeHost(it.url)) } +
+                siteHosts.toList()
+        val domains = snapshots.flatMap { it.domains }.mapNotNull { d -> normalizeHost(d.name)?.let { d.ref to it } }
+        for (worker in snapshots.flatMap { it.workers }) {
+            hosts.forEach { (ref, names) ->
+                if (worker.routes.any { route -> names.any { routeCovers(route, it) } }) {
+                    links.add(worker.ref, ref, LinkReason.HOSTNAME)
+                }
+            }
+            val routeHosts = worker.routes.mapNotNull { normalizeHost(it)?.removePrefix("*")?.removePrefix(".") }
+            domains.forEach { (ref, name) ->
+                if (routeHosts.any { isWithinDomain(it, name) }) links.add(ref, worker.ref, LinkReason.HOSTNAME)
+            }
         }
     }
 

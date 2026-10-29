@@ -70,6 +70,14 @@ class ResourceLinkerTest {
     }
 
     @Test
+    fun workerRouteLinksToRecordMonitorAndDomain() {
+        assertTrue(linked("acme-edge", "rec-api", LinkReason.HOSTNAME))
+        assertTrue(linked("acme-edge", "m-780004", LinkReason.HOSTNAME))
+        assertTrue(linked("acme-edge", "zone-acme-dev", LinkReason.HOSTNAME))
+        assertTrue(links.none { setOf(it.a.nativeId, it.b.nativeId) == setOf("acme-edge", "rec-www") })
+    }
+
+    @Test
     fun noDuplicatesOrSelfLinks() {
         assertEquals(links.size, links.toSet().size)
         assertTrue(links.none { it.a == it.b })
