@@ -43,13 +43,18 @@ import dev.dache.app.resources.setting_optional_label
 import dev.dache.app.resources.token_label
 import dev.dache.app.ui.components.ExternalLinkButton
 import dev.dache.app.ui.components.errorMessage
+import dev.dache.app.ui.components.secureDialogProperties
+import dev.dache.app.ui.components.secureSheetProperties
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
 import dev.dache.core.model.ProviderId
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
-/** Bottom sheet on phones (reachable, keyboard-friendly), a centred dialog on desktop. */
+/**
+ * Bottom sheet on phones (reachable, keyboard-friendly), a centred dialog on desktop. Both are secure windows on
+ * Android, so the token can't be captured by screenshots, screen recording or the recents thumbnail.
+ */
 @Composable
 fun AddAccountFlow(
     state: AddAccountState,
@@ -66,6 +71,7 @@ fun AddAccountFlow(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            properties = secureSheetProperties(),
         ) {
             Column(
                 Modifier.padding(horizontal = 24.dp).padding(bottom = 24.dp),
@@ -96,6 +102,7 @@ fun AddAccountFlow(
             dismissButton = {
                 TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
             },
+            properties = secureDialogProperties(),
         )
     }
 }

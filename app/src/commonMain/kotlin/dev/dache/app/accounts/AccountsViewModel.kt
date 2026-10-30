@@ -33,6 +33,11 @@ data class AddAccountState(
             token.isNotBlank() &&
                 !isValidating &&
                 settings.none { it.required && settingValues[it.key].isNullOrBlank() }
+
+    // The generated toString would print the token into any log or crash report that dumps the state.
+    override fun toString(): String =
+        "AddAccountState(provider=$provider, token=${if (token.isEmpty()) "" else "***"}, " +
+            "settingValues=$settingValues, isValidating=$isValidating, error=$error, sampleData=$sampleData)"
 }
 
 data class AccountsUiState(
