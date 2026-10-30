@@ -54,6 +54,8 @@ fun AccountsScreen(
     onRemove: (ConnectedAccount) -> Unit,
     confirmExternalLinks: Boolean,
     onConfirmExternalLinksChange: (Boolean) -> Unit,
+    /** Platform security preferences, e.g. the app lock where the device has a screen lock. */
+    securityCard: (@Composable () -> Unit)? = null,
 ) {
     var pendingRemoval by remember { mutableStateOf<ConnectedAccount?>(null) }
     val compact = LocalFormFactor.current == FormFactor.COMPACT
@@ -78,6 +80,7 @@ fun AccountsScreen(
         },
     ) {
         PreferencesCard(confirmExternalLinks, onConfirmExternalLinksChange)
+        securityCard?.invoke()
         if (accounts.isEmpty()) {
             EmptyState(
                 icon = Icons.Filled.AccountCircle,

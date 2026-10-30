@@ -16,6 +16,7 @@
     <string name="widget_all_good">All good</string>
     <string name="widget_updated">Updated %1$s</string>
     <string name="widget_monitor_counts">%1$d up · %2$d down</string>
+    <string name="widget_deploy_counts">%1$d sites · %2$d failing</string>
     <string name="widget_account_errors">%1$d account(s) failed to refresh</string>
 
     <string name="summary_failing_deploys">Failing deploys</string>
@@ -31,4 +32,6 @@
     <string name="status_up">✓ Up</string>
     <string name="status_down">✕ Down</string>
     <string name="status_paused">– Paused</string>
+
+    <string name="lock_prompt_title">Unlock Dache</string>
 </resources>

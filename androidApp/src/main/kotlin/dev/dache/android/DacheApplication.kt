@@ -2,6 +2,9 @@ package dev.dache.android
 
 import android.app.Application
 import android.content.pm.ApplicationInfo
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import dev.dache.android.widget.DacheWidgets
 import dev.dache.app.AppContainer
 import dev.dache.core.account.DataStoreAccountStore
@@ -35,10 +38,26 @@ class DacheApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Process-wide start and stop: rotation and one activity replacing another don't count as leaving.
+        ProcessLifecycleOwner.get().lifecycle.addObserver(
+            object : DefaultLifecycleObserver {
+                override fun onStart(owner: LifecycleOwner) = container.appLock.onForeground()
+
+                override fun onStop(owner: LifecycleOwner) = container.appLock.onBackground()
+            },
+        )
         // Push fresh data to home-screen widgets whenever the dashboard changes.
         appScope.launch {
             container.dashboardRepository.state
                 .map { it.lastUpdated to it.accounts }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { DacheWidgets.updateAll(this@DacheApplication) }
+        }
+        // Redraw widgets when they start or stop hiding names, not only on the next refresh.
+        appScope.launch {
+            container.settingsStore.appLock
+                .map { it.widgetDetailsHidden }
                 .distinctUntilChanged()
                 .drop(1)
                 .collect { DacheWidgets.updateAll(this@DacheApplication) }

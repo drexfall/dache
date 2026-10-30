@@ -26,6 +26,7 @@ import dev.dache.android.R
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.Site
+import kotlinx.coroutines.flow.first
 
 /** Latest deploy per site, failures first. */
 class DeploysWidget : GlanceAppWidget() {
@@ -34,9 +35,13 @@ class DeploysWidget : GlanceAppWidget() {
         id: GlanceId,
     ) {
         val dashboard = context.loadedDashboard()
+        val detailsHidden = context.widgetDetailsHidden()
+        // Read before the first frame, so a hidden widget never shows names even briefly.
+        val hiddenAtStart = detailsHidden.first()
         provideContent {
             val state by dashboard.state.collectAsState()
-            GlanceTheme { DeploysContent(state) }
+            val hidden by detailsHidden.collectAsState(hiddenAtStart)
+            GlanceTheme { DeploysContent(state, hidden) }
         }
     }
 }
@@ -46,7 +51,10 @@ class DeploysWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 @Composable
-private fun DeploysContent(state: DashboardState) {
+private fun DeploysContent(
+    state: DashboardState,
+    detailsHidden: Boolean,
+) {
     val context = LocalContext.current
     WidgetFrame {
         WidgetTitle(R.string.widget_title_deploys)
@@ -57,6 +65,10 @@ private fun DeploysContent(state: DashboardState) {
         when {
             state.accounts.isEmpty() -> WidgetCaption(context.getString(R.string.widget_empty))
             sites.isEmpty() -> WidgetCaption(context.getString(R.string.widget_none))
+            detailsHidden -> {
+                val failing = sites.count { it.latestDeployment?.status == DeployStatus.FAILED }
+                WidgetCaption(context.getString(R.string.widget_deploy_counts, sites.size, failing))
+            }
             else ->
                 LazyColumn(GlanceModifier.defaultWeight()) {
                     items(sites, itemId = { it.hashCode().toLong() }) { site -> SiteLine(site) }

@@ -9,6 +9,7 @@ import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.provider.mock.MockProvider
 import dev.dache.core.security.TokenKey
 import dev.dache.core.security.TokenVault
+import dev.dache.core.settings.AppLockSettings
 import dev.dache.core.settings.SettingsStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +47,12 @@ class InMemorySettingsStore : SettingsStore {
 
     override suspend fun setConfirmExternalLinks(confirm: Boolean) {
         this.confirm.value = confirm
+    }
+
+    override val appLock = MutableStateFlow(AppLockSettings())
+
+    override suspend fun setAppLock(settings: AppLockSettings) {
+        appLock.value = settings
     }
 }
 

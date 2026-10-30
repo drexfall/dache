@@ -26,6 +26,7 @@ import dev.dache.android.R
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.model.Monitor
 import dev.dache.core.model.MonitorStatus
+import kotlinx.coroutines.flow.first
 
 /** Uptime monitors with up/down counts, down monitors first. */
 class MonitorsWidget : GlanceAppWidget() {
@@ -34,9 +35,13 @@ class MonitorsWidget : GlanceAppWidget() {
         id: GlanceId,
     ) {
         val dashboard = context.loadedDashboard()
+        val detailsHidden = context.widgetDetailsHidden()
+        // Read before the first frame, so a hidden widget never shows names even briefly.
+        val hiddenAtStart = detailsHidden.first()
         provideContent {
             val state by dashboard.state.collectAsState()
-            GlanceTheme { MonitorsContent(state) }
+            val hidden by detailsHidden.collectAsState(hiddenAtStart)
+            GlanceTheme { MonitorsContent(state, hidden) }
         }
     }
 }
@@ -46,7 +51,10 @@ class MonitorsWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 @Composable
-private fun MonitorsContent(state: DashboardState) {
+private fun MonitorsContent(
+    state: DashboardState,
+    detailsHidden: Boolean,
+) {
     val context = LocalContext.current
     WidgetFrame {
         WidgetTitle(R.string.widget_title_monitors)
@@ -58,8 +66,10 @@ private fun MonitorsContent(state: DashboardState) {
                 val up = monitors.count { it.status == MonitorStatus.UP }
                 val down = monitors.count { it.status == MonitorStatus.DOWN }
                 WidgetCaption(context.getString(R.string.widget_monitor_counts, up, down))
-                LazyColumn(GlanceModifier.defaultWeight()) {
-                    items(monitors, itemId = { it.hashCode().toLong() }) { monitor -> MonitorLine(monitor) }
+                if (!detailsHidden) {
+                    LazyColumn(GlanceModifier.defaultWeight()) {
+                        items(monitors, itemId = { it.hashCode().toLong() }) { monitor -> MonitorLine(monitor) }
+                    }
                 }
             }
         }

@@ -218,4 +218,17 @@
     <string name="stat_nothing_listed">Nothing to list.</string>
     <string name="stat_last_14_days_total">Last 14 days</string>
     <string name="stat_avg_per_day">Average per day</string>
+
+    <string name="pref_app_lock">App lock</string>
+    <string name="pref_app_lock_body">Ask for your fingerprint, face or screen lock when you open Dache.</string>
+    <string name="pref_app_lock_unavailable">Set a screen lock on this device to use app lock.</string>
+    <string name="pref_lock_timeout">Lock after leaving the app</string>
+    <string name="lock_timeout_immediately">Immediately</string>
+    <string name="lock_timeout_one_minute">After 1 minute</string>
+    <string name="lock_timeout_five_minutes">After 5 minutes</string>
+    <string name="pref_hide_widget_details">Hide names on widgets</string>
+    <string name="pref_hide_widget_details_body">Widgets show counts only, since anyone can see your home screen.</string>
+    <string name="lock_title">Dache is locked</string>
+    <string name="lock_body">Unlock with your fingerprint, face or screen lock.</string>
+    <string name="action_unlock">Unlock</string>
 </resources>
