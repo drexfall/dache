@@ -70,12 +70,39 @@ compose.resources {
 compose.desktop {
     application {
         mainClass = "dev.dache.app.MainKt"
+        // jpackage isn't in every JDK (Android Studio's JBR lacks it); PACKAGING_JDK names one that has it.
+        providers.environmentVariable("PACKAGING_JDK").orNull?.let { javaHome = it }
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Rpm)
             packageName = "dache"
             packageVersion = "0.1.0"
+            description = "One dashboard for your hosting, DNS, CI, servers and uptime"
+            vendor = "Dache"
+            // TLS needs jdk.crypto.ec on JDK 17-21; the rest come from Ktor, OkHttp and DataStore.
+            modules("java.naming", "java.net.http", "jdk.crypto.ec", "jdk.unsupported", "java.management")
+            providers.gradleProperty("dache.distDir").orNull?.let { outputBaseDir.set(file(it)) }
+            linux {
+                iconFile.set(rootProject.file("packaging/linux/dache.png"))
+            }
         }
     }
+}
+
+// The AppImage for Linux releases: the jpackage app image wrapped by packaging/linux/build-appimage.sh.
+val packageAppImage by tasks.registering(Exec::class) {
+    group = "compose desktop"
+    description = "Builds Dache-<version>-x86_64.AppImage from the desktop distributable."
+    dependsOn("createDistributable")
+    val version = compose.desktop.application.nativeDistributions.packageVersion
+    val base = compose.desktop.application.nativeDistributions.outputBaseDir
+    val appImageDir = base.map { it.dir("main/app/dache") }
+    val output = base.map { it.file("main/appimage/Dache-$version-x86_64.AppImage") }
+    outputs.file(output)
+    executable = rootProject.file("packaging/linux/build-appimage.sh").absolutePath
+    argumentProviders +=
+        CommandLineArgumentProvider {
+            listOf(appImageDir.get().asFile.absolutePath, output.get().asFile.absolutePath)
+        }
 }
 
 // KMP has no `test` task; alias it so `./gradlew test` runs the shared tests on both targets.

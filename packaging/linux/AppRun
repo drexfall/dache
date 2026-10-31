@@ -1,0 +1,5 @@
+#!/bin/sh
+# Starts the jpackage launcher inside the AppImage. $APPIMAGE (set by the runtime) is how Dache finds itself
+# again for the background check timer.
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "$HERE/usr/lib/dache/bin/dache" "$@"

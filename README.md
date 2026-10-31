@@ -39,6 +39,14 @@ DACHE_RENDER_DIR=/tmp/shots ./gradlew :app:jvmTest --tests '*RenderScreens*'  # 
 
 The registry side: `keygen <file>` writes a new Ed25519 signing key to `<file>` (owner-only) and prints the public key to pin in the app; `index <registry-dir> --out <dir>` builds `index.json` from `plugins/<id>/manifest.json`, copying each manifest beside it under its version with its SHA-256; `sign <file> --key-env VAR` writes `<file>.sig`. The registry itself is the separate `drexfall/dache-plugins` repo, whose CI runs these.
 
+### Linux AppImage
+
+```bash
+PACKAGING_JDK=/path/to/jdk-21 ./gradlew :app:packageAppImage   # → app/build/compose/binaries/main/appimage/
+```
+
+`PACKAGING_JDK` must be a JDK with `jpackage` (Temurin has it; Android Studio's JBR doesn't). The task builds the jpackage app image and wraps it with `packaging/linux/build-appimage.sh`, which downloads appimagetool 1.9.1 once (pinned by SHA-256) into `~/.cache/dache`. Add `-Pdache.distDir=<dir>` to build somewhere else. Pushing a `v*` tag runs `.github/workflows/release.yml`, which attaches the AppImage to a GitHub release. The AppImage runs on glibc 2.35+ (Ubuntu 22.04, Fedora 36 and later) and still needs `secret-tool` and a Secret Service from the host; background checks use the host's `systemd` and `notify-send`.
+
 On Linux, connecting an account stores the token in your keyring via `secret-tool` (package `libsecret` / `libsecret-tools`). A running Secret Service (GNOME Keyring or KWallet) is required; without one, connecting fails with an explanation.
 
 Debug request logging: debuggable Android builds log every plugin request to Logcat; on desktop set `DACHE_LOG_HTTP=1`. Tokens are redacted from URLs, headers and bodies before anything is logged. Release builds log nothing.

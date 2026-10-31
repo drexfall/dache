@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Dache
+Comment=One dashboard for your hosting, DNS, CI, servers and uptime
+Exec=dache
+Icon=dache
+Categories=Development;Network;Monitor;
+Keywords=deploy;dns;ci;uptime;dashboard;
+StartupWMClass=dev-dache-app-MainKt
+Terminal=false
