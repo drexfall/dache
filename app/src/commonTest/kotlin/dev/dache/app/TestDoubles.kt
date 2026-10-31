@@ -7,6 +7,7 @@ import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderId
 import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.provider.mock.MockProvider
+import dev.dache.core.security.IntegrityWarningSettings
 import dev.dache.core.security.TokenKey
 import dev.dache.core.security.TokenVault
 import dev.dache.core.settings.AppLockSettings
@@ -53,6 +54,12 @@ class InMemorySettingsStore : SettingsStore {
 
     override suspend fun setAppLock(settings: AppLockSettings) {
         appLock.value = settings
+    }
+
+    override val integrityWarning = MutableStateFlow(IntegrityWarningSettings())
+
+    override suspend fun setIntegrityWarning(settings: IntegrityWarningSettings) {
+        integrityWarning.value = settings
     }
 }
 

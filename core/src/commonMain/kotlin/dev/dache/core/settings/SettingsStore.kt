@@ -6,6 +6,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import dev.dache.core.security.IntegritySignal
+import dev.dache.core.security.IntegrityWarningSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import okio.Path.Companion.toPath
@@ -20,6 +23,10 @@ interface SettingsStore {
     val appLock: Flow<AppLockSettings>
 
     suspend fun setAppLock(settings: AppLockSettings)
+
+    val integrityWarning: Flow<IntegrityWarningSettings>
+
+    suspend fun setIntegrityWarning(settings: IntegrityWarningSettings)
 }
 
 class DataStoreSettingsStore(
@@ -49,7 +56,28 @@ class DataStoreSettingsStore(
         }
     }
 
+    override val integrityWarning: Flow<IntegrityWarningSettings> =
+        dataStore.data.map { prefs ->
+            IntegrityWarningSettings(
+                seen =
+                    prefs[INTEGRITY_SEEN]
+                        .orEmpty()
+                        .mapNotNull { name -> IntegritySignal.entries.firstOrNull { it.name == name } }
+                        .toSet(),
+                neverShow = prefs[INTEGRITY_NEVER_SHOW] ?: false,
+            )
+        }
+
+    override suspend fun setIntegrityWarning(settings: IntegrityWarningSettings) {
+        dataStore.edit {
+            it[INTEGRITY_SEEN] = settings.seen.map { signal -> signal.name }.toSet()
+            it[INTEGRITY_NEVER_SHOW] = settings.neverShow
+        }
+    }
+
     companion object {
+        private val INTEGRITY_SEEN = stringSetPreferencesKey("integrity_warning_seen")
+        private val INTEGRITY_NEVER_SHOW = booleanPreferencesKey("integrity_warning_never_show")
         private val CONFIRM_LINKS = booleanPreferencesKey("confirm_external_links")
         private val APP_LOCK = booleanPreferencesKey("app_lock")
         private val LOCK_TIMEOUT = stringPreferencesKey("app_lock_timeout")
