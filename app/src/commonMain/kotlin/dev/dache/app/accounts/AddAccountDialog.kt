@@ -32,12 +32,6 @@ import dev.dache.app.resources.action_cancel
 import dev.dache.app.resources.action_connect
 import dev.dache.app.resources.action_create_token
 import dev.dache.app.resources.add_account_title
-import dev.dache.app.resources.scope_cloudflare
-import dev.dache.app.resources.scope_digitalocean
-import dev.dache.app.resources.scope_github
-import dev.dache.app.resources.scope_netlify
-import dev.dache.app.resources.scope_uptimerobot
-import dev.dache.app.resources.scope_vercel
 import dev.dache.app.resources.setting_optional_label
 import dev.dache.app.resources.token_label
 import dev.dache.app.ui.components.ExternalLinkButton
@@ -47,7 +41,6 @@ import dev.dache.app.ui.components.secureSheetProperties
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
 import dev.dache.core.model.ProviderId
-import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -117,7 +110,7 @@ private fun AddAccountForm(
     val tokenIme = if (state.settings.isEmpty()) ImeAction.Done else ImeAction.Next
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ProviderId.entries.forEach { provider ->
+            state.providers.forEach { provider ->
                 FilterChip(
                     selected = provider == state.provider,
                     onClick = { onProviderSelected(provider) },
@@ -125,11 +118,13 @@ private fun AddAccountForm(
                 )
             }
         }
-        Text(stringResource(state.provider.scopeHint()), style = MaterialTheme.typography.bodyMedium)
-        ExternalLinkButton(
-            text = stringResource(Res.string.action_create_token, state.provider.displayName),
-            url = state.provider.tokenPageUrl,
-        )
+        state.provider.tokenHelp?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        state.provider.tokenPageUrl?.let { url ->
+            ExternalLinkButton(
+                text = stringResource(Res.string.action_create_token, state.provider.displayName),
+                url = url,
+            )
+        }
         OutlinedTextField(
             value = state.token,
             onValueChange = onTokenChanged,
@@ -167,14 +162,3 @@ private fun AddAccountForm(
         if (state.isValidating) LinearProgressIndicator(Modifier.fillMaxWidth())
     }
 }
-
-/** Least-privilege guidance shown before the user creates a token. */
-private fun ProviderId.scopeHint(): StringResource =
-    when (this) {
-        ProviderId.NETLIFY -> Res.string.scope_netlify
-        ProviderId.VERCEL -> Res.string.scope_vercel
-        ProviderId.CLOUDFLARE -> Res.string.scope_cloudflare
-        ProviderId.GITHUB -> Res.string.scope_github
-        ProviderId.DIGITALOCEAN -> Res.string.scope_digitalocean
-        ProviderId.UPTIMEROBOT -> Res.string.scope_uptimerobot
-    }

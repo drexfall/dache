@@ -72,5 +72,5 @@ class TestGraph(
     private val providers =
         ProviderId.entries.associateWith { MockProvider(it, vault, latency = Duration.ZERO) } + overrides(vault)
     val accounts = AccountRepository(InMemoryAccountStore(), vault, providers)
-    val dashboard = DashboardRepository(accounts, providers, scope)
+    val dashboard = DashboardRepository(accounts, scope)
 }

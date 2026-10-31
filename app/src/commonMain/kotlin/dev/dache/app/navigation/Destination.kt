@@ -80,7 +80,7 @@ private fun Destination.tokens(): List<String> =
         is Destination.Account -> listOf("account", accountId)
         is Destination.Service -> listOf("service", accountId, pageId)
         is Destination.AccountSettings -> listOf("settings", accountId)
-        is Destination.Resource -> listOf("resource", ref.providerId.name, ref.accountId, ref.kind.name, ref.nativeId)
+        is Destination.Resource -> listOf("resource", ref.providerId.id, ref.accountId, ref.kind.name, ref.nativeId)
     }
 
 /** Rebuilds the last page of a saved trail. Each resource page goes back to the page before it. */
@@ -95,7 +95,7 @@ private fun decode(tokens: List<String>): Destination {
                 "service" -> Destination.Service(rest.removeFirst(), rest.removeFirst())
                 "settings" -> Destination.AccountSettings(rest.removeFirst())
                 "resource" -> {
-                    val provider = ProviderId.valueOf(rest.removeFirst())
+                    val provider = ProviderId(rest.removeFirst())
                     val accountId = rest.removeFirst()
                     val kind = ResourceKind.valueOf(rest.removeFirst())
                     Destination.Resource(ResourceRef(provider, accountId, rest.removeFirst(), kind), destination)

@@ -9,6 +9,7 @@ object TestManifests {
         """
         {
           "manifestVersion": 1,
+          "dashboardUrl": "https://dashboard.example.com",
           "id": "netlify",
           "name": "Example",
           "version": "1.0.0",

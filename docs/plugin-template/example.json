@@ -4,6 +4,9 @@
   "id": "example",
   "name": "Example",
   "version": "0.1.0",
+  "dashboardUrl": "https://dashboard.example.com",
+  "tokenUrl": "https://dashboard.example.com/settings/tokens",
+  "tokenHelp": "Create a read-only token with access to projects and deployments.",
   "hosts": ["api.example.com"],
   "auth": { "type": "bearer" },
   "settings": [

@@ -31,7 +31,7 @@ class AppContainer(
         BundledPlugins.providers(vault, createPluginHttpClient(), requestLogger)
 
     val accountRepository = AccountRepository(accountStore, vault, providers)
-    val dashboardRepository = DashboardRepository(accountRepository, providers, scope)
+    val dashboardRepository = DashboardRepository(accountRepository, scope)
 
     /** Process-wide, so the lock outlives the activity and covers every way back into the app. */
     val appLock = AppLockController(settingsStore.appLock, scope)

@@ -32,6 +32,7 @@ class ResourceKindsTest {
             """
             {
               "manifestVersion": 1,
+              "dashboardUrl": "https://dashboard.example.com",
               "id": "example",
               "name": "Example",
               "version": "1.0.0",

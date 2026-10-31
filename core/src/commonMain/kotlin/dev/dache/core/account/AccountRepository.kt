@@ -7,21 +7,38 @@ import dev.dache.core.model.ProviderId
 import dev.dache.core.model.TokenCheck
 import dev.dache.core.model.TokenPermission
 import dev.dache.core.provider.DevOpsProvider
+import dev.dache.core.provider.ProviderCatalog
 import dev.dache.core.security.TokenKey
 import dev.dache.core.security.TokenVault
 import dev.dache.core.security.VaultUnavailableException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-/** Connects and removes accounts. Removing an account deletes its token too. */
+/**
+ * Connects and removes accounts. Removing an account deletes its token too. Accounts come back with their
+ * provider's full id from [catalog], so its name and links follow the installed plugin.
+ */
 class AccountRepository(
     private val store: AccountStore,
     private val vault: TokenVault,
-    private val providers: Map<ProviderId, DevOpsProvider>,
+    val catalog: ProviderCatalog,
     private val newId: () -> String = ::randomId,
 ) {
-    val accounts: Flow<List<ConnectedAccount>> = store.accounts
+    constructor(
+        store: AccountStore,
+        vault: TokenVault,
+        providers: Map<ProviderId, DevOpsProvider>,
+        newId: () -> String = ::randomId,
+    ) : this(store, vault, ProviderCatalog(providers), newId)
+
+    private val providers: Map<ProviderId, DevOpsProvider> get() = catalog.providers.value
+
+    val accounts: Flow<List<ConnectedAccount>> =
+        combine(store.accounts, catalog.providers) { accounts, _ ->
+            accounts.map { it.copy(providerId = catalog.resolve(it.providerId)) }
+        }
 
     /** What [providerId]'s token check reports on, to list before a token is checked. */
     fun tokenPermissions(providerId: ProviderId): List<TokenPermission> =

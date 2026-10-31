@@ -36,7 +36,7 @@ class DashboardRepositoryTest {
         val accounts = AccountRepository(InMemoryAccountStore(), vault, providers)
         // Unconfined so the state collector keeps up; advanceUntilIdle does not drive backgroundScope work.
         val scope = CoroutineScope(backgroundScope.coroutineContext + UnconfinedTestDispatcher(testScheduler))
-        return accounts to DashboardRepository(accounts, providers, scope, clock)
+        return accounts to DashboardRepository(accounts, scope, clock)
     }
 
     @Test

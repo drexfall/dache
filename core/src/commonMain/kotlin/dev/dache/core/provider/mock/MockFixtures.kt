@@ -36,6 +36,7 @@ object MockFixtures {
             ProviderId.GITHUB -> setOf(Capability.CI, Capability.DEPLOYMENTS)
             ProviderId.DIGITALOCEAN -> setOf(Capability.SERVERS, Capability.DOMAINS, Capability.DNS, Capability.SITES)
             ProviderId.UPTIMEROBOT -> setOf(Capability.MONITORS)
+            else -> emptySet()
         }
 
     fun snapshot(
@@ -50,6 +51,7 @@ object MockFixtures {
             ProviderId.GITHUB -> github(accountId, now)
             ProviderId.DIGITALOCEAN -> digitalOcean(accountId, now)
             ProviderId.UPTIMEROBOT -> uptimeRobot(accountId, now)
+            else -> ProviderSnapshot()
         }
 
     /** Latest deploy as given, plus generated history before it. */

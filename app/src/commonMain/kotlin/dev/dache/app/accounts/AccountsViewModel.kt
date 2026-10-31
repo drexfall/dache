@@ -35,7 +35,9 @@ data class TokenCheckState(
 }
 
 data class AddAccountState(
-    val provider: ProviderId = ProviderId.NETLIFY,
+    val provider: ProviderId,
+    /** Every installed provider, to pick from. */
+    val providers: List<ProviderId> = listOf(provider),
     val token: String = "",
     /** What the selected provider asks for besides the token. */
     val settings: List<AccountSetting> = emptyList(),
@@ -87,7 +89,11 @@ class AccountsViewModel(
 
     fun startAdding() {
         checkJob?.cancel()
-        addAccount.value = forProvider(AddAccountState(), AddAccountState().provider)
+        val providers =
+            accounts.catalog.providers.value.keys
+                .sortedBy { it.displayName.lowercase() }
+        val first = providers.firstOrNull() ?: return
+        addAccount.value = forProvider(AddAccountState(first, providers), first)
     }
 
     fun cancelAdding() {

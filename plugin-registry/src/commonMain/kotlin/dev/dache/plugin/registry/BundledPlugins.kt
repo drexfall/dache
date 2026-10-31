@@ -22,16 +22,14 @@ object BundledPlugins {
         }
     }
 
-    /** A provider for each bundled manifest whose id is a known [ProviderId]. */
+    /** A provider for each bundled manifest. */
     fun providers(
         vault: TokenVault,
         client: HttpClient,
         logger: RequestLogger = RequestLogger.None,
     ): Map<ProviderId, DevOpsProvider> =
-        manifests
-            .mapNotNull { manifest ->
-                ProviderId.entries.firstOrNull { it.id == manifest.id }?.let { id ->
-                    id to ManifestProvider(manifest, id, vault, client, logger)
-                }
-            }.toMap()
+        manifests.associate { manifest ->
+            val provider = ManifestProvider(manifest, vault = vault, client = client, logger = logger)
+            provider.id to provider
+        }
 }

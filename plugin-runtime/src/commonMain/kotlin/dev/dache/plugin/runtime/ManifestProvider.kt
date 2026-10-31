@@ -29,7 +29,7 @@ import kotlinx.serialization.json.JsonElement
  */
 class ManifestProvider(
     private val manifest: PluginManifest,
-    override val id: ProviderId,
+    override val id: ProviderId = manifest.providerId(),
     private val vault: TokenVault,
     client: HttpClient,
     logger: RequestLogger = RequestLogger.None,
@@ -207,3 +207,7 @@ class MissingSettingException(
 
 /** A setting's value can't be used in a request, e.g. `..` in a path. */
 class InvalidSettingException : Exception("a setting can't be used in a request")
+
+/** The provider [this] manifest talks to, with its name and links. */
+fun PluginManifest.providerId(): ProviderId =
+    ProviderId(id = id, displayName = name, dashboardUrl = dashboardUrl, tokenPageUrl = tokenUrl, tokenHelp = tokenHelp)

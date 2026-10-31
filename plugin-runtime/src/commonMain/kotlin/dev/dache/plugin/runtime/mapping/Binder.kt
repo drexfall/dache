@@ -157,8 +157,8 @@ internal class Binder(
             )
         }
 
-    /** Without its own link, a resource links to the provider's dashboard. */
-    private fun Mapping.Record.webUrl(): String = text("webUrl") ?: providerId.dashboardUrl
+    /** Without its own link, a resource links to the provider's dashboard, which validated manifests name. */
+    private fun Mapping.Record.webUrl(): String = text("webUrl") ?: providerId.dashboardUrl.orEmpty()
 }
 
 private inline fun <T> orSkip(build: () -> T): T? =

@@ -289,6 +289,15 @@
             "$ref": "#/$defs/PageSpec"
           }
         },
+        "dashboardUrl": {
+          "type": "string"
+        },
+        "tokenUrl": {
+          "type": "string"
+        },
+        "tokenHelp": {
+          "type": "string"
+        },
         "$schema": {
           "type": "string"
         }

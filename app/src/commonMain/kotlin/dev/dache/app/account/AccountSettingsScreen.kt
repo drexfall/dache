@@ -83,10 +83,9 @@ fun AccountSettingsScreen(
                 OutlinedButton(onClick = onCheck, enabled = !check.isChecking) {
                     Text(stringResource(Res.string.action_check_again))
                 }
-                ExternalLinkButton(
-                    stringResource(Res.string.action_create_token, provider),
-                    account.providerId.tokenPageUrl,
-                )
+                account.providerId.tokenPageUrl?.let { url ->
+                    ExternalLinkButton(stringResource(Res.string.action_create_token, provider), url)
+                }
             }
         }
     }

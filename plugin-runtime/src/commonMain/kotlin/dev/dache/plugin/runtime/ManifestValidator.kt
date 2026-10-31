@@ -119,6 +119,10 @@ object ManifestValidator {
                     problem("hosts[$index]", "\"$host\" is not a lowercase hostname (no scheme, port or wildcard)")
                 }
             }
+            if (manifest.dashboardUrl == null) problem("dashboardUrl", "name the provider's web dashboard")
+            listOf("dashboardUrl" to manifest.dashboardUrl, "tokenUrl" to manifest.tokenUrl).forEach { (key, url) ->
+                if (url != null && !isWebLink(url)) problem(key, "must be an https:// URL")
+            }
             if (manifest.capabilities.isEmpty()) problem("capabilities", "declare at least one capability")
             manifest.capabilities.forEachIndexed { index, name ->
                 if (Capability.entries.none { it.name == name }) {
@@ -294,3 +298,14 @@ private fun AuthSpec.headerName(): String? =
     }
 
 private fun AuthSpec.queryName(): String? = (this as? AuthSpec.Query)?.name
+
+/** A link the app may offer to open in the browser. The host need not be in `hosts`; the engine never calls it. */
+private fun isWebLink(url: String): Boolean {
+    val rest = url.removePrefix("https://")
+    return rest != url &&
+        rest
+            .substringBefore('/')
+            .substringBefore('#')
+            .substringBefore('?')
+            .let(HostGuard::isValidHost)
+}

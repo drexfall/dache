@@ -6,7 +6,7 @@ The README's Plugins section is the reference for every key. This page is the wo
 
 ## 1. Start from the template
 
-Copy `docs/plugin-template/example.json` and its `fixtures/` folder. The template lists projects with their deployments, plus an optional storage list, split into two pages. Set `id` (lowercase, also the token's storage namespace), `name`, `hosts` and `auth`.
+Copy `docs/plugin-template/example.json` and its `fixtures/` folder. The template lists projects with their deployments, plus an optional storage list, split into two pages. Set `id` (lowercase, also the token's storage namespace), `name`, `hosts` and `auth`. Then `dashboardUrl`, the provider's web dashboard (required, HTTPS), `tokenUrl`, where users create a token, and `tokenHelp`, a sentence or two on which permissions to grant. The app shows the last two when someone connects an account.
 
 Keep `"$schema": "../../schema/manifest.schema.json"` (adjust the path to where your file lives). Editors then complete keys, kinds, field names and capabilities, and flag a misspelt field as you type.
 

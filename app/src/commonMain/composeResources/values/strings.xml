@@ -148,12 +148,6 @@
     <string name="remove_account_body">The stored token and all cached data for this account will be deleted.</string>
     <string name="remove_account_description">Remove %1$s</string>
 
-    <string name="scope_netlify">Netlify personal access tokens can’t be scoped. Give it an expiry date and use it only for Dache.</string>
-    <string name="scope_vercel">Scope the token to the one team you want to see and give it an expiry date. Enter that team’s slug below.</string>
-    <string name="scope_cloudflare">Create a custom token with Account Settings, Zone, DNS, Cloudflare Pages and Workers Scripts. Add SSL and Certificates, R2, KV, D1, Queues and Cloudflare Tunnel to fill those pages too. The checklist below shows what the token can read.</string>
-    <string name="scope_github">Use a fine-grained token with Metadata, Actions and Deployments on the repos you pick. Without Actions or Deployments, only those pages stay empty.</string>
-    <string name="scope_digitalocean">Use custom scopes for account, droplet, app, domain and billing. Without one of the last four, only that part stays empty.</string>
-    <string name="scope_uptimerobot">Use an account API key from Integrations › API. A monitor-specific key only shows that one monitor.</string>
 
     <string name="state_expanded">Expanded</string>
     <string name="state_collapsed">Collapsed</string>

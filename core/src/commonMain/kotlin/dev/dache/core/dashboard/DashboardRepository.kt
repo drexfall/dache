@@ -10,7 +10,6 @@ import dev.dache.core.model.Resource
 import dev.dache.core.model.ResourceLink
 import dev.dache.core.model.ResourceRef
 import dev.dache.core.model.ServicePage
-import dev.dache.core.provider.DevOpsProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -71,24 +70,27 @@ data class DashboardState(
  */
 class DashboardRepository(
     private val accountRepository: AccountRepository,
-    private val providers: Map<ProviderId, DevOpsProvider>,
     scope: CoroutineScope,
     private val clock: Clock = Clock.System,
 ) {
-    private val pages = providers.mapValues { (_, provider) -> provider.pages }
-    private val fetched = MutableStateFlow(DashboardState(pages = pages))
+    private val catalog = accountRepository.catalog
+    private val fetched = MutableStateFlow(DashboardState())
     private val refreshLock = Mutex()
 
     val state: StateFlow<DashboardState> =
-        combine(fetched, accountRepository.accounts) { state, accounts ->
+        combine(fetched, accountRepository.accounts, catalog.providers) { state, accounts, providers ->
             val ids = accounts.map { it.id }.toSet()
             val results = state.results.filter { it.account.id in ids }
+            val pages = providers.mapValues { (_, provider) -> provider.pages }
             if (results.size == state.results.size) {
-                state.copy(accounts = accounts)
+                state.copy(accounts = accounts, pages = pages)
             } else {
-                derive(results, state.lastUpdated).copy(accounts = accounts, isRefreshing = state.isRefreshing)
+                derive(
+                    results,
+                    state.lastUpdated,
+                ).copy(accounts = accounts, isRefreshing = state.isRefreshing, pages = pages)
             }
-        }.stateIn(scope, SharingStarted.Eagerly, DashboardState(pages = pages))
+        }.stateIn(scope, SharingStarted.Eagerly, DashboardState())
 
     suspend fun refresh() {
         // Overlapping refreshes (pull-to-refresh plus a widget update) would just repeat the same calls.
@@ -108,7 +110,7 @@ class DashboardRepository(
     @Suppress("TooGenericExceptionCaught")
     private suspend fun fetch(account: ConnectedAccount): AccountResult {
         val provider =
-            providers[account.providerId]
+            catalog[account.providerId]
                 ?: return AccountResult(account, null, ProviderError.NotFound())
         val result =
             try {
@@ -134,7 +136,6 @@ class DashboardRepository(
             links = ResourceLinker.link(snapshots),
             summary = DashboardSummary.from(snapshots, clock.now()),
             lastUpdated = lastUpdated,
-            pages = pages,
         )
     }
 }

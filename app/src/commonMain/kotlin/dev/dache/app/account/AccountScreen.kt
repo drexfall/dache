@@ -66,13 +66,13 @@ fun AccountScreen(
         onOpenMenu = onOpenMenu,
         // Desktop has room in the toolbar; on phones the button gets its own row so the title isn't squeezed.
         actions = {
-            if (!compact) ExternalLinkButton(openLabel, dashboardUrl)
+            if (!compact && dashboardUrl != null) ExternalLinkButton(openLabel, dashboardUrl)
             IconButton(onClick = { onNavigate(Destination.AccountSettings(account.id)) }) {
                 Icon(Icons.Filled.Settings, contentDescription = stringResource(Res.string.action_account_settings))
             }
         },
     ) {
-        if (compact) {
+        if (compact && dashboardUrl != null) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 ExternalLinkButton(openLabel, dashboardUrl, outlined = true)
             }

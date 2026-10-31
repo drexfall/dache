@@ -26,6 +26,15 @@ data class PluginManifest(
     val resources: List<ResourceSpec>,
     /** How the account's resources are split into pages. Without any, each kind and service gets its own. */
     val pages: List<PageSpec> = emptyList(),
+    /**
+     * The provider's web dashboard, linked from each account and used for resources without a link of their own.
+     * Required; nullable only so a manifest missing it is reported by the validator rather than the parser.
+     */
+    val dashboardUrl: String? = null,
+    /** Where users create a token. */
+    val tokenUrl: String? = null,
+    /** Least-privilege guidance shown before the user creates a token: which permissions to grant, and why. */
+    val tokenHelp: String? = null,
     /** Where editors find the JSON Schema, e.g. `../../schema/manifest.schema.json`. The engine ignores it. */
     @SerialName("\$schema")
     val schema: String? = null,

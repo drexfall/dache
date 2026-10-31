@@ -2,13 +2,12 @@ package dev.dache.plugin.cli
 
 import dev.dache.core.account.tokenKey
 import dev.dache.core.model.ConnectedAccount
-import dev.dache.core.model.ProviderId
 import dev.dache.core.security.TokenKey
 import dev.dache.core.security.TokenVault
-import dev.dache.plugin.api.PluginManifest
 import dev.dache.plugin.runtime.LoadResult
 import dev.dache.plugin.runtime.ManifestLoader
 import dev.dache.plugin.runtime.ManifestProvider
+import dev.dache.plugin.runtime.providerId
 import io.ktor.client.HttpClient
 import java.io.File
 
@@ -26,7 +25,7 @@ suspend fun refresh(
     val report = validate(file)
     val manifest = (ManifestLoader.load(file.readText()) as? LoadResult.Loaded)?.manifest
     if (manifest == null) return Outcome(report.toString(), ok = false)
-    val id = providerId(manifest)
+    val id = manifest.providerId()
     val account = ConnectedAccount(id = "cli", providerId = id, displayName = manifest.name, settings = settings)
     val vault = SingleTokenVault(account.tokenKey(), token)
     val provider = ManifestProvider(manifest, id, vault, client)
@@ -41,10 +40,6 @@ suspend fun refresh(
         ).joinToString("\n")
     return Outcome(text, ok = snapshot.getOrNull() != null)
 }
-
-/** The provider the manifest's id names; any other manifest borrows the first, which only shows in fallbacks. */
-private fun providerId(manifest: PluginManifest): ProviderId =
-    ProviderId.entries.firstOrNull { it.id == manifest.id } ?: ProviderId.entries.first()
 
 /** The error's type and cause, never a token: provider errors carry no response content. */
 private fun Throwable.describe(): String =
