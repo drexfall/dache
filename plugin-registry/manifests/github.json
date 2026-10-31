@@ -4,6 +4,7 @@
   "id": "github",
   "name": "GitHub",
   "version": "1.0.0",
+  "publisher": "Dache",
   "dashboardUrl": "https://github.com",
   "tokenUrl": "https://github.com/settings/personal-access-tokens/new",
   "tokenHelp": "Use a fine-grained token with Metadata, Actions and Deployments on the repos you pick. Without Actions or Deployments, only those pages stay empty.",

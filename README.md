@@ -37,6 +37,8 @@ DACHE_RENDER_DIR=/tmp/shots ./gradlew :app:jvmTest --tests '*RenderScreens*'  # 
 
 `run <manifest> --token-env VAR` does the same against the live API, with the token read from environment variable `VAR` so it stays out of shell history: `NETLIFY_TOKEN=… ./gradlew :tools:plugin-cli:run --args="run $PWD/plugin-registry/manifests/netlify.json --token-env NETLIFY_TOKEN"`.
 
+The registry side: `keygen <file>` writes a new Ed25519 signing key to `<file>` (owner-only) and prints the public key to pin in the app; `index <registry-dir> --out <dir>` builds `index.json` from `plugins/<id>/manifest.json`, copying each manifest beside it under its version with its SHA-256; `sign <file> --key-env VAR` writes `<file>.sig`. The registry itself is the separate `drexfall/dache-plugins` repo, whose CI runs these.
+
 On Linux, connecting an account stores the token in your keyring via `secret-tool` (package `libsecret` / `libsecret-tools`). A running Secret Service (GNOME Keyring or KWallet) is required; without one, connecting fails with an explanation.
 
 Debug request logging: debuggable Android builds log every plugin request to Logcat; on desktop set `DACHE_LOG_HTTP=1`. Tokens are redacted from URLs, headers and bodies before anything is logged. Release builds log nothing.

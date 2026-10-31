@@ -242,6 +242,9 @@
         "version": {
           "type": "string"
         },
+        "publisher": {
+          "type": "string"
+        },
         "hosts": {
           "type": "array",
           "items": {

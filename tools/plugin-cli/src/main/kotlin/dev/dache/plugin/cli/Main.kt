@@ -16,9 +16,12 @@ private val USAGE =
            dache-plugin test <manifest.json> --fixtures <dir> [--setting key=value]...
            dache-plugin run <manifest.json> --token-env <VAR> [--setting key=value]...
            dache-plugin schema
+           dache-plugin index <registry-dir> --out <dir> [--serial <n>]
+           dache-plugin sign <file> --key-env <VAR>
+           dache-plugin keygen <private-key-file>
 
     run sends real requests with the token from environment variable <VAR>. Pass the token that way, never as an
-    argument, so it stays out of shell history and process lists.
+    argument, so it stays out of shell history and process lists. sign reads the private key the same way.
     """.trimIndent()
 
 /** The token `test` sends; fixtures don't check it. */
@@ -31,6 +34,9 @@ fun main(args: Array<String>) {
             "test" -> Arguments.parse(args.drop(1), "--fixtures")?.let(::test)
             "schema" -> Outcome(schemaText(), ok = true).takeIf { args.size == 1 }
             "run" -> Arguments.parse(args.drop(1), "--token-env")?.let { run(it, System::getenv) }
+            "index" -> index(args.drop(1))
+            "sign" -> Arguments.parse(args.drop(1), "--key-env")?.let { sign(it, System::getenv) }
+            "keygen" -> args.getOrNull(1)?.takeIf { args.size == 2 }?.let { generateKey(File(it)) }
             else -> null
         }
     if (outcome == null) {
@@ -60,6 +66,28 @@ private fun test(arguments: Arguments): Outcome {
     val client = createPluginHttpClient(Fixtures(dir).engine())
     return runBlocking { refresh(arguments.manifest, client, FIXTURE_TOKEN, arguments.settings) }
 }
+
+/** `<registry-dir> --out <dir> [--serial <n>]`; the serial defaults to the current time in seconds. */
+private fun index(args: List<String>): Outcome? {
+    val registry = args.firstOrNull()?.takeUnless { it.startsWith("--") }
+    val pairs = args.drop(1).chunked(2)
+    val values = pairs.filter { it.size == 2 }.associate { it[0] to it[1] }
+    val wellFormed = pairs.all { it.size == 2 } && (values.keys - setOf("--out", "--serial")).isEmpty()
+    val out = values["--out"]
+    val serial = values["--serial"]?.toLongOrNull() ?: (System.currentTimeMillis() / MILLIS_PER_SECOND)
+    return if (registry != null && out != null && wellFormed) buildIndex(File(registry), File(out), serial) else null
+}
+
+private fun sign(
+    arguments: Arguments,
+    env: (String) -> String?,
+): Outcome {
+    val key = env(arguments.option)?.trim()
+    if (key.isNullOrEmpty()) return Outcome("environment variable ${arguments.option} is not set", ok = false)
+    return signFile(arguments.manifest, key)
+}
+
+private const val MILLIS_PER_SECOND = 1000L
 
 /** Against the live API. [env] reads the environment, so tests can supply their own. */
 fun run(

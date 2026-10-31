@@ -4,6 +4,7 @@
   "id": "vercel",
   "name": "Vercel",
   "version": "1.0.0",
+  "publisher": "Dache",
   "dashboardUrl": "https://vercel.com/dashboard",
   "tokenUrl": "https://vercel.com/account/tokens",
   "tokenHelp": "Scope the token to the one team you want to see and give it an expiry date. Enter that team’s slug below.",

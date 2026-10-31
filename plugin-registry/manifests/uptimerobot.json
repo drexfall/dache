@@ -4,6 +4,7 @@
   "id": "uptimerobot",
   "name": "UptimeRobot",
   "version": "1.0.0",
+  "publisher": "Dache",
   "dashboardUrl": "https://dashboard.uptimerobot.com",
   "tokenUrl": "https://dashboard.uptimerobot.com/integrations",
   "tokenHelp": "Use an account API key from Integrations › API. A monitor-specific key only shows that one monitor.",

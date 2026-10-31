@@ -15,6 +15,8 @@ data class PluginManifest(
     val id: String,
     val name: String,
     val version: String,
+    /** Who wrote and maintains the plugin, shown on the consent screen. */
+    val publisher: String? = null,
     /** Exact hostnames the plugin may call over HTTPS. No wildcards. */
     val hosts: List<String>,
     val auth: AuthSpec,

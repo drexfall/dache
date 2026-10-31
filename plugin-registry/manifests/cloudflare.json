@@ -4,6 +4,7 @@
   "id": "cloudflare",
   "name": "Cloudflare",
   "version": "1.0.0",
+  "publisher": "Dache",
   "dashboardUrl": "https://dash.cloudflare.com",
   "tokenUrl": "https://dash.cloudflare.com/profile/api-tokens",
   "tokenHelp": "Create a custom token with Account Settings, Zone, DNS, Cloudflare Pages and Workers Scripts. Add SSL and Certificates, R2, KV, D1, Queues and Cloudflare Tunnel to fill those pages too. The checklist below shows what the token can read.",

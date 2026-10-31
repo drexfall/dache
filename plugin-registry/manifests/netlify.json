@@ -4,6 +4,7 @@
   "id": "netlify",
   "name": "Netlify",
   "version": "1.0.0",
+  "publisher": "Dache",
   "dashboardUrl": "https://app.netlify.com",
   "tokenUrl": "https://app.netlify.com/user/applications#personal-access-tokens",
   "tokenHelp": "Netlify personal access tokens can’t be scoped. Give it an expiry date and use it only for Dache.",

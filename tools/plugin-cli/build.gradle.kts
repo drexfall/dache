@@ -19,6 +19,9 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
+// The registry's CI downloads this distribution (distZip) from a release, so it carries a version.
+version = "0.1.0"
+
 application {
     mainClass = "dev.dache.plugin.cli.MainKt"
     applicationName = "dache-plugin"
