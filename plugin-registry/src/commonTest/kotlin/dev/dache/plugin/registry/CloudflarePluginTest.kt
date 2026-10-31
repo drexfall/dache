@@ -8,6 +8,7 @@ import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
+import dev.dache.core.model.ServiceStatus
 import dev.dache.core.provider.DevOpsProvider
 import dev.dache.plugin.registry.CloudflareFixtures.ACCOUNT_ID
 import dev.dache.plugin.registry.CloudflareFixtures.ZONE_ID
@@ -36,6 +37,14 @@ class CloudflarePluginTest {
             vault.tokens[it.tokenKey()] = CloudflareFixtures.TOKEN
         }
 
+    private val services =
+        mapOf(
+            "/accounts/$ACCOUNT_ID/r2/buckets" to (HttpStatusCode.OK to R2_BUCKETS),
+            "/accounts/$ACCOUNT_ID/cfd_tunnel" to (HttpStatusCode.OK to TUNNELS),
+            // The token lacks Queues Read.
+            "/accounts/$ACCOUNT_ID/queues" to (HttpStatusCode.Forbidden to CloudflareFixtures.UNAUTHORIZED),
+        )
+
     private fun cloudflare(): DevOpsProvider {
         val engine =
             MockEngine { request ->
@@ -60,6 +69,7 @@ class CloudflarePluginTest {
                         path == "/accounts/$ACCOUNT_ID/workers/scripts" ->
                             HttpStatusCode.OK to
                                 CloudflareFixtures.workers
+                        path in services -> services.getValue(path)
                         else -> HttpStatusCode.NotFound to """{"success":false,"errors":[{"code":7003}]}"""
                     }
                 respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
@@ -72,10 +82,76 @@ class CloudflarePluginTest {
     @Test
     fun bundledManifestLoads() {
         assertEquals(
-            setOf(Capability.DOMAINS, Capability.DNS, Capability.SITES, Capability.DEPLOYMENTS, Capability.WORKERS),
+            setOf(
+                Capability.DOMAINS,
+                Capability.DNS,
+                Capability.SITES,
+                Capability.DEPLOYMENTS,
+                Capability.WORKERS,
+                Capability.SERVICES,
+            ),
             cloudflare().capabilities,
         )
     }
+
+    @Test
+    fun servicesHaveTheirOwnPages() {
+        assertEquals(
+            listOf("dns", "pages", "workers", "r2", "kv", "d1", "queues", "tunnels"),
+            cloudflare().pages.map { it.id },
+        )
+    }
+
+    @Test
+    fun listsR2BucketsAndTunnels() =
+        runTest {
+            val services = snapshot().services
+
+            val bucket = services.single { it.service == "r2Bucket" }
+            assertEquals("acme-assets", bucket.name)
+            assertEquals("WEUR", bucket.detail)
+            assertEquals("https://dash.cloudflare.com/$ACCOUNT_ID/r2/default/buckets/acme-assets", bucket.webUrl)
+            assertEquals(Instant.parse("2026-03-01T10:00:00Z"), bucket.createdAt)
+            assertEquals(ServiceStatus.DEGRADED, services.single { it.service == "tunnel" }.status)
+        }
+
+    @Test
+    fun servicesTheTokenCantReadAreLeftOutAndNamed() =
+        runTest {
+            val snapshot = snapshot()
+
+            assertTrue(snapshot.services.none { it.service == "queue" })
+            assertTrue("Queues Read" in snapshot.missingPermissions, "${snapshot.missingPermissions}")
+            assertTrue(snapshot.domains.isNotEmpty())
+        }
+
+    @Test
+    fun checkingTheTokenListsEveryPermission() =
+        runTest {
+            val check = cloudflare().checkToken(CloudflareFixtures.TOKEN).getOrThrow()
+            val granted = check.permissions.associate { it.permission.name to it.granted }
+
+            assertEquals("Acme Inc", check.displayName)
+            assertEquals(true, granted["Account Settings Read"])
+            assertEquals(true, granted["DNS Read"])
+            assertEquals(true, granted["Workers R2 Storage Read"])
+            assertEquals(false, granted["Queues Read"])
+            assertTrue(!check.missingRequired)
+            assertEquals(
+                setOf(
+                    "SSL and Certificates Read",
+                    "Workers R2 Storage Read",
+                    "Workers KV Storage Read",
+                    "D1 Read",
+                    "Queues Read",
+                    "Cloudflare Tunnel Read",
+                ),
+                check.permissions
+                    .filterNot { it.permission.required }
+                    .map { it.permission.name }
+                    .toSet(),
+            )
+        }
 
     @Test
     fun validTokenNamesTheAccount() =
@@ -172,3 +248,13 @@ class CloudflarePluginTest {
             assertTrue(requests.all { it.url.protocol == URLProtocol.HTTPS && it.url.host == "api.cloudflare.com" })
         }
 }
+
+private const val R2_BUCKETS =
+    """{"success": true, "result": {"buckets": [
+      {"name": "acme-assets", "creation_date": "2026-03-01T10:00:00.000Z", "location": "WEUR"}
+    ]}}"""
+
+private const val TUNNELS =
+    """{"success": true, "result": [
+      {"id": "t1", "name": "office", "status": "degraded", "created_at": "2026-01-01T00:00:00Z"}
+    ]}"""

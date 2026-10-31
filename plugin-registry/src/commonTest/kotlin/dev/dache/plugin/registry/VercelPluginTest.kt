@@ -64,7 +64,10 @@ class VercelPluginTest {
     fun bundledManifestLoads() {
         val vercel = vercel()
 
-        assertEquals(setOf(Capability.SITES, Capability.DEPLOYMENTS), vercel.capabilities)
+        assertEquals(
+            setOf(Capability.SITES, Capability.DEPLOYMENTS, Capability.DOMAINS, Capability.DNS, Capability.SERVICES),
+            vercel.capabilities,
+        )
         assertEquals(listOf("team"), vercel.accountSettings.map { it.key })
         assertFalse(vercel.accountSettings.single().required)
     }

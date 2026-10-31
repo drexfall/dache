@@ -39,6 +39,7 @@ sealed interface FieldSpec {
      *
      * With [request], the engine sends it once per item, its placeholders filled from that item, and [from] is
      * read from the response instead of the item (e.g. a project's deployments from their own endpoint).
+     * [permission] and [optional] work as on a resource, for that request.
      */
     @Serializable
     data class Nested(
@@ -46,6 +47,8 @@ sealed interface FieldSpec {
         val fields: Map<String, FieldSpec>,
         val statusMap: Map<String, String> = emptyMap(),
         val request: RequestSpec? = null,
+        val permission: String? = null,
+        val optional: Boolean = false,
     ) : FieldSpec
 }
 

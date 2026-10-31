@@ -55,7 +55,7 @@ Expressions are a dot path into the response (`build_settings.repo_url`, `items.
 
 Paging is `page` (numbered pages), `cursor` (an expression such as `pagination.next` names the next cursor) or `link` (follows the `Link: rel="next"` header). Every style stops after `maxPages`.
 
-A resource's `kind` is `site`, `domain` (with TLS `certificates` as nested records), `dnsRecord` or `worker`. Each status field has a `statusMap` from the provider's values to Dache's, e.g. `DeployStatus` names for deployments and `CertificateStatus` names for certificates.
+A resource's `kind` is `site`, `domain` (with TLS `certificates` as nested records), `dnsRecord`, `worker` or `service`. A `service` is anything without a model of its own (R2 buckets, KV namespaces, tunnels, Netlify forms), described by a `service` spec with an `id` and a plural `label`, and mapped to `name`, an optional one-line `detail`, `status` (`ServiceStatus`), `createdAt` and `updatedAt`. Adding one is manifest-only. Each status field has a `statusMap` from the provider's values to Dache's, e.g. `DeployStatus` names for deployments and `CertificateStatus` names for certificates.
 
 A request can also run once per item of an earlier list. `forEach` on a resource lists parents first (Cloudflare accounts, say) and sends the resource request per parent; a `request` on a nested field fetches that field per item (a project's deployments). Placeholders fill the path and query values from that item, and every item fetched this way carries its parent as `^`, so `^.name` is the zone a DNS record came from and `^.^.id` reaches two levels up:
 
@@ -68,6 +68,10 @@ A request can also run once per item of an earlier list. `forEach` on a resource
 ```
 
 A manifest can also ask for account `settings` besides the token, such as Vercel's optional team slug. `{@team}` fills them into requests and text fields. A query parameter that is only an unset optional setting is left out, and a text field can be a template like `"https://vercel.com/{@team}/{name}"`. Times in epoch milliseconds use the `millis` pipe, and a key on an array reads it from every item (`alias.domain`).
+
+Each resource, nested request and the validate request can name the token `permission` it needs, as the provider names it. Connecting checks every one by sending the first request of each list, and shows a checklist; an account's settings page runs the same check with the stored token. A resource marked `optional` that answers 403 or 404 is left out instead of failing the refresh, and its page says which permission is missing. Optional resources must name their permission.
+
+`pages` splits an account into pages beside its dashboard, e.g. `{ "id": "dns", "title": "DNS", "resources": ["domain", "dnsRecord"] }`, naming kinds and service ids. Every resource must be on a page; without `pages`, each kind and service gets its own.
 
 Values filled into the path are percent-encoded whole, so they can't add path segments, and placeholders can't appear in the host. A fan-out sends at most 100 requests, four at a time; a parent whose list returns 404 just has no items.
 

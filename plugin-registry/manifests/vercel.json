@@ -12,7 +12,7 @@
       "hint": "The part after vercel.com/ on your team's dashboard. Leave blank for your personal account."
     }
   ],
-  "capabilities": ["SITES", "DEPLOYMENTS"],
+  "capabilities": ["SITES", "DEPLOYMENTS", "DOMAINS", "DNS", "SERVICES"],
   "validate": {
     "request": { "url": "https://api.vercel.com/v2/user" },
     "displayName": "user.email | default:Vercel"
@@ -64,6 +64,91 @@
           }
         }
       }
+    },
+    {
+      "kind": "domain",
+      "permission": "Domains Read",
+      "optional": true,
+      "request": {
+        "url": "https://api.vercel.com/v5/domains",
+        "query": { "slug": "{@team}" },
+        "paging": {
+          "type": "cursor",
+          "param": "until",
+          "next": "pagination.next",
+          "sizeParam": "limit",
+          "size": 100,
+          "maxPages": 10
+        }
+      },
+      "items": "domains",
+      "fields": {
+        "nativeId": "id",
+        "name": "name",
+        "webUrl": "https://vercel.com/{@team}/~/domains/{name}",
+        "expiresAt": "expiresAt | millis"
+      }
+    },
+    {
+      "kind": "dnsRecord",
+      "permission": "Domains Read",
+      "optional": true,
+      "forEach": {
+        "request": {
+          "url": "https://api.vercel.com/v5/domains",
+          "query": { "slug": "{@team}" },
+          "paging": {
+            "type": "cursor",
+            "param": "until",
+            "next": "pagination.next",
+            "sizeParam": "limit",
+            "size": 100,
+            "maxPages": 10
+          }
+        },
+        "items": "domains"
+      },
+      "request": {
+        "url": "https://api.vercel.com/v4/domains/{name}/records",
+        "query": { "slug": "{@team}" },
+        "paging": {
+          "type": "cursor",
+          "param": "until",
+          "next": "pagination.next",
+          "sizeParam": "limit",
+          "size": 100,
+          "maxPages": 10
+        }
+      },
+      "items": "records",
+      "fields": {
+        "nativeId": "id",
+        "webUrl": "https://vercel.com/{@team}/~/domains/{^.name}",
+        "zoneName": "^.name",
+        "type": "type",
+        "name": "name | default:@",
+        "content": "value"
+      }
+    },
+    {
+      "kind": "service",
+      "service": { "id": "edgeConfig", "label": "Edge Config stores" },
+      "permission": "Edge Config Read",
+      "optional": true,
+      "request": { "url": "https://api.vercel.com/v1/edge-config", "query": { "slug": "{@team}" } },
+      "fields": {
+        "nativeId": "id",
+        "name": "slug",
+        "webUrl": "https://vercel.com/{@team}/~/stores",
+        "detail": "{itemCount} items",
+        "createdAt": "createdAt | millis",
+        "updatedAt": "updatedAt | millis"
+      }
     }
+  ],
+  "pages": [
+    { "id": "projects", "title": "Projects", "resources": ["site"] },
+    { "id": "domains", "title": "Domains", "resources": ["domain", "dnsRecord"] },
+    { "id": "edge-config", "title": "Edge Config", "resources": ["edgeConfig"] }
   ]
 }

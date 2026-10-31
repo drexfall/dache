@@ -106,6 +106,28 @@ internal class ListFetcher(
         return if (parent == null) items else items.map { it.withParent(parent) }
     }
 
+    /**
+     * Sends only the first request of [list], to check the token can read it, and returns that page's items.
+     * Unlike [fetch], every failure is thrown, and a parent that can't fill the placeholders gives no items.
+     *
+     * @throws ProviderError
+     */
+    suspend fun first(
+        list: CompiledList,
+        account: AccountContext,
+        parent: JsonElement? = null,
+    ): List<JsonElement> {
+        val first = list.url(parent, account.settings) ?: return emptyList()
+        val url =
+            when (val paging = list.paging) {
+                null -> first
+                is PagingSpec.Page -> first.with(paging.sizeParams() + (paging.param to paging.start.toString()))
+                else -> first.with(paging.sizeParams())
+            }
+        val items = list.items(http.getJson(url, list.headers, account.token))
+        return if (parent == null) items else items.map { it.withParent(parent) }
+    }
+
     /** An object item carries [parent] under `^`, so expressions can read it (`^.name`). */
     private fun JsonElement.withParent(parent: JsonElement): JsonElement =
         (this as? JsonObject)?.let { JsonObject(it + (Expression.PARENT to parent)) } ?: this

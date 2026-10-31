@@ -15,7 +15,9 @@ data class DashboardSummary(
     /** Workflows whose latest run failed. */
     val failedCiRuns: Int,
 ) {
-    val hasProblems: Boolean get() = failingDeploys + downMonitors + expiringDomains + failedCiRuns > 0
+    val problemCount: Int get() = failingDeploys + downMonitors + expiringDomains + failedCiRuns
+
+    val hasProblems: Boolean get() = problemCount > 0
 
     companion object {
         val EXPIRY_WINDOW: Duration = 30.days

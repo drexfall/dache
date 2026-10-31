@@ -52,7 +52,10 @@ class NetlifyPluginTest {
         val manifest = BundledPlugins.manifests.single { it.id == "netlify" }
 
         assertEquals(listOf("api.netlify.com"), manifest.hosts)
-        assertEquals(setOf(Capability.SITES, Capability.DEPLOYMENTS), netlify().capabilities)
+        assertEquals(
+            setOf(Capability.SITES, Capability.DEPLOYMENTS, Capability.DOMAINS, Capability.DNS, Capability.SERVICES),
+            netlify().capabilities,
+        )
     }
 
     @Test
@@ -79,7 +82,8 @@ class NetlifyPluginTest {
 
             val sites = netlify().fetchSnapshot(account).getOrThrow().sites
 
-            val request = requests.single()
+            // Sites come first; DNS zones and forms follow.
+            val request = requests.first()
             assertEquals("/api/v1/sites", request.url.encodedPath)
             assertEquals("all", request.url.parameters["filter"])
             assertEquals("100", request.url.parameters["per_page"])

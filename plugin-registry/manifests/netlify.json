@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "hosts": ["api.netlify.com"],
   "auth": { "type": "bearer" },
-  "capabilities": ["SITES", "DEPLOYMENTS"],
+  "capabilities": ["SITES", "DEPLOYMENTS", "DOMAINS", "DNS", "SERVICES"],
   "validate": {
     "request": { "url": "https://api.netlify.com/api/v1/user" },
     "displayName": "email | default:Netlify"
@@ -55,6 +55,58 @@
           }
         }
       }
+    },
+    {
+      "kind": "domain",
+      "permission": "DNS Read",
+      "optional": true,
+      "request": { "url": "https://api.netlify.com/api/v1/dns_zones" },
+      "fields": {
+        "nativeId": "id",
+        "name": "name",
+        "webUrl": "https://app.netlify.com/teams/{account_slug}/dns/{name}"
+      }
+    },
+    {
+      "kind": "dnsRecord",
+      "permission": "DNS Read",
+      "optional": true,
+      "forEach": { "request": { "url": "https://api.netlify.com/api/v1/dns_zones" } },
+      "request": { "url": "https://api.netlify.com/api/v1/dns_zones/{id}/dns_records" },
+      "fields": {
+        "nativeId": "id",
+        "webUrl": "https://app.netlify.com/teams/{^.account_slug}/dns/{^.name}",
+        "zoneName": "^.name",
+        "type": "type",
+        "name": "hostname",
+        "content": "value"
+      }
+    },
+    {
+      "kind": "service",
+      "service": { "id": "form", "label": "Forms" },
+      "permission": "Forms Read",
+      "optional": true,
+      "forEach": {
+        "request": {
+          "url": "https://api.netlify.com/api/v1/sites",
+          "query": { "filter": "all" },
+          "paging": { "type": "page", "param": "page", "sizeParam": "per_page", "size": 100, "maxPages": 10 }
+        }
+      },
+      "request": { "url": "https://api.netlify.com/api/v1/sites/{id}/forms" },
+      "fields": {
+        "nativeId": "id",
+        "name": "name",
+        "webUrl": "https://app.netlify.com/sites/{^.name}/forms/{id}",
+        "detail": "{submission_count} submissions",
+        "createdAt": "created_at | date"
+      }
     }
+  ],
+  "pages": [
+    { "id": "sites", "title": "Sites", "resources": ["site"] },
+    { "id": "dns", "title": "DNS", "resources": ["domain", "dnsRecord"] },
+    { "id": "forms", "title": "Forms", "resources": ["form"] }
   ]
 }

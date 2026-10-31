@@ -7,8 +7,11 @@ import dev.dache.core.model.Deployment
 import dev.dache.core.model.DnsRecord
 import dev.dache.core.model.Domain
 import dev.dache.core.model.ProviderId
+import dev.dache.core.model.ServiceResource
+import dev.dache.core.model.ServiceStatus
 import dev.dache.core.model.Site
 import dev.dache.core.model.Worker
+import dev.dache.plugin.api.ServiceSpec
 
 /** Builds unified models from mapped records. A record missing a required field is skipped. */
 internal class Binder(
@@ -70,6 +73,26 @@ internal class Binder(
             )
         }
 
+    fun service(
+        record: Mapping.Record,
+        spec: ServiceSpec,
+    ): ServiceResource? =
+        orSkip {
+            ServiceResource(
+                providerId = providerId,
+                accountId = accountId,
+                nativeId = "${spec.id}/${record.required("nativeId")}",
+                webUrl = record.webUrl(),
+                service = spec.id,
+                serviceLabel = spec.label,
+                name = record.required("name"),
+                detail = record.text("detail")?.ifBlank { null },
+                status = record.text("status")?.let { record.status("status", ServiceStatus.UNKNOWN) },
+                createdAt = record.time("createdAt"),
+                updatedAt = record.time("updatedAt"),
+            )
+        }
+
     private fun deployment(record: Mapping.Record): Deployment? =
         orSkip {
             Deployment(
@@ -93,25 +116,25 @@ internal class Binder(
             )
         }
 
-    private inline fun <T> orSkip(build: () -> T): T? =
-        try {
-            build()
-        } catch (_: MissingFieldException) {
-            null
-        }
-
     private fun Mapping.Record.required(field: String): String = text(field) ?: throw MissingFieldException(field)
 
     /** Without its own link, a resource links to the provider's dashboard. */
     private fun Mapping.Record.webUrl(): String = text("webUrl") ?: providerId.dashboardUrl
-
-    /** Unmapped and unlisted provider values are [unknown]. */
-    private inline fun <reified E : Enum<E>> Mapping.Record.status(
-        field: String,
-        unknown: E,
-    ): E = status(field)?.let { name -> enumValues<E>().firstOrNull { it.name == name } } ?: unknown
-
-    private class MissingFieldException(
-        field: String,
-    ) : Exception("missing $field")
 }
+
+private inline fun <T> orSkip(build: () -> T): T? =
+    try {
+        build()
+    } catch (_: MissingFieldException) {
+        null
+    }
+
+/** Unmapped and unlisted provider values are [unknown]. */
+private inline fun <reified E : Enum<E>> Mapping.Record.status(
+    field: String,
+    unknown: E,
+): E = status(field)?.let { name -> enumValues<E>().firstOrNull { it.name == name } } ?: unknown
+
+private class MissingFieldException(
+    field: String,
+) : Exception("missing $field")

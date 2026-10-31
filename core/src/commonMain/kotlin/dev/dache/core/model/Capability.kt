@@ -10,4 +10,7 @@ enum class Capability {
     SERVERS,
     WORKERS,
     MONITORS,
+
+    /** [ServiceResource]s: storage, queues, tunnels and anything else a plugin describes itself. */
+    SERVICES,
 }

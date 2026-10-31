@@ -70,7 +70,7 @@ class Template private constructor(
     override fun toString(): String = source
 
     companion object {
-        private val placeholder = Regex("\\{([^{}]*)}")
+        private val placeholder = Regex("\\{([^{}]*)\\}")
         private val settingKey = Regex("@([A-Za-z][A-Za-z0-9_]*)")
 
         /** @throws ExpressionException for a bad placeholder expression or a stray brace. */

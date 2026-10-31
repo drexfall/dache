@@ -5,14 +5,16 @@
   "version": "1.0.0",
   "hosts": ["api.cloudflare.com"],
   "auth": { "type": "bearer" },
-  "capabilities": ["DOMAINS", "DNS", "SITES", "DEPLOYMENTS", "WORKERS"],
+  "capabilities": ["DOMAINS", "DNS", "SITES", "DEPLOYMENTS", "WORKERS", "SERVICES"],
   "validate": {
     "request": { "url": "https://api.cloudflare.com/client/v4/accounts", "query": { "per_page": "5" } },
-    "displayName": "result.0.name | default:Cloudflare"
+    "displayName": "result.0.name | default:Cloudflare",
+    "permission": "Account Settings Read"
   },
   "resources": [
     {
       "kind": "domain",
+      "permission": "Zone Read",
       "request": {
         "url": "https://api.cloudflare.com/client/v4/zones",
         "paging": { "type": "page", "sizeParam": "per_page", "size": 50, "maxPages": 10 }
@@ -27,6 +29,8 @@
             "url": "https://api.cloudflare.com/client/v4/zones/{id}/ssl/certificate_packs",
             "query": { "status": "all" }
           },
+          "permission": "SSL and Certificates Read",
+          "optional": true,
           "from": "result",
           "fields": {
             "nativeId": "id",
@@ -62,6 +66,7 @@
     },
     {
       "kind": "dnsRecord",
+      "permission": "DNS Read",
       "forEach": {
         "request": {
           "url": "https://api.cloudflare.com/client/v4/zones",
@@ -85,6 +90,7 @@
     },
     {
       "kind": "site",
+      "permission": "Cloudflare Pages Read",
       "forEach": {
         "request": {
           "url": "https://api.cloudflare.com/client/v4/accounts",
@@ -131,6 +137,7 @@
     },
     {
       "kind": "worker",
+      "permission": "Workers Scripts Read",
       "forEach": {
         "request": {
           "url": "https://api.cloudflare.com/client/v4/accounts",
@@ -147,6 +154,140 @@
         "routes": "routes.pattern",
         "modifiedAt": "modified_on | date"
       }
+    },
+    {
+      "kind": "service",
+      "service": { "id": "r2Bucket", "label": "R2 buckets" },
+      "permission": "Workers R2 Storage Read",
+      "optional": true,
+      "forEach": {
+        "request": {
+          "url": "https://api.cloudflare.com/client/v4/accounts",
+          "paging": { "type": "page", "sizeParam": "per_page", "size": 50, "maxPages": 4 }
+        },
+        "items": "result"
+      },
+      "request": {
+        "url": "https://api.cloudflare.com/client/v4/accounts/{id}/r2/buckets",
+        "query": { "per_page": "1000" }
+      },
+      "items": "result.buckets",
+      "fields": {
+        "nativeId": "name",
+        "name": "name",
+        "webUrl": "https://dash.cloudflare.com/{^.id}/r2/default/buckets/{name}",
+        "detail": "location",
+        "createdAt": "creation_date | date"
+      }
+    },
+    {
+      "kind": "service",
+      "service": { "id": "kvNamespace", "label": "KV namespaces" },
+      "permission": "Workers KV Storage Read",
+      "optional": true,
+      "forEach": {
+        "request": {
+          "url": "https://api.cloudflare.com/client/v4/accounts",
+          "paging": { "type": "page", "sizeParam": "per_page", "size": 50, "maxPages": 4 }
+        },
+        "items": "result"
+      },
+      "request": {
+        "url": "https://api.cloudflare.com/client/v4/accounts/{id}/storage/kv/namespaces",
+        "paging": { "type": "page", "sizeParam": "per_page", "size": 100, "maxPages": 10 }
+      },
+      "items": "result",
+      "fields": {
+        "nativeId": "id",
+        "name": "title",
+        "webUrl": "https://dash.cloudflare.com/{^.id}/workers/kv/namespaces/{id}"
+      }
+    },
+    {
+      "kind": "service",
+      "service": { "id": "d1Database", "label": "D1 databases" },
+      "permission": "D1 Read",
+      "optional": true,
+      "forEach": {
+        "request": {
+          "url": "https://api.cloudflare.com/client/v4/accounts",
+          "paging": { "type": "page", "sizeParam": "per_page", "size": 50, "maxPages": 4 }
+        },
+        "items": "result"
+      },
+      "request": {
+        "url": "https://api.cloudflare.com/client/v4/accounts/{id}/d1/database",
+        "paging": { "type": "page", "sizeParam": "per_page", "size": 100, "maxPages": 10 }
+      },
+      "items": "result",
+      "fields": {
+        "nativeId": "uuid",
+        "name": "name",
+        "webUrl": "https://dash.cloudflare.com/{^.id}/workers/d1/databases/{uuid}",
+        "detail": "version",
+        "createdAt": "created_at | date"
+      }
+    },
+    {
+      "kind": "service",
+      "service": { "id": "queue", "label": "Queues" },
+      "permission": "Queues Read",
+      "optional": true,
+      "forEach": {
+        "request": {
+          "url": "https://api.cloudflare.com/client/v4/accounts",
+          "paging": { "type": "page", "sizeParam": "per_page", "size": 50, "maxPages": 4 }
+        },
+        "items": "result"
+      },
+      "request": { "url": "https://api.cloudflare.com/client/v4/accounts/{id}/queues" },
+      "items": "result",
+      "fields": {
+        "nativeId": "queue_id",
+        "name": "queue_name",
+        "webUrl": "https://dash.cloudflare.com/{^.id}/workers/queues/view/{queue_id}",
+        "detail": "{consumers_total_count} consumers",
+        "createdAt": "created_on | date",
+        "updatedAt": "modified_on | date"
+      }
+    },
+    {
+      "kind": "service",
+      "service": { "id": "tunnel", "label": "Tunnels" },
+      "permission": "Cloudflare Tunnel Read",
+      "optional": true,
+      "forEach": {
+        "request": {
+          "url": "https://api.cloudflare.com/client/v4/accounts",
+          "paging": { "type": "page", "sizeParam": "per_page", "size": 50, "maxPages": 4 }
+        },
+        "items": "result"
+      },
+      "request": {
+        "url": "https://api.cloudflare.com/client/v4/accounts/{id}/cfd_tunnel",
+        "query": { "is_deleted": "false" },
+        "paging": { "type": "page", "sizeParam": "per_page", "size": 50, "maxPages": 10 }
+      },
+      "items": "result",
+      "fields": {
+        "nativeId": "id",
+        "name": "name",
+        "webUrl": "https://one.dash.cloudflare.com/{^.id}/networks/tunnels",
+        "status": "status",
+        "createdAt": "created_at | date",
+        "updatedAt": "conns_active_at | date"
+      },
+      "statusMap": { "healthy": "HEALTHY", "degraded": "DEGRADED", "down": "DOWN", "inactive": "INACTIVE" }
     }
+  ],
+  "pages": [
+    { "id": "dns", "title": "DNS", "resources": ["domain", "dnsRecord"] },
+    { "id": "pages", "title": "Pages", "resources": ["site"] },
+    { "id": "workers", "title": "Workers", "resources": ["worker"] },
+    { "id": "r2", "title": "R2", "resources": ["r2Bucket"] },
+    { "id": "kv", "title": "KV", "resources": ["kvNamespace"] },
+    { "id": "d1", "title": "D1", "resources": ["d1Database"] },
+    { "id": "queues", "title": "Queues", "resources": ["queue"] },
+    { "id": "tunnels", "title": "Tunnels", "resources": ["tunnel"] }
   ]
 }

@@ -9,6 +9,7 @@ import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.Resource
 import dev.dache.core.model.ResourceLink
 import dev.dache.core.model.ResourceRef
+import dev.dache.core.model.ServicePage
 import dev.dache.core.provider.DevOpsProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +42,8 @@ data class DashboardState(
     val summary: DashboardSummary = DashboardSummary(0, 0, 0, 0),
     val lastUpdated: Instant? = null,
     val isRefreshing: Boolean = false,
+    /** Each provider's pages beside an account's dashboard. */
+    val pages: Map<ProviderId, List<ServicePage>> = emptyMap(),
 ) {
     val snapshots: List<ProviderSnapshot> get() = results.mapNotNull { it.snapshot }
 
@@ -50,6 +53,13 @@ data class DashboardState(
             it.ref ==
                 ref
         }
+
+    fun pages(providerId: ProviderId): List<ServicePage> = pages[providerId].orEmpty()
+
+    fun page(
+        providerId: ProviderId,
+        pageId: String,
+    ): ServicePage? = pages(providerId).firstOrNull { it.id == pageId }
 
     /** Resources linked to [ref], on any provider. */
     fun linkedTo(ref: ResourceRef): List<ResourceRef> = links.mapNotNull { it.other(ref) }
@@ -65,7 +75,8 @@ class DashboardRepository(
     scope: CoroutineScope,
     private val clock: Clock = Clock.System,
 ) {
-    private val fetched = MutableStateFlow(DashboardState())
+    private val pages = providers.mapValues { (_, provider) -> provider.pages }
+    private val fetched = MutableStateFlow(DashboardState(pages = pages))
     private val refreshLock = Mutex()
 
     val state: StateFlow<DashboardState> =
@@ -77,7 +88,7 @@ class DashboardRepository(
             } else {
                 derive(results, state.lastUpdated).copy(accounts = accounts, isRefreshing = state.isRefreshing)
             }
-        }.stateIn(scope, SharingStarted.Eagerly, DashboardState())
+        }.stateIn(scope, SharingStarted.Eagerly, DashboardState(pages = pages))
 
     suspend fun refresh() {
         // Overlapping refreshes (pull-to-refresh plus a widget update) would just repeat the same calls.
@@ -123,6 +134,7 @@ class DashboardRepository(
             links = ResourceLinker.link(snapshots),
             summary = DashboardSummary.from(snapshots, clock.now()),
             lastUpdated = lastUpdated,
+            pages = pages,
         )
     }
 }

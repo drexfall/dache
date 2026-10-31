@@ -4,6 +4,7 @@ import dev.dache.core.model.AccountSetting
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
+import dev.dache.core.model.TokenCheck
 import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.security.TokenKey
 import dev.dache.core.security.TokenVault
@@ -35,7 +36,7 @@ class AccountRepository(
     ): Result<ConnectedAccount> {
         val provider = providers[providerId] ?: return Result.failure(ProviderError.NotFound())
         val trimmed = token.trim()
-        val values = settings.mapValues { it.value.trim() }.filterValues { it.isNotEmpty() }
+        val values = clean(settings)
         return provider.validateCredentials(trimmed, values).fold(
             onSuccess = { info ->
                 val account =
@@ -50,6 +51,31 @@ class AccountRepository(
             onFailure = { Result.failure(it) },
         )
     }
+
+    /** Checks [token] and which permissions it has, without connecting anything. */
+    suspend fun checkToken(
+        providerId: ProviderId,
+        token: String,
+        settings: Map<String, String> = emptyMap(),
+    ): Result<TokenCheck> {
+        val provider = providers[providerId] ?: return Result.failure(ProviderError.NotFound())
+        return provider.checkToken(token.trim(), clean(settings))
+    }
+
+    /** The same check for a connected account, with its stored token. */
+    suspend fun checkToken(account: ConnectedAccount): Result<TokenCheck> {
+        val token =
+            try {
+                vault.get(account.tokenKey())
+            } catch (e: VaultUnavailableException) {
+                return Result.failure(e)
+            }
+        return token?.let { checkToken(account.providerId, it, account.settings) }
+            ?: Result.failure(ProviderError.Unauthorized())
+    }
+
+    private fun clean(settings: Map<String, String>): Map<String, String> =
+        settings.mapValues { it.value.trim() }.filterValues { it.isNotEmpty() }
 
     private suspend fun save(
         account: ConnectedAccount,

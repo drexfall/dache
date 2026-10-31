@@ -99,6 +99,7 @@ object ManifestValidator {
                 checkRequest("$path.request", resource.request, fannedOut = resource.forEach != null)
                 resource.items?.let { checkExpression("$path.items", it) }
             }
+            problems += PageRules.check(manifest)
             return problems
         }
 

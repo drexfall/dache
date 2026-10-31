@@ -3,6 +3,8 @@ package dev.dache.plugin.runtime.mapping
 import dev.dache.core.model.Capability
 import dev.dache.core.model.CertificateStatus
 import dev.dache.core.model.DeployStatus
+import dev.dache.core.model.ResourceKind
+import dev.dache.core.model.ServiceStatus
 
 enum class FieldType {
     TEXT,
@@ -33,8 +35,10 @@ private fun time(required: Boolean = false) = FieldDef(FieldType.TIME, required)
 
 private val textList = FieldDef(FieldType.TEXT_LIST, required = false)
 
-private fun status(values: Array<out Enum<*>>) =
-    FieldDef(FieldType.STATUS, required = true, statuses = values.map { it.name })
+private fun status(
+    values: Array<out Enum<*>>,
+    required: Boolean = true,
+) = FieldDef(FieldType.STATUS, required, statuses = values.map { it.name })
 
 /**
  * The unified models a manifest can produce, with the fields each needs. Kinds are added when the first
@@ -42,11 +46,13 @@ private fun status(values: Array<out Enum<*>>) =
  */
 enum class ManifestKind(
     val kindName: String,
+    val resourceKind: ResourceKind,
     val capability: Capability,
     val fields: Map<String, FieldDef>,
 ) {
     SITE(
         kindName = "site",
+        resourceKind = ResourceKind.SITE,
         capability = Capability.SITES,
         fields =
             mapOf(
@@ -75,6 +81,7 @@ enum class ManifestKind(
     ),
     DOMAIN(
         kindName = "domain",
+        resourceKind = ResourceKind.DOMAIN,
         capability = Capability.DOMAINS,
         fields =
             mapOf(
@@ -99,6 +106,7 @@ enum class ManifestKind(
     ),
     DNS_RECORD(
         kindName = "dnsRecord",
+        resourceKind = ResourceKind.DNS_RECORD,
         capability = Capability.DNS,
         fields =
             mapOf(
@@ -112,6 +120,7 @@ enum class ManifestKind(
     ),
     WORKER(
         kindName = "worker",
+        resourceKind = ResourceKind.WORKER,
         capability = Capability.WORKERS,
         fields =
             mapOf(
@@ -120,6 +129,23 @@ enum class ManifestKind(
                 "webUrl" to text(),
                 "routes" to textList,
                 "modifiedAt" to time(),
+            ),
+    ),
+
+    /** Anything else, described by the resource's `service` spec. */
+    SERVICE(
+        kindName = "service",
+        resourceKind = ResourceKind.SERVICE,
+        capability = Capability.SERVICES,
+        fields =
+            mapOf(
+                "nativeId" to text(required = true),
+                "name" to text(required = true),
+                "webUrl" to text(),
+                "detail" to text(),
+                "status" to status(ServiceStatus.entries.toTypedArray(), required = false),
+                "createdAt" to time(),
+                "updatedAt" to time(),
             ),
     ),
     ;

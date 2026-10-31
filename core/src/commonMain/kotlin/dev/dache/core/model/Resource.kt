@@ -22,6 +22,9 @@ enum class ResourceKind {
     SERVER,
     WORKER,
     MONITOR,
+
+    /** A [ServiceResource]: anything a plugin describes itself, such as an R2 bucket. */
+    SERVICE,
 }
 
 /** Stable pointer to a resource, used as the endpoint of a [ResourceLink]. */

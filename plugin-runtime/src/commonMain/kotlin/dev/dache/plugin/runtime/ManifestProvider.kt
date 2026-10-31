@@ -8,11 +8,11 @@ import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
+import dev.dache.core.model.ServicePage
+import dev.dache.core.model.TokenCheck
 import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.security.TokenVault
-import dev.dache.plugin.api.FieldSpec
 import dev.dache.plugin.api.PluginManifest
-import dev.dache.plugin.api.ResourceSpec
 import dev.dache.plugin.runtime.http.PluginHttp
 import dev.dache.plugin.runtime.mapping.Binder
 import dev.dache.plugin.runtime.mapping.Expression
@@ -36,27 +36,14 @@ class ManifestProvider(
     override val capabilities: Set<Capability> =
         manifest.capabilities.mapNotNull { name -> Capability.entries.firstOrNull { it.name == name } }.toSet()
 
+    override val pages: List<ServicePage> = manifestPages(manifest)
+
     private val http = PluginHttp(client, manifest, logger)
     private val lists = ListFetcher(http)
     private val validate = CompiledList(manifest.validate.request, items = null)
     private val displayName = Expression.parse(manifest.validate.displayName)
     private val resources = manifest.resources.map(::CompiledResource)
-
-    private class CompiledResource(
-        spec: ResourceSpec,
-    ) {
-        val kind = checkNotNull(ManifestKind.named(spec.kind)) { "manifest was not validated" }
-        val list = CompiledList(spec.request, spec.items)
-        val parents = spec.forEach?.let { CompiledList(it.request, it.items) }
-        val mapping = Mapping(spec.fields, spec.statusMap)
-
-        /** Nested fields with their own request, sent once per item. */
-        val requested =
-            spec.fields
-                .mapNotNull { (name, field) ->
-                    (field as? FieldSpec.Nested)?.request?.let { name to CompiledList(it, field.from) }
-                }.toMap()
-    }
+    private val checker = TokenChecker(lists, resources, manifest.validate.permission)
 
     override val accountSettings: List<AccountSetting> =
         manifest.settings.map { AccountSetting(it.key, it.label, it.hint, it.required) }
@@ -73,22 +60,42 @@ class ManifestProvider(
             AccountInfo(displayName = displayName.evaluate(body)?.asText()?.ifBlank { null } ?: manifest.name)
         }
 
+    override suspend fun checkToken(
+        token: String,
+        settings: Map<String, String>,
+    ): Result<TokenCheck> =
+        validateCredentials(token, settings).map { info ->
+            TokenCheck(info.displayName, checker.check(AccountContext(token, settings)))
+        }
+
     override suspend fun fetchSnapshot(account: ConnectedAccount): Result<ProviderSnapshot> =
         attempt {
             val token = vault.get(account.tokenKey()) ?: throw ProviderError.Unauthorized()
             val context = AccountContext(token, account.settings)
             val binder = Binder(id, account.id)
             resources.fold(ProviderSnapshot()) { snapshot, resource ->
-                val records = records(resource, items(resource, context), context)
-                when (resource.kind) {
-                    ManifestKind.SITE -> snapshot.copy(sites = snapshot.sites + records.mapNotNull(binder::site))
-                    ManifestKind.DOMAIN ->
-                        snapshot.copy(domains = snapshot.domains + records.mapNotNull(binder::domain))
-                    ManifestKind.DNS_RECORD ->
-                        snapshot.copy(dnsRecords = snapshot.dnsRecords + records.mapNotNull(binder::dnsRecord))
-                    ManifestKind.WORKER ->
-                        snapshot.copy(workers = snapshot.workers + records.mapNotNull(binder::worker))
-                }
+                val fetched = readable(resource.optional) { records(resource, items(resource, context), context) }
+                val missing = fetched?.missing ?: listOfNotNull(resource.permission)
+                add(snapshot, resource, fetched?.records.orEmpty(), binder)
+                    .let { it.copy(missingPermissions = it.missingPermissions + missing) }
+            }
+        }
+
+    private fun add(
+        snapshot: ProviderSnapshot,
+        resource: CompiledResource,
+        records: List<Mapping.Record>,
+        binder: Binder,
+    ): ProviderSnapshot =
+        when (resource.kind) {
+            ManifestKind.SITE -> snapshot.copy(sites = snapshot.sites + records.mapNotNull(binder::site))
+            ManifestKind.DOMAIN -> snapshot.copy(domains = snapshot.domains + records.mapNotNull(binder::domain))
+            ManifestKind.DNS_RECORD ->
+                snapshot.copy(dnsRecords = snapshot.dnsRecords + records.mapNotNull(binder::dnsRecord))
+            ManifestKind.WORKER -> snapshot.copy(workers = snapshot.workers + records.mapNotNull(binder::worker))
+            ManifestKind.SERVICE -> {
+                val service = checkNotNull(resource.service) { "manifest was not validated" }
+                snapshot.copy(services = snapshot.services + records.mapNotNull { binder.service(it, service) })
             }
         }
 
@@ -100,22 +107,43 @@ class ManifestProvider(
         return fanOut(parents) { parent -> lists.fetch(resource.list, account, parent) }.flatten()
     }
 
+    /** The records, and the permissions of optional nested lists the token couldn't read. */
+    private class Fetched(
+        val records: List<Mapping.Record>,
+        val missing: Set<String>,
+    )
+
     /** Items past the fan-out limit keep their own fields but get no requested nested records. */
     private suspend fun records(
         resource: CompiledResource,
         items: List<JsonElement>,
         account: AccountContext,
-    ): List<Mapping.Record> {
+    ): Fetched {
         val settings = account.settings
-        if (resource.requested.isEmpty()) return items.map { resource.mapping.Record(it, settings) }
+        if (resource.requested.isEmpty()) {
+            return Fetched(
+                items.map { resource.mapping.Record(it, settings) },
+                emptySet(),
+            )
+        }
         val fetched =
             fanOut(items) { item ->
-                resource.requested.mapValues { (_, list) -> lists.fetch(list, account, parent = item) }
+                resource.requested.mapValues { (_, field) ->
+                    readable(field.optional) { lists.fetch(field.list, account, parent = item) }
+                }
             }
+        val missing =
+            fetched
+                .flatMap { byField -> byField.filterValues { it == null }.keys }
+                .mapNotNull { resource.requested[it]?.permission }
+                .toSet()
         val none = emptyMap<String, List<JsonElement>>()
-        return items.mapIndexed { index, item ->
-            resource.mapping.Record(item, settings, fetched.getOrElse(index) { none })
-        }
+        val records =
+            items.mapIndexed { index, item ->
+                val nested = fetched.getOrNull(index)?.mapValues { it.value.orEmpty() } ?: none
+                resource.mapping.Record(item, settings, nested)
+            }
+        return Fetched(records, missing)
     }
 
     private inline fun <T> attempt(block: () -> T): Result<T> =

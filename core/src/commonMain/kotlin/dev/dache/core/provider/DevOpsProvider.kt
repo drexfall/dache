@@ -6,6 +6,8 @@ import dev.dache.core.model.Capability
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
+import dev.dache.core.model.ServicePage
+import dev.dache.core.model.TokenCheck
 
 /**
  * Common contract for every provider. Failures are returned as `Result.failure(ProviderError)`.
@@ -18,11 +20,23 @@ interface DevOpsProvider {
     /** What the user fills in besides the token when connecting. */
     val accountSettings: List<AccountSetting> get() = emptyList()
 
+    /** How an account's resources are split into pages beside its dashboard. */
+    val pages: List<ServicePage> get() = ServicePage.perKind(capabilities)
+
     /** [settings] are the values for [accountSettings] the account will be connected with. */
     suspend fun validateCredentials(
         token: String,
         settings: Map<String, String> = emptyMap(),
     ): Result<AccountInfo>
+
+    /**
+     * Validates [token] like [validateCredentials], then checks each permission the provider needs. Providers
+     * that can't tell permissions apart report none.
+     */
+    suspend fun checkToken(
+        token: String,
+        settings: Map<String, String> = emptyMap(),
+    ): Result<TokenCheck> = validateCredentials(token, settings).map { TokenCheck(it.displayName, emptyList()) }
 
     suspend fun fetchSnapshot(account: ConnectedAccount): Result<ProviderSnapshot>
 }
