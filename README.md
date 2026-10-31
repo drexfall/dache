@@ -45,7 +45,7 @@ The registry side: `keygen <file>` writes a new Ed25519 signing key to `<file>` 
 PACKAGING_JDK=/path/to/jdk-21 ./gradlew :app:packageAppImage   # → app/build/compose/binaries/main/appimage/
 ```
 
-`PACKAGING_JDK` must be a JDK with `jpackage` (Temurin has it; Android Studio's JBR doesn't). The task builds the jpackage app image and wraps it with `packaging/linux/build-appimage.sh`, which downloads appimagetool 1.9.1 once (pinned by SHA-256) into `~/.cache/dache`. Add `-Pdache.distDir=<dir>` to build somewhere else. Pushing a `v*` tag runs `.github/workflows/release.yml`, which attaches the AppImage to a GitHub release. The AppImage runs on glibc 2.35+ (Ubuntu 22.04, Fedora 36 and later) and still needs `secret-tool` and a Secret Service from the host; background checks use the host's `systemd` and `notify-send`.
+`PACKAGING_JDK` must be a JDK with `jpackage` (Temurin has it; Android Studio's JBR doesn't). The task builds the jpackage app image and wraps it with `packaging/linux/build-appimage.sh`, which downloads appimagetool 1.9.1 once (pinned by SHA-256) into `~/.cache/dache`. Add `-Pdache.distDir=<dir>` to build somewhere else. Pushing a `v*` tag runs `.github/workflows/release.yml`, which attaches the AppImage to a GitHub release. The AppImage still needs `secret-tool` and a Secret Service from the host; background checks use the host's `systemd` and `notify-send`.
 
 On Linux, connecting an account stores the token in your keyring via `secret-tool` (package `libsecret` / `libsecret-tools`). A running Secret Service (GNOME Keyring or KWallet) is required; without one, connecting fails with an explanation.
 
