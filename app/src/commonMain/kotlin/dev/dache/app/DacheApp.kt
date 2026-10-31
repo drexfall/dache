@@ -162,6 +162,7 @@ private fun DacheContent(
     LaunchedEffect(accountsViewModel) {
         accountsViewModel.connected.collect { destination = Destination.Account(it.id) }
     }
+    LaunchedEffect(Unit) { container.updatePluginsInBackground() }
     // A removed account's pages have nothing left to show.
     val currentAccountId = destination.accountId
     if (currentAccountId != null &&

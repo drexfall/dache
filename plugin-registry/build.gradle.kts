@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kmp.library)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // Turns manifests/*.json into Kotlin string constants, so bundled plugins need no resource loading.
@@ -66,7 +67,12 @@ kotlin {
             kotlin.srcDir(generateBundledManifests)
             dependencies {
                 api(projects.pluginRuntime)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.androidx.datastore.preferences.core)
             }
+        }
+        androidMain.dependencies {
+            implementation(libs.tink.android)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

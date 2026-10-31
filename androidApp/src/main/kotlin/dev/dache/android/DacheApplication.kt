@@ -10,6 +10,7 @@ import dev.dache.app.AppContainer
 import dev.dache.core.account.DataStoreAccountStore
 import dev.dache.core.security.TinkTokenVault
 import dev.dache.core.settings.DataStoreSettingsStore
+import dev.dache.plugin.registry.DataStorePluginStore
 import dev.dache.plugin.runtime.RequestLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,7 @@ class DacheApplication : Application() {
             vault = TinkTokenVault(this),
             accountStore = DataStoreAccountStore.create(File(filesDir, "accounts.preferences_pb").absolutePath),
             settingsStore = DataStoreSettingsStore.create(File(filesDir, "settings.preferences_pb").absolutePath),
+            pluginStore = DataStorePluginStore.create(File(filesDir, "plugins.preferences_pb").absolutePath),
             scope = appScope,
             // Request logging is debug-only; release builds never log requests.
             requestLogger = if (isDebuggable()) RequestLogger.Console else RequestLogger.None,

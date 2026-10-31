@@ -86,6 +86,12 @@ Each resource, nested request and the validate request can name the token `permi
 
 Values filled into the path are percent-encoded whole, so they can't add path segments, and placeholders can't appear in the host. A fan-out sends at most 100 requests, four at a time; a parent whose list returns 404 just has no items.
 
+## Plugin registry
+
+Besides the bundled plugins, the app installs plugins from the signed registry (`drexfall/dache-plugins`, private for now, so fetching it fails until it is public). The app pins the registry's Ed25519 public key (`RegistryKeys`), checks the signature of `index.json`, refuses an index older than the last one it accepted, and checks each manifest's SHA-256 against the index before installing. An installed plugin replaces the bundled one with the same id; removing it brings the bundled one back.
+
+Once a day the app checks the registry and installs updates that keep a plugin's hosts and auth. An update that changes either waits for the user to approve it again.
+
 ## Layouts
 
 The layout follows window width, not platform, so a narrow desktop window gets the phone UI.

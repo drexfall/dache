@@ -93,6 +93,7 @@ class DashboardRepository(
         }.stateIn(scope, SharingStarted.Eagerly, DashboardState())
 
     suspend fun refresh() {
+        catalog.awaitReady()
         // Overlapping refreshes (pull-to-refresh plus a widget update) would just repeat the same calls.
         if (refreshLock.isLocked) return
         refreshLock.withLock {

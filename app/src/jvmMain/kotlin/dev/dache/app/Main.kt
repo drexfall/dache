@@ -15,6 +15,7 @@ import dev.dache.app.resources.app_name
 import dev.dache.core.account.DataStoreAccountStore
 import dev.dache.core.security.SecretServiceTokenVault
 import dev.dache.core.settings.DataStoreSettingsStore
+import dev.dache.plugin.registry.DataStorePluginStore
 import dev.dache.plugin.runtime.RequestLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +32,7 @@ fun main() {
             vault = SecretServiceTokenVault(),
             accountStore = DataStoreAccountStore.create(File(dataDir, "accounts.preferences_pb").absolutePath),
             settingsStore = DataStoreSettingsStore.create(File(dataDir, "settings.preferences_pb").absolutePath),
+            pluginStore = DataStorePluginStore.create(File(dataDir, "plugins.preferences_pb").absolutePath),
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
             // Off unless a developer opts in; requests are redacted either way.
             requestLogger = if (System.getenv("DACHE_LOG_HTTP") == "1") RequestLogger.Console else RequestLogger.None,
