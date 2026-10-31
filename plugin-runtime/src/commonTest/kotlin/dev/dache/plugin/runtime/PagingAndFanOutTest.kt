@@ -17,6 +17,8 @@ import io.ktor.client.request.HttpResponseData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,6 +29,7 @@ class PagingAndFanOutTest {
     private val account = ConnectedAccount(id = "acc-1", providerId = ProviderId.VERCEL, displayName = "dev")
     private val vault = MapTokenVault().apply { tokens[account.tokenKey()] = "fake-token-123" }
     private val requests = mutableListOf<HttpRequestData>()
+    private val recording = Mutex()
 
     private val siteFields = """"nativeId": "id", "name": "name", "webUrl": "url", "primaryUrl": "url""""
 
@@ -60,7 +63,8 @@ class PagingAndFanOutTest {
             client =
                 createPluginHttpClient(
                     MockEngine { request ->
-                        requests += request
+                        // Fan-outs send four at a time, so recording must not race.
+                        recording.withLock { requests += request }
                         handler(request)
                     },
                 ),
@@ -230,11 +234,16 @@ class PagingAndFanOutTest {
                 }.getOrThrow()
 
             assertEquals(listOf("x", "y", "z"), sites.map { it.nativeId })
+            // The accounts come first; the per-account requests run in parallel, so in any order.
+            assertEquals("/accounts", requests.first().url.encodedPath)
             assertEquals(
-                listOf("/accounts", "/accounts/a1/projects", "/accounts/a%2F2/projects"),
-                requests.map { it.url.encodedPath },
+                setOf("/accounts/a1/projects", "/accounts/a%2F2/projects"),
+                requests.drop(1).map { it.url.encodedPath }.toSet(),
             )
-            assertEquals("T&o", requests.last().url.parameters["owner"])
+            assertEquals(
+                "T&o",
+                requests.single { it.url.encodedPath == "/accounts/a%2F2/projects" }.url.parameters["owner"],
+            )
         }
 
     @Test
