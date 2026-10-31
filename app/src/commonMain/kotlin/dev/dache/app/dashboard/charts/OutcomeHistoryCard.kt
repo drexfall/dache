@@ -36,7 +36,7 @@ import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Instant
 
 /**
- * Builds per day. Emphasis form: failures in critical red on top of everything else in gray. Tapping a column
+ * Builds per day. Emphasis form: failures in critical red on top of the rest in the accent blue. Tapping a column
  * pins it and lists that day's builds below the chart.
  */
 @Composable
@@ -56,7 +56,7 @@ fun OutcomeHistoryCard(
     ChartCard(
         title = stringResource(title),
         subtitle = stringResource(Res.string.chart_last_14_days),
-        legend = listOf(LegendItem(failed, colors.critical), LegendItem(succeeded, colors.deemphasis)),
+        legend = listOf(LegendItem(failed, colors.critical), LegendItem(succeeded, colors.accent)),
         table =
             ChartTable(
                 columns =
@@ -102,7 +102,7 @@ fun OutcomeHistoryCard(
             labels = labels,
             series =
                 listOf(
-                    ChartSeries(succeeded, colors.deemphasis, counts.map { it.succeeded.toDouble() }),
+                    ChartSeries(succeeded, colors.accent, counts.map { it.succeeded.toDouble() }),
                     ChartSeries(failed, colors.critical, counts.map { it.failed.toDouble() }),
                 ),
             valueFormatter = { it.toInt().toString() },

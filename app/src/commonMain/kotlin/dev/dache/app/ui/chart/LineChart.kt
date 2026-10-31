@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -34,8 +35,8 @@ import dev.dache.app.ui.theme.LocalChartColors
 import kotlin.math.roundToInt
 
 /**
- * Single-series line: 2dp stroke, a 10% area wash, the last value labelled at the end dot, and a crosshair
- * that snaps to the nearest point on hover or touch.
+ * Single-series line: 2dp stroke, an area wash fading to the baseline, the last value labelled at the end dot,
+ * and a crosshair that snaps to the nearest point on hover or touch.
  */
 @Composable
 fun LineChart(
@@ -137,7 +138,7 @@ private class LineGeometry(
     }
 }
 
-/** 2dp line with round joins over a 10% wash of the same hue, both anchored to the baseline. */
+/** 2dp line with round joins over a fading wash of the same hue, both anchored to the baseline. */
 private fun DrawScope.drawSeries(
     points: List<Offset>,
     plot: PlotArea,
@@ -155,7 +156,15 @@ private fun DrawScope.drawSeries(
             lineTo(points.first().x, plot.bottom)
             close()
         }
-    drawPath(area, color.copy(alpha = AREA_ALPHA))
+    // The wash fades toward the baseline, so it reads as a tint of the line rather than a filled block.
+    drawPath(
+        area,
+        Brush.verticalGradient(
+            listOf(color.copy(alpha = AREA_ALPHA), color.copy(alpha = 0f)),
+            startY = plot.top,
+            endY = plot.bottom,
+        ),
+    )
     drawPath(line, color, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
@@ -169,7 +178,7 @@ private fun DrawScope.drawRingedDot(
     drawCircle(color, radius = 4.dp.toPx(), center = center)
 }
 
-private const val AREA_ALPHA = 0.1f
+private const val AREA_ALPHA = 0.2f
 
 /** Lets the pointer catch the first point from just left of the plot. */
 private const val HIT_SLOP_PX = 8f

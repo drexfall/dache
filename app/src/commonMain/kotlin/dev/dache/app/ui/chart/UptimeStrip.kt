@@ -30,8 +30,8 @@ data class UptimeDay(
 )
 
 /**
- * One row of day cells per monitor. Emphasis form: days with any downtime are critical red, clean days the
- * de-emphasis gray. Hovering or tapping a cell replaces the row's summary with that day's value.
+ * One row of day cells per monitor. Emphasis form: days with any downtime are critical red, clean days a
+ * recessive gray. Hovering or tapping a cell replaces the row's summary with that day's value.
  */
 @Composable
 fun UptimeStrip(
@@ -82,7 +82,7 @@ fun UptimeStrip(
             val gap = 2.dp.toPx()
             val cell = (size.width - gap * (days.size - 1)) / days.size
             days.forEachIndexed { index, day ->
-                val color = if (day.percent < FULL_UPTIME) colors.critical else colors.deemphasis
+                val color = if (day.percent < FULL_UPTIME) colors.critical else colors.quiet
                 drawRoundRect(
                     color = if (focus == null || focus == index) color else color.copy(alpha = DIMMED_ALPHA),
                     topLeft = Offset(index * (cell + gap), 0f),

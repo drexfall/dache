@@ -66,7 +66,7 @@ fun UptimeCard(monitors: List<Monitor>) {
         legend =
             listOf(
                 LegendItem(stringResource(Res.string.chart_uptime_downtime), colors.critical),
-                LegendItem(stringResource(Res.string.chart_uptime_no_downtime), colors.deemphasis),
+                LegendItem(stringResource(Res.string.chart_uptime_no_downtime), colors.quiet),
             ),
         table =
             ChartTable(

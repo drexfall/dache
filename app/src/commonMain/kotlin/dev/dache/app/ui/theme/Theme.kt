@@ -45,8 +45,10 @@ val LocalStatusColors = staticCompositionLocalOf { LightStatus }
 
 /**
  * Chart chrome and marks. Values come from the validated dataviz reference palette; charts render on [surface]
- * rather than the dynamic theme surface so the contrast checks hold. Failures use the fixed critical status
- * color against the de-emphasis gray (deutan ΔE 9.1); single-series charts use categorical slot 1.
+ * rather than the dynamic theme surface so the contrast checks hold. Volume charts put failures in the fixed
+ * critical status color on top of [accent] (categorical slot 1; deutan ΔE 25.7 dark, protan 23.8 light), which
+ * single-series charts use too. [quiet] is a recessive step for marks that only matter as the backdrop to a
+ * critical one, such as an uptime day without downtime.
  */
 data class ChartColors(
     val surface: Color,
@@ -58,7 +60,7 @@ data class ChartColors(
     val mutedText: Color,
     val accent: Color,
     val critical: Color,
-    val deemphasis: Color,
+    val quiet: Color,
 )
 
 private val LightChart =
@@ -72,7 +74,7 @@ private val LightChart =
         mutedText = Color(0xFF898781),
         accent = Color(0xFF2A78D6),
         critical = Color(0xFFD03B3B),
-        deemphasis = Color(0xFF898781),
+        quiet = Color(0xFFD3D2CB),
     )
 
 private val DarkChart =
@@ -86,13 +88,41 @@ private val DarkChart =
         mutedText = Color(0xFF898781),
         accent = Color(0xFF3987E5),
         critical = Color(0xFFD03B3B),
-        deemphasis = Color(0xFF898781),
+        quiet = Color(0xFF3A3A37),
     )
 
 val LocalChartColors = staticCompositionLocalOf { LightChart }
 
-private val LightScheme = lightColorScheme(primary = Color(0xFF3B5BA9), secondary = Color(0xFF5A5D72))
-private val DarkScheme = darkColorScheme(primary = Color(0xFFB2C5FF), secondary = Color(0xFFC2C5DD))
+// Neutral warm grays from the same reference palette as the charts, so chart cards sit on the page instead of
+// against Material's default lavender tint.
+private val LightScheme =
+    lightColorScheme(
+        primary = Color(0xFF2A5FB0),
+        secondary = Color(0xFF52514E),
+        background = Color(0xFFF6F5F2),
+        surface = Color(0xFFF6F5F2),
+        surfaceVariant = Color(0xFFE9E8E3),
+        surfaceContainerLowest = Color(0xFFFCFCFB),
+        surfaceContainerLow = Color(0xFFF9F9F7),
+        surfaceContainer = Color(0xFFF1F0EC),
+        surfaceContainerHigh = Color(0xFFECEBE6),
+        surfaceContainerHighest = Color(0xFFE6E5DF),
+        outlineVariant = Color(0xFFDDDCD5),
+    )
+private val DarkScheme =
+    darkColorScheme(
+        primary = Color(0xFF9DC0F5),
+        secondary = Color(0xFFC3C2B7),
+        background = Color(0xFF111110),
+        surface = Color(0xFF111110),
+        surfaceVariant = Color(0xFF2C2C2A),
+        surfaceContainerLowest = Color(0xFF0D0D0D),
+        surfaceContainerLow = Color(0xFF1A1A19),
+        surfaceContainer = Color(0xFF1E1E1D),
+        surfaceContainerHigh = Color(0xFF242423),
+        surfaceContainerHighest = Color(0xFF2C2C2A),
+        outlineVariant = Color(0xFF383835),
+    )
 
 @Composable
 fun DacheTheme(
