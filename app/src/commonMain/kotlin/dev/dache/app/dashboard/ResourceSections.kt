@@ -29,6 +29,7 @@ import dev.dache.app.resources.section_sites
 import dev.dache.app.resources.section_workers
 import dev.dache.app.ui.components.ExpandableBody
 import dev.dache.app.ui.components.ExpandableHeader
+import dev.dache.app.ui.components.Paged
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.dashboard.latestPerWorkflow
 import dev.dache.core.model.CiRun
@@ -79,7 +80,7 @@ fun resourceSections(
         services.groupBy { it.service }.forEach { (service, items) ->
             add {
                 SectionCard(items.first().serviceLabel, "service:$service", items.size) {
-                    items.forEach { ServiceResourceRow(it, state) }
+                    Paged(items, key = "service:$service") { ServiceResourceRow(it, state) }
                 }
             }
         }
@@ -106,7 +107,7 @@ private fun <T> MutableList<@Composable () -> Unit>.section(
     row: @Composable (T) -> Unit,
 ) {
     if (items.isNotEmpty()) {
-        add { SectionCard(stringResource(title), title.key, items.size) { items.forEach { row(it) } } }
+        add { SectionCard(stringResource(title), title.key, items.size) { Paged(items, key = title.key) { row(it) } } }
     }
 }
 

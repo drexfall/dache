@@ -19,6 +19,7 @@ import dev.dache.app.resources.Res
 import dev.dache.app.resources.write_log_empty
 import dev.dache.app.resources.write_log_failed
 import dev.dache.app.resources.write_log_title
+import dev.dache.app.ui.components.Paged
 import dev.dache.app.ui.components.relativeTime
 import dev.dache.app.ui.theme.LocalStatusColors
 import dev.dache.core.actions.WriteLogEntry
@@ -43,7 +44,7 @@ fun WriteLogCard(entries: List<WriteLogEntry>) {
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            entries.take(SHOWN).forEach { entry ->
+            Paged(entries, key = "write-log") { entry ->
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     leadingContent = {
@@ -73,5 +74,3 @@ fun WriteLogCard(entries: List<WriteLogEntry>) {
         }
     }
 }
-
-private const val SHOWN = 20

@@ -73,6 +73,7 @@ import dev.dache.app.resources.plugins_sideload
 import dev.dache.app.resources.plugins_sideload_body
 import dev.dache.app.resources.plugins_title
 import dev.dache.app.resources.plugins_updates
+import dev.dache.app.ui.components.Paged
 import dev.dache.app.ui.layout.PageScaffold
 import dev.dache.app.ui.theme.LocalStatusColors
 import dev.dache.plugin.api.IndexEntry
@@ -106,11 +107,19 @@ fun PluginsScreen(
         state.work.error?.let { ErrorText(it.message ?: it.toString()) }
         if (state.updates.isNotEmpty()) {
             SectionCard(stringResource(Res.string.plugins_updates)) {
-                state.updates.forEach { UpdateRow(it, onUpdate = { viewModel.install(it.entry) }) }
+                Paged(
+                    state.updates,
+                    key = "plugin-updates",
+                ) { UpdateRow(it, onUpdate = { viewModel.install(it.entry) }) }
             }
         }
         SectionCard(stringResource(Res.string.plugins_installed)) {
-            state.plugins.forEach { plugin -> InstalledRow(plugin, onRemove = { removing = plugin }) }
+            Paged(state.plugins, key = "plugins-installed") { plugin ->
+                InstalledRow(plugin, onRemove = {
+                    removing =
+                        plugin
+                })
+            }
         }
         if (state.registry is RegistryStatus.Ready) {
             SectionCard(stringResource(Res.string.plugins_available)) {
@@ -121,7 +130,10 @@ fun PluginsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                state.available.forEach { AvailableRow(it, onInstall = { viewModel.install(it) }) }
+                Paged(
+                    state.available,
+                    key = "plugins-available",
+                ) { AvailableRow(it, onInstall = { viewModel.install(it) }) }
             }
         }
         SideloadCard(state.allowSideload, state.work.busy, viewModel)

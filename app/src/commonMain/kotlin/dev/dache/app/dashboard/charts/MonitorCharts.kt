@@ -40,6 +40,7 @@ import dev.dache.app.ui.chart.UptimeDay
 import dev.dache.app.ui.chart.UptimeStrip
 import dev.dache.app.ui.components.ExternalLinkButton
 import dev.dache.app.ui.components.ExternalLinkIconButton
+import dev.dache.app.ui.components.Paged
 import dev.dache.app.ui.components.formatDay
 import dev.dache.app.ui.components.formatHour
 import dev.dache.app.ui.components.rememberValueFormats
@@ -109,7 +110,7 @@ fun UptimeCard(monitors: List<Monitor>) {
         },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            withHistory.forEachIndexed { monitorIndex, monitor ->
+            Paged(withHistory.withIndex().toList(), key = "uptime-strips", spacing = 12.dp) { (monitorIndex, monitor) ->
                 val stripDays = monitor.dailyUptime.map { UptimeDay(formatDay(it.at), it.value) }
                 val average = monitor.dailyUptime.map { it.value }.average()
                 UptimeStrip(
@@ -168,7 +169,7 @@ fun ResponseTimeCard(monitors: List<Monitor>) {
         detail = { ChartHint(stringResource(Res.string.chart_hint_points)) },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            withData.forEach { monitor ->
+            Paged(withData, key = "response-times", spacing = 16.dp) { monitor ->
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(

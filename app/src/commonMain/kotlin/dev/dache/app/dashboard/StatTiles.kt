@@ -39,6 +39,7 @@ import dev.dache.app.resources.state_collapsed
 import dev.dache.app.resources.state_expanded
 import dev.dache.app.ui.components.ExpandChevron
 import dev.dache.app.ui.components.ExpandableBody
+import dev.dache.app.ui.components.Paged
 import dev.dache.app.ui.layout.AdaptiveGrid
 import dev.dache.app.ui.theme.LocalChartColors
 import org.jetbrains.compose.resources.stringResource
@@ -134,7 +135,7 @@ private fun StatTile(stat: Stat) {
                     if (stat.details.isEmpty()) {
                         Text(stringResource(Res.string.stat_nothing_listed), style = MaterialTheme.typography.bodySmall)
                     }
-                    stat.details.forEach { detail -> StatDetailRow(detail) }
+                    Paged(stat.details, key = "stat:${stat.label}") { detail -> StatDetailRow(detail) }
                 }
             }
         }

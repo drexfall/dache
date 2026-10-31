@@ -8,12 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,6 +33,7 @@ import dev.dache.app.resources.chart_show_chart
 import dev.dache.app.resources.chart_show_table
 import dev.dache.app.ui.components.ExpandableBody
 import dev.dache.app.ui.components.ExpandableHeader
+import dev.dache.app.ui.components.Paged
 import dev.dache.app.ui.theme.LocalChartColors
 import org.jetbrains.compose.resources.stringResource
 
@@ -141,10 +139,13 @@ fun Legend(
 @Composable
 private fun DataTable(table: ChartTable) {
     val colors = LocalChartColors.current
-    Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
+    Column {
         TableRow(table.columns, colors.mutedText, header = true)
         HorizontalDivider(color = colors.grid)
-        table.rows.forEach { TableRow(it, colors.primaryText, header = false) }
+        Paged(
+            table.rows,
+            key = "table:${table.columns.joinToString()}",
+        ) { TableRow(it, colors.primaryText, header = false) }
     }
 }
 

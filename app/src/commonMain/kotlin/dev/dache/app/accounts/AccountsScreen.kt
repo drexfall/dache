@@ -39,6 +39,7 @@ import dev.dache.app.resources.remove_account_description
 import dev.dache.app.resources.remove_account_title
 import dev.dache.app.ui.components.EmptyState
 import dev.dache.app.ui.components.OpenInNewIcon
+import dev.dache.app.ui.components.Paged
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
 import dev.dache.app.ui.layout.PageScaffold
@@ -104,7 +105,7 @@ fun AccountsScreen(
         }
         Card {
             Column {
-                accounts.forEach { account ->
+                Paged(accounts, key = "accounts") { account ->
                     ListItem(
                         modifier = Modifier.clickable(role = Role.Button) { onOpenSettings(account) },
                         leadingContent = { ProviderAvatar(account.providerId) },
