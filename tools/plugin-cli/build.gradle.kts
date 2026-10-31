@@ -20,7 +20,7 @@ dependencies {
 }
 
 // The registry's CI downloads this distribution (distZip) from a release, so it carries a version.
-version = "0.3.0"
+version = "0.4.0"
 
 application {
     mainClass = "dev.dache.plugin.cli.MainKt"
