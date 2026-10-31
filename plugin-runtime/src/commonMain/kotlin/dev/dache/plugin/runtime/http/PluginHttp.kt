@@ -1,6 +1,7 @@
 package dev.dache.plugin.runtime.http
 
 import dev.dache.core.model.ProviderError
+import dev.dache.plugin.api.ActionSpec
 import dev.dache.plugin.api.PluginManifest
 import dev.dache.plugin.runtime.RedactedExchange
 import dev.dache.plugin.runtime.RequestLogger
@@ -11,6 +12,7 @@ import dev.dache.plugin.runtime.security.Redactor
 import io.ktor.client.HttpClient
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.request
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
@@ -18,6 +20,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
+import io.ktor.http.content.TextContent
 import io.ktor.http.takeFrom
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -94,6 +97,34 @@ internal class PluginHttp(
     }
 
     /**
+     * Sends [action]'s write. Only an action declared in the manifest may send anything but GET, and a write
+     * never follows a redirect, so its body can't be replayed to another URL.
+     *
+     * @throws ProviderError
+     */
+    suspend fun execute(
+        action: ActionSpec,
+        url: Url,
+        body: JsonObject?,
+        secret: String,
+    ) {
+        if (manifest.actions.none { it === action || it == action }) {
+            throw ProviderError.Unknown(IllegalStateException("${action.id} is not an action of ${manifest.id}"))
+        }
+        val method = HttpMethod.parse(action.request.method)
+        val limiter = limiter(secret)
+        takeFromBudget()
+        limiter.acquire()
+        val response = send(url, emptyMap(), secret, Redactor(manifest.auth, secret), method, body)
+        waitFrom(response.headers)?.let { limiter.block(it) }
+        when (response.status) {
+            in SUCCESS_CODES -> Unit
+            in REDIRECT_CODES -> throw ProviderError.Unknown(InvalidResponseException("a write was redirected"))
+            else -> decode(response)
+        }
+    }
+
+    /**
      * Sends through [limiter]. A 429 that asks for a short wait is waited out and retried; a response saying no
      * requests are left holds back the next ones until the reset.
      */
@@ -122,11 +153,14 @@ internal class PluginHttp(
         headers: Map<String, String>,
         secret: String,
         redactor: Redactor,
+        method: HttpMethod = HttpMethod.Get,
+        body: JsonObject? = null,
     ): RawResponse {
         checkHost(target)
         val request =
             HttpRequestBuilder().apply {
-                method = HttpMethod.Get
+                this.method = method
+                body?.let { setBody(TextContent(it.toString(), ContentType.Application.Json)) }
                 url.takeFrom(target)
                 headers.forEach { (name, value) -> this.headers.append(name, value) }
                 // A manifest may ask for a vendor JSON type, such as GitHub's application/vnd.github+json.

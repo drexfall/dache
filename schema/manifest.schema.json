@@ -4,6 +4,51 @@
   "title": "Dache plugin manifest",
   "$ref": "#/$defs/PluginManifest",
   "$defs": {
+    "ActionSpec": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "request": {
+          "$ref": "#/$defs/RequestSpec"
+        },
+        "body": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/kotlinxserializationjsonJsonElement"
+          }
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/InputSpec"
+          }
+        },
+        "destructive": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "permission": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "target",
+        "request"
+      ],
+      "additionalProperties": false
+    },
     "AuthSpec": {
       "oneOf": [
         {
@@ -102,6 +147,41 @@
       "required": [
         "from",
         "fields"
+      ],
+      "additionalProperties": false
+    },
+    "InputSpec": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "text",
+            "number",
+            "boolean"
+          ]
+        },
+        "default": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "key",
+        "label"
       ],
       "additionalProperties": false
     },
@@ -303,6 +383,12 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/PageSpec"
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ActionSpec"
           }
         },
         "dashboardUrl": {
@@ -999,6 +1085,9 @@
         "displayName"
       ],
       "additionalProperties": false
+    },
+    "kotlinxserializationjsonJsonElement": {
+      "oneOf": []
     }
   }
 }

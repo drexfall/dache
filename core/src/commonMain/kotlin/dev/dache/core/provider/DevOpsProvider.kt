@@ -2,6 +2,9 @@ package dev.dache.core.provider
 
 import dev.dache.core.model.AccountInfo
 import dev.dache.core.model.AccountSetting
+import dev.dache.core.model.ActionInfo
+import dev.dache.core.model.ActionPreview
+import dev.dache.core.model.ActionRequest
 import dev.dache.core.model.Capability
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderId
@@ -47,4 +50,24 @@ interface DevOpsProvider {
     ): Result<TokenCheck> = validateCredentials(token, settings).map { TokenCheck(it.displayName, emptyList()) }
 
     suspend fun fetchSnapshot(account: ConnectedAccount): Result<ProviderSnapshot>
+
+    /** Writes this provider offers. Most offer none. */
+    val actions: List<ActionInfo> get() = emptyList()
+
+    /** The current value of each of the action's inputs on its target, to start the form from. */
+    suspend fun actionDefaults(
+        account: ConnectedAccount,
+        request: ActionRequest,
+    ): Result<Map<String, String>> = Result.success(emptyMap())
+
+    /** What [request] would send, without sending it. */
+    suspend fun previewAction(
+        account: ConnectedAccount,
+        request: ActionRequest,
+    ): Result<ActionPreview> = Result.failure(UnsupportedOperationException("no actions"))
+
+    suspend fun runAction(
+        account: ConnectedAccount,
+        request: ActionRequest,
+    ): Result<Unit> = Result.failure(UnsupportedOperationException("no actions"))
 }

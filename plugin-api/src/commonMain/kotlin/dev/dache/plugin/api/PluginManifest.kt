@@ -28,6 +28,8 @@ data class PluginManifest(
     val resources: List<ResourceSpec>,
     /** How the account's resources are split into pages. Without any, each kind and service gets its own. */
     val pages: List<PageSpec> = emptyList(),
+    /** Writes the plugin offers. Without any, the plugin only reads. */
+    val actions: List<ActionSpec> = emptyList(),
     /**
      * The provider's web dashboard, linked from each account and used for resources without a link of their own.
      * Required; nullable only so a manifest missing it is reported by the validator rather than the parser.

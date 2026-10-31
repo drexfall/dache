@@ -101,6 +101,7 @@ object ManifestValidator {
                 resource.items?.let { checkExpression("$path.items", it) }
             }
             problems += PageRules.check(manifest)
+            problems += ActionRules(manifest, placeholders).check()
             return problems
         }
 
@@ -139,7 +140,7 @@ object ManifestValidator {
             request: RequestSpec,
             fannedOut: Boolean,
         ) {
-            if (request.method != "GET") problem("$path.method", "only GET is supported")
+            if (request.method != "GET") problem("$path.method", "reads use GET; writes are declared as actions")
             placeholders.url(request.url, fannedOut).forEach { problem("$path.url", it) }
             request.query.forEach { (name, value) ->
                 placeholders.query(name, value, fannedOut).forEach { problem("$path.query.$name", it) }

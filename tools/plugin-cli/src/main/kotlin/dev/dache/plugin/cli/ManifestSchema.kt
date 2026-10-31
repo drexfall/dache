@@ -10,6 +10,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.descriptors.PolymorphicKind
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.SerialKind
 import kotlinx.serialization.descriptors.StructureKind
 import kotlinx.serialization.descriptors.elementDescriptors
 import kotlinx.serialization.json.JsonArray
@@ -33,6 +34,7 @@ object ManifestSchema {
 
     private const val API_PACKAGE = "dev.dache.plugin.api."
     private const val FIELD_SPEC = "FieldSpec"
+    private const val JSON_OBJECT = "kotlinx.serialization.json.JsonObject"
     private const val NESTED = "FieldSpecNested"
 
     fun generate(): JsonObject {
@@ -58,7 +60,24 @@ object ManifestSchema {
         private val defs: MutableMap<String, JsonObject>,
     ) {
         fun schema(descriptor: SerialDescriptor): JsonObject =
+            // An action body is free-form JSON; its string values are templates.
+            if (descriptor.serialName == JSON_OBJECT) type("object") else typed(descriptor)
+
+        private fun typed(descriptor: SerialDescriptor): JsonObject =
             when (val kind = descriptor.kind) {
+                SerialKind.ENUM ->
+                    JsonObject(
+                        mapOf(
+                            "enum" to
+                                JsonArray(
+                                    (0 until descriptor.elementsCount).map {
+                                        JsonPrimitive(
+                                            descriptor.getElementName(it),
+                                        )
+                                    },
+                                ),
+                        ),
+                    )
                 PrimitiveKind.STRING -> type("string")
                 PrimitiveKind.BOOLEAN -> type("boolean")
                 PrimitiveKind.INT, PrimitiveKind.LONG, PrimitiveKind.SHORT, PrimitiveKind.BYTE -> type("integer")

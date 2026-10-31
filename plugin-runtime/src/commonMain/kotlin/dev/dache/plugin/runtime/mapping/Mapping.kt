@@ -49,6 +49,9 @@ class Mapping(
         private val settings: Map<String, String> = emptyMap(),
         private val fetched: Map<String, List<JsonElement>> = emptyMap(),
     ) {
+        /** The item as the provider listed it, for actions that read the target. */
+        val item: JsonElement get() = element
+
         private fun value(field: String): Value? =
             (compiled[field] as? Compiled.Single)?.source?.evaluate(element, settings)
 

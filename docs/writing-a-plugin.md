@@ -80,6 +80,25 @@ Bundled plugins live in `plugin-registry/manifests/` and need, in the same chang
 
 `./gradlew test` loads every bundled manifest, and fails if one doesn't validate.
 
+## Actions (writes)
+
+A plugin reads with GET only. Anything else is an action, declared under `actions` and shown on the resource it targets:
+
+```json
+"actions": [{
+  "id": "redeploy", "label": "Redeploy", "target": "site",
+  "request": { "url": "https://api.example.com/sites/{id}/builds", "method": "POST" }
+}, {
+  "id": "edit-record", "label": "Edit record", "target": "dnsRecord", "permission": "DNS:Edit",
+  "inputs": [{ "key": "content", "label": "Content", "default": "content" },
+             { "key": "ttl", "label": "TTL", "type": "number", "default": "ttl" }],
+  "request": { "url": "https://api.example.com/zones/{^.id}/records/{id}", "method": "PATCH" },
+  "body": { "content": "{input.content}", "ttl": "{input.ttl}" }
+}]
+```
+
+`target` is a kind the plugin lists, or `deployment` for one of a site's deployments (its site is `^`). Placeholders read the target exactly as the provider listed it, `{@key}` an account setting, `{input.key}` an input. An input's `default` is an expression on the target, so the confirmation screen shows each value before and after. A body string that is only a number or boolean input is sent as that type. Mark deletes, power cycles and production rollbacks `destructive` and name their `permission`; the app then asks for the device lock as well. Writes never follow redirects, and the engine refuses any non-GET request that isn't one of the manifest's actions.
+
 ## Rate limits
 
 If the provider documents a request limit, declare it: `"limits": { "requestsPerMinute": 10 }`. The engine paces each account to it, and honours `Retry-After` and `X-RateLimit-Remaining`/`X-RateLimit-Reset` (or the IETF `RateLimit-*` names) on its own. `maxRequestsPerRefresh` (default 300, at most 2000) caps one refresh; a refresh that would need more fails instead of hammering the API.

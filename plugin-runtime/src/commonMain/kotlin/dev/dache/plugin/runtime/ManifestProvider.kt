@@ -3,6 +3,9 @@ package dev.dache.plugin.runtime
 import dev.dache.core.account.tokenKey
 import dev.dache.core.model.AccountInfo
 import dev.dache.core.model.AccountSetting
+import dev.dache.core.model.ActionInfo
+import dev.dache.core.model.ActionPreview
+import dev.dache.core.model.ActionRequest
 import dev.dache.core.model.Capability
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderError
@@ -49,6 +52,9 @@ class ManifestProvider(
     private val displayName = Expression.parse(manifest.validate.displayName)
     private val resources = manifest.resources.map(::CompiledResource)
     private val checker = TokenChecker(lists, resources, manifest.validate.permission)
+    private val executor = ActionExecutor(manifest, http)
+
+    override val actions: List<ActionInfo> get() = executor.infos
 
     override val accountSettings: List<AccountSetting> =
         manifest.settings.map { AccountSetting(it.key, it.label, it.hint, it.required) }
@@ -88,47 +94,40 @@ class ManifestProvider(
         }
 
     private suspend fun fetch(account: ConnectedAccount): ProviderSnapshot {
-        val token = vault.get(account.tokenKey()) ?: throw ProviderError.Unauthorized()
-        val context = AccountContext(token, account.settings)
+        val context = AccountContext(vault.tokenFor(account), account.settings)
         val binder = Binder(id, account.id)
-        return resources.fold(ProviderSnapshot()) { snapshot, resource ->
-            val fetched =
-                readable(resource.optional) { records(resource, items(resource, context), context) }
-                    .getOrElse { Fetched.unread(it, resource.permission) }
-            add(snapshot, resource, fetched.records, binder).let {
-                it.copy(
-                    missingPermissions = it.missingPermissions + fetched.missing,
-                    unavailable = it.unavailable + fetched.unavailable,
-                )
+        val targets = mutableMapOf<String, JsonElement>()
+        val snapshot =
+            resources.fold(ProviderSnapshot()) { snapshot, resource ->
+                val fetched =
+                    readable(resource.optional) { records(resource, items(resource, context), context) }
+                        .getOrElse { Fetched.unread(it, resource.permission) }
+                targets += ActionExecutor.index(resource.kind, fetched.records)
+                add(snapshot, resource, fetched.records, binder).let {
+                    it.copy(
+                        missingPermissions = it.missingPermissions + fetched.missing,
+                        unavailable = it.unavailable + fetched.unavailable,
+                    )
+                }
             }
-        }
+        executor.remember(account.id, targets)
+        return snapshot
     }
 
-    private fun add(
-        snapshot: ProviderSnapshot,
-        resource: CompiledResource,
-        records: List<Mapping.Record>,
-        binder: Binder,
-    ): ProviderSnapshot =
-        when (resource.kind) {
-            ManifestKind.SITE -> snapshot.copy(sites = snapshot.sites + records.mapNotNull(binder::site))
-            ManifestKind.DOMAIN -> snapshot.copy(domains = snapshot.domains + records.mapNotNull(binder::domain))
-            ManifestKind.DNS_RECORD ->
-                snapshot.copy(dnsRecords = snapshot.dnsRecords + records.mapNotNull(binder::dnsRecord))
-            ManifestKind.CI_RUN -> snapshot.copy(ciRuns = snapshot.ciRuns + records.mapNotNull(binder::ciRun))
-            ManifestKind.MONITOR -> snapshot.copy(monitors = snapshot.monitors + records.mapNotNull(binder::monitor))
-            ManifestKind.SERVER -> snapshot.copy(servers = snapshot.servers + records.mapNotNull(binder::server))
-            ManifestKind.BILLING ->
-                snapshot.copy(
-                    billing =
-                        records.firstNotNullOfOrNull(binder::billing) ?: snapshot.billing,
-                )
-            ManifestKind.WORKER -> snapshot.copy(workers = snapshot.workers + records.mapNotNull(binder::worker))
-            ManifestKind.SERVICE -> {
-                val service = checkNotNull(resource.service) { "manifest was not validated" }
-                snapshot.copy(services = snapshot.services + records.mapNotNull { binder.service(it, service) })
-            }
-        }
+    override suspend fun actionDefaults(
+        account: ConnectedAccount,
+        request: ActionRequest,
+    ): Result<Map<String, String>> = attempt { executor.defaults(account, request) }
+
+    override suspend fun previewAction(
+        account: ConnectedAccount,
+        request: ActionRequest,
+    ): Result<ActionPreview> = attempt { executor.preview(account, request, vault.tokenFor(account)) }
+
+    override suspend fun runAction(
+        account: ConnectedAccount,
+        request: ActionRequest,
+    ): Result<Unit> = attempt { executor.run(account, request, vault.tokenFor(account)) }
 
     private suspend fun items(
         resource: CompiledResource,
@@ -200,10 +199,13 @@ class ManifestProvider(
         return Fetched(records, missing = permissions(refused = true), unavailable = permissions(refused = false))
     }
 
+    /** Provider errors, and action inputs that can't be used, become failures the UI can show. */
     private inline fun <T> attempt(block: () -> T): Result<T> =
         try {
             Result.success(block())
         } catch (e: ProviderError) {
+            Result.failure(e)
+        } catch (e: ActionInputException) {
             Result.failure(e)
         }
 }
@@ -219,3 +221,32 @@ class InvalidSettingException : Exception("a setting can't be used in a request"
 /** The provider [this] manifest talks to, with its name and links. */
 fun PluginManifest.providerId(): ProviderId =
     ProviderId(id = id, displayName = name, dashboardUrl = dashboardUrl, tokenPageUrl = tokenUrl, tokenHelp = tokenHelp)
+
+private fun add(
+    snapshot: ProviderSnapshot,
+    resource: CompiledResource,
+    records: List<Mapping.Record>,
+    binder: Binder,
+): ProviderSnapshot =
+    when (resource.kind) {
+        ManifestKind.SITE -> snapshot.copy(sites = snapshot.sites + records.mapNotNull(binder::site))
+        ManifestKind.DOMAIN -> snapshot.copy(domains = snapshot.domains + records.mapNotNull(binder::domain))
+        ManifestKind.DNS_RECORD ->
+            snapshot.copy(dnsRecords = snapshot.dnsRecords + records.mapNotNull(binder::dnsRecord))
+        ManifestKind.CI_RUN -> snapshot.copy(ciRuns = snapshot.ciRuns + records.mapNotNull(binder::ciRun))
+        ManifestKind.MONITOR -> snapshot.copy(monitors = snapshot.monitors + records.mapNotNull(binder::monitor))
+        ManifestKind.SERVER -> snapshot.copy(servers = snapshot.servers + records.mapNotNull(binder::server))
+        ManifestKind.BILLING ->
+            snapshot.copy(
+                billing =
+                    records.firstNotNullOfOrNull(binder::billing) ?: snapshot.billing,
+            )
+        ManifestKind.WORKER -> snapshot.copy(workers = snapshot.workers + records.mapNotNull(binder::worker))
+        ManifestKind.SERVICE -> {
+            val service = checkNotNull(resource.service) { "manifest was not validated" }
+            snapshot.copy(services = snapshot.services + records.mapNotNull { binder.service(it, service) })
+        }
+    }
+
+private suspend fun TokenVault.tokenFor(account: ConnectedAccount): String =
+    get(account.tokenKey()) ?: throw ProviderError.Unauthorized()

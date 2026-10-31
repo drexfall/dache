@@ -96,7 +96,12 @@ class ManifestValidatorTest {
 
     @Test
     fun onlyGetForNow() {
-        assertProblem("method: only GET is supported", withSite { copy(request = request.copy(method = "POST")) })
+        assertProblem(
+            "method: reads use GET; writes are declared as actions",
+            withSite {
+                copy(request = request.copy(method = "POST"))
+            },
+        )
     }
 
     @Test
