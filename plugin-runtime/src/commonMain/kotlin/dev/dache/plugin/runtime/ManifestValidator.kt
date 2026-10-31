@@ -170,7 +170,10 @@ object ManifestValidator {
                         checkExpression("$path.next", paging.next)
                         listOfNotNull(paging.param, paging.sizeParam)
                     }
-                    is PagingSpec.Link -> listOfNotNull(paging.sizeParam)
+                    is PagingSpec.Link -> {
+                        paging.next?.let { checkExpression("$path.next", it) }
+                        listOfNotNull(paging.sizeParam)
+                    }
                 }
             if (params.any { it.isBlank() } || params.size != params.toSet().size) {
                 problem(path, "param and sizeParam must be distinct and not blank")

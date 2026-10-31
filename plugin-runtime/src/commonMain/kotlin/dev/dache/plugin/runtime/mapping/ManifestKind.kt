@@ -3,6 +3,7 @@ package dev.dache.plugin.runtime.mapping
 import dev.dache.core.model.Capability
 import dev.dache.core.model.CertificateStatus
 import dev.dache.core.model.DeployStatus
+import dev.dache.core.model.MonitorStatus
 import dev.dache.core.model.ResourceKind
 import dev.dache.core.model.ServerStatus
 import dev.dache.core.model.ServiceStatus
@@ -138,6 +139,21 @@ enum class ManifestKind(
                 "status" to status(DeployStatus.entries.toTypedArray()),
                 "createdAt" to time(required = true),
                 "durationSeconds" to FieldDef(FieldType.INT, required = false),
+            ),
+    ),
+    MONITOR(
+        kindName = "monitor",
+        resourceKind = ResourceKind.MONITOR,
+        capability = Capability.MONITORS,
+        fields =
+            mapOf(
+                "nativeId" to text(required = true),
+                "webUrl" to text(),
+                "name" to text(required = true),
+                "url" to text(required = true),
+                "status" to status(MonitorStatus.entries.toTypedArray()),
+                "uptimePercent" to FieldDef(FieldType.NUMBER, required = false),
+                "responseTimeMs" to FieldDef(FieldType.INT, required = false),
             ),
     ),
     SERVER(

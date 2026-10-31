@@ -8,6 +8,8 @@ import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.Deployment
 import dev.dache.core.model.DnsRecord
 import dev.dache.core.model.Domain
+import dev.dache.core.model.Monitor
+import dev.dache.core.model.MonitorStatus
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.Server
 import dev.dache.core.model.ServerStatus
@@ -79,6 +81,21 @@ internal class Binder(
                 status = record.status("status", DeployStatus.UNKNOWN),
                 createdAt = record.time("createdAt") ?: throw MissingFieldException("createdAt"),
                 durationSeconds = record.int("durationSeconds"),
+            )
+        }
+
+    fun monitor(record: Mapping.Record): Monitor? =
+        orSkip {
+            Monitor(
+                providerId = providerId,
+                accountId = accountId,
+                nativeId = record.required("nativeId"),
+                webUrl = record.webUrl(),
+                name = record.required("name"),
+                url = record.required("url"),
+                status = record.status("status", MonitorStatus.UNKNOWN),
+                uptimePercent = record.number("uptimePercent"),
+                responseTimeMs = record.int("responseTimeMs"),
             )
         }
 

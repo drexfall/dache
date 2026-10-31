@@ -25,12 +25,19 @@ internal fun nextLink(
                 ?.groupValues
                 ?.get(1)
         } ?: return null
-    return try {
+    return resolveLink(target, base)
+}
+
+/** [target], relative to [base] or absolute, as a URL. */
+internal fun resolveLink(
+    target: String,
+    base: Url,
+): Url =
+    try {
         base.resolve(target)
     } catch (e: URLParserException) {
         throw ProviderError.Unknown(InvalidResponseException("next link is not a URL: ${e::class.simpleName}"))
     }
-}
 
 private fun isNext(link: MatchResult): Boolean =
     relParam.findAll(link.groupValues[2]).any { rel ->

@@ -93,6 +93,7 @@ class ManifestProvider(
             ManifestKind.DNS_RECORD ->
                 snapshot.copy(dnsRecords = snapshot.dnsRecords + records.mapNotNull(binder::dnsRecord))
             ManifestKind.CI_RUN -> snapshot.copy(ciRuns = snapshot.ciRuns + records.mapNotNull(binder::ciRun))
+            ManifestKind.MONITOR -> snapshot.copy(monitors = snapshot.monitors + records.mapNotNull(binder::monitor))
             ManifestKind.SERVER -> snapshot.copy(servers = snapshot.servers + records.mapNotNull(binder::server))
             ManifestKind.BILLING ->
                 snapshot.copy(

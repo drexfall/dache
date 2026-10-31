@@ -51,9 +51,9 @@ A plugin is a JSON manifest, not code. It declares the exact hosts it may call (
 }
 ```
 
-Expressions are a dot path into the response (`build_settings.repo_url`, `items.0.id`) followed by pipes: `host`, `lower`, `date` and `default:<text>`. See `plugin-registry/manifests/netlify.json` for a complete example.
+Expressions are a dot path into the response (`build_settings.repo_url`, `items.0.id`) followed by pipes: `host`, `lower`, `date`, `millis`, `avg` (the mean of a list of numbers) and `default:<text>`. A `key=value` segment keeps the array items whose key has that value (`networks.v4.type=public.0.ip_address`). See `plugin-registry/manifests/netlify.json` for a complete example.
 
-Paging is `page` (numbered pages), `cursor` (an expression such as `pagination.next` names the next cursor) or `link` (follows the `Link: rel="next"` header). Every style stops after `maxPages`.
+Paging is `page` (numbered pages), `cursor` (an expression such as `pagination.next` names the next cursor) or `link` (follows the `Link: rel="next"` header, or with `next`, a URL in the body such as `nextLink`). Every style stops after `maxPages`.
 
 A resource's `kind` is `site`, `domain` (with TLS `certificates` as nested records), `dnsRecord`, `ciRun`, `server`, `worker`, `service` or `billing`. A `billing` resource reads the account's spend from one object (`"items": "$"`) and is shown on the dashboard, not a page. A `service` is anything without a model of its own (R2 buckets, KV namespaces, tunnels, Netlify forms), described by a `service` spec with an `id` and a plural `label`, and mapped to `name`, an optional one-line `detail`, `status` (`ServiceStatus`), `createdAt` and `updatedAt`. Adding one is manifest-only. Each status field has a `statusMap` from the provider's values to Dache's, e.g. `DeployStatus` names for deployments and `CertificateStatus` names for certificates.
 

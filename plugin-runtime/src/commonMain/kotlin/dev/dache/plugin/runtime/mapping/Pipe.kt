@@ -1,5 +1,6 @@
 package dev.dache.plugin.runtime.mapping
 
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.time.Instant
 
 /**
@@ -42,6 +43,20 @@ enum class Pipe(
             value: Value?,
             argument: String?,
         ): Value? = value?.asText()?.toLongOrNull()?.let { Value.Time(Instant.fromEpochMilliseconds(it)) }
+    },
+
+    /** The mean of a list of numbers, e.g. `histogram.uptime | avg`. Items that aren't numbers are left out. */
+    AVG("avg", takesArgument = false) {
+        override fun apply(
+            value: Value?,
+            argument: String?,
+        ): Value? =
+            (value as? Value.Items)
+                ?.values
+                ?.mapNotNull { (it as? JsonPrimitive)?.content?.toDoubleOrNull() }
+                ?.takeIf { it.isNotEmpty() }
+                ?.average()
+                ?.let { Value.Num(it.toString()) }
     },
 
     /** Replaces null or an empty string with the literal argument: `default:unknown`. */

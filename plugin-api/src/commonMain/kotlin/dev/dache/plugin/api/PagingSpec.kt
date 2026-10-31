@@ -40,12 +40,14 @@ sealed interface PagingSpec {
     ) : PagingSpec
 
     /**
-     * Follows the `Link: <url>; rel="next"` response header. The next URL goes through the same host checks as
-     * every other request. [sizeParam] is only sent on the first request; providers carry it in their links.
+     * Follows the `Link: <url>; rel="next"` response header, or with [next], the URL that expression gives in the
+     * body, such as UptimeRobot's `nextLink`. The next URL goes through the same host checks as every other
+     * request. [sizeParam] is only sent on the first request; providers carry it in their links.
      */
     @Serializable
     @SerialName("link")
     data class Link(
+        val next: String? = null,
         override val sizeParam: String? = null,
         override val size: Int = 100,
         override val maxPages: Int = 10,

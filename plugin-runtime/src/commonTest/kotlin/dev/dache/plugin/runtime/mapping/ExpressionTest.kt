@@ -139,7 +139,7 @@ class ExpressionTest {
     @Test
     fun parseErrorsExplainTheProblem() {
         assertEquals(
-            "unknown pipe \"upper\" in \"name | upper\"; available: host, lower, date, millis, default",
+            "unknown pipe \"upper\" in \"name | upper\"; available: host, lower, date, millis, avg, default",
             assertFailsWith<ExpressionException> { Expression.parse("name | upper") }.message,
         )
         assertFailsWith<ExpressionException> { Expression.parse("") }

@@ -6,6 +6,7 @@ import dev.dache.plugin.api.RequestSpec
 import dev.dache.plugin.runtime.http.InvalidResponseException
 import dev.dache.plugin.runtime.http.PluginHttp
 import dev.dache.plugin.runtime.http.nextLink
+import dev.dache.plugin.runtime.http.resolveLink
 import dev.dache.plugin.runtime.mapping.Expression
 import dev.dache.plugin.runtime.mapping.Template
 import dev.dache.plugin.runtime.mapping.Value
@@ -46,6 +47,7 @@ internal class CompiledList(
     val headers = request.headers
     val paging = request.paging
     val cursor = (paging as? PagingSpec.Cursor)?.next?.let(Expression::parse)
+    val bodyLink = (paging as? PagingSpec.Link)?.next?.let(Expression::parse)
 
     /**
      * The first request's URL, placeholders filled from [item] and [settings]; null when they can't fill them.
@@ -191,7 +193,18 @@ internal class ListFetcher(
             seen += url
             val response = http.get(url, list.headers, token)
             all += list.items(response.body)
-            url = nextLink(response.headers[HttpHeaders.Link], url)?.takeIf { it !in seen } ?: return all
+            val bodyLink = list.bodyLink
+            val next =
+                if (bodyLink == null) {
+                    nextLink(response.headers[HttpHeaders.Link], url)
+                } else {
+                    bodyLink
+                        .evaluate(response.body)
+                        ?.asText()
+                        ?.takeIf { it.isNotEmpty() }
+                        ?.let { resolveLink(it, url) }
+                }
+            url = next?.takeIf { it !in seen } ?: return all
         }
         return all
     }
