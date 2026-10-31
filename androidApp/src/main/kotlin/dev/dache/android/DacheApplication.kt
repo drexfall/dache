@@ -9,6 +9,7 @@ import dev.dache.android.alerts.AlertNotifier
 import dev.dache.android.alerts.BackgroundChecks
 import dev.dache.android.widget.DacheWidgets
 import dev.dache.app.AppContainer
+import dev.dache.app.AppStores
 import dev.dache.core.account.DataStoreAccountStore
 import dev.dache.core.security.TinkTokenVault
 import dev.dache.core.settings.DataStoreSettingsStore
@@ -30,10 +31,14 @@ class DacheApplication : Application() {
         val settings = DataStoreSettingsStore.create(File(filesDir, "settings.preferences_pb").absolutePath)
         AppContainer(
             vault = TinkTokenVault(this),
-            accountStore = DataStoreAccountStore.create(File(filesDir, "accounts.preferences_pb").absolutePath),
-            settingsStore = settings,
-            alertStore = settings,
-            pluginStore = DataStorePluginStore.create(File(filesDir, "plugins.preferences_pb").absolutePath),
+            stores =
+                AppStores(
+                    accounts = DataStoreAccountStore.create(File(filesDir, "accounts.preferences_pb").absolutePath),
+                    settings = settings,
+                    alerts = settings,
+                    writeLog = settings,
+                    plugins = DataStorePluginStore.create(File(filesDir, "plugins.preferences_pb").absolutePath),
+                ),
             scope = appScope,
             // Request logging is debug-only; release builds never log requests.
             requestLogger = if (isDebuggable()) RequestLogger.Console else RequestLogger.None,

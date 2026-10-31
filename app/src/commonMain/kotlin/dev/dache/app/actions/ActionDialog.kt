@@ -38,6 +38,7 @@ import dev.dache.app.resources.action_back
 import dev.dache.app.resources.action_cancel
 import dev.dache.app.resources.action_close
 import dev.dache.app.resources.action_continue
+import dev.dache.app.resources.action_destructive_typed
 import dev.dache.app.resources.action_destructive_warning
 import dev.dache.app.resources.action_done_body
 import dev.dache.app.resources.action_permission
@@ -45,6 +46,7 @@ import dev.dache.app.resources.action_review_changes
 import dev.dache.app.resources.action_review_request
 import dev.dache.app.resources.action_review_title
 import dev.dache.app.resources.action_run
+import dev.dache.app.resources.action_type_to_confirm
 import dev.dache.app.ui.components.errorMessage
 import dev.dache.app.ui.theme.LocalStatusColors
 import dev.dache.core.model.ActionInput
@@ -139,7 +141,13 @@ private fun ReviewDialog(
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (destructive) {
                     Text(
-                        stringResource(Res.string.action_destructive_warning),
+                        stringResource(
+                            if (viewModel.confirmsByTyping) {
+                                Res.string.action_destructive_typed
+                            } else {
+                                Res.string.action_destructive_warning
+                            },
+                        ),
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -153,6 +161,15 @@ private fun ReviewDialog(
                 step.action.permission?.let {
                     Text(stringResource(Res.string.action_permission, it), style = MaterialTheme.typography.bodySmall)
                 }
+                if (destructive && viewModel.confirmsByTyping) {
+                    OutlinedTextField(
+                        value = step.typed,
+                        onValueChange = viewModel::setTyped,
+                        label = { Text(stringResource(Res.string.action_type_to_confirm, step.targetName)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 if (step.running) LinearProgressIndicator(Modifier.fillMaxWidth())
                 step.error?.let { ErrorText(errorMessage(it)) }
             }
@@ -160,7 +177,7 @@ private fun ReviewDialog(
         confirmButton = {
             Button(
                 onClick = viewModel::confirm,
-                enabled = !step.running,
+                enabled = viewModel.canRun(step),
                 colors =
                     if (destructive) {
                         ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)

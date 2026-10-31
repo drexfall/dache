@@ -348,4 +348,9 @@
     <string name="action_done_body">Done. The dashboard is refreshing to show the change.</string>
     <string name="actions_heading">Actions</string>
     <string name="actions_deployment">%1$s · %2$s</string>
+    <string name="action_destructive_typed">This can’t be undone from Dache. Type the name below to confirm.</string>
+    <string name="action_type_to_confirm">Type %1$s to confirm</string>
+    <string name="write_log_title">Recent changes</string>
+    <string name="write_log_empty">Nothing changed from Dache yet.</string>
+    <string name="write_log_failed">failed: %1$s</string>
 </resources>

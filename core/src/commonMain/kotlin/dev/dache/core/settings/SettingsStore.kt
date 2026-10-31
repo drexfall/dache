@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import dev.dache.core.actions.WriteLog
+import dev.dache.core.actions.WriteLogEntry
 import dev.dache.core.alerts.AlertSettings
 import dev.dache.core.alerts.AlertStore
 import dev.dache.core.security.IntegritySignal
@@ -15,6 +17,8 @@ import dev.dache.core.security.IntegrityWarningSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import okio.Path.Companion.toPath
 
 /** Non-secret user preferences. */
@@ -36,7 +40,8 @@ interface SettingsStore {
 class DataStoreSettingsStore(
     private val dataStore: DataStore<Preferences>,
 ) : SettingsStore,
-    AlertStore {
+    AlertStore,
+    WriteLog {
     override val confirmExternalLinks: Flow<Boolean> = dataStore.data.map { it[CONFIRM_LINKS] ?: true }
 
     override suspend fun setConfirmExternalLinks(confirm: Boolean) {
@@ -110,7 +115,21 @@ class DataStoreSettingsStore(
         dataStore.edit { it[REPORTED_ALERTS] = keys }
     }
 
+    override val entries: Flow<List<WriteLogEntry>> =
+        dataStore.data.map { prefs -> prefs[WRITE_LOG]?.let { logJson.decodeFromString(logSerializer, it) }.orEmpty() }
+
+    override suspend fun append(entry: WriteLogEntry) {
+        dataStore.edit { prefs ->
+            val current = prefs[WRITE_LOG]?.let { logJson.decodeFromString(logSerializer, it) }.orEmpty()
+            prefs[WRITE_LOG] =
+                logJson.encodeToString(logSerializer, (listOf(entry) + current).take(WriteLog.MAX_ENTRIES))
+        }
+    }
+
     companion object {
+        private val WRITE_LOG = stringPreferencesKey("write_log")
+        private val logJson = Json { ignoreUnknownKeys = true }
+        private val logSerializer = ListSerializer(WriteLogEntry.serializer())
         private val ALERTS = booleanPreferencesKey("alerts")
         private val ALERT_INTERVAL = intPreferencesKey("alert_interval_minutes")
         private val ALERT_DEPLOYS = booleanPreferencesKey("alert_deploys")

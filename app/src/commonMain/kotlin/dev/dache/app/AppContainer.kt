@@ -4,6 +4,7 @@ import dev.dache.app.security.AppLockController
 import dev.dache.core.account.AccountRepository
 import dev.dache.core.account.AccountStore
 import dev.dache.core.actions.ActionService
+import dev.dache.core.actions.WriteLog
 import dev.dache.core.alerts.AlertSettings
 import dev.dache.core.alerts.AlertStore
 import dev.dache.core.alerts.BackgroundCheck
@@ -23,19 +24,31 @@ import dev.dache.plugin.runtime.http.createPluginHttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+/** Where the app keeps what it persists. Several are often one store implementing more than one of these. */
+class AppStores(
+    val accounts: AccountStore,
+    val settings: SettingsStore,
+    val alerts: AlertStore,
+    val writeLog: WriteLog,
+    val plugins: PluginStore,
+)
+
 /**
  * Manual DI root, created once per process by the platform entry point. Pass [requestLogger] only in debug
  * builds; release builds keep the default and log nothing about requests.
  */
 class AppContainer(
     vault: TokenVault,
-    accountStore: AccountStore,
-    val settingsStore: SettingsStore,
-    val alertStore: AlertStore,
-    pluginStore: PluginStore,
+    stores: AppStores,
     val scope: CoroutineScope,
     requestLogger: RequestLogger = RequestLogger.None,
 ) {
+    val settingsStore: SettingsStore = stores.settings
+    val alertStore: AlertStore = stores.alerts
+    val writeLog: WriteLog = stores.writeLog
+    private val accountStore = stores.accounts
+    private val pluginStore = stores.plugins
+
     private val httpClient = createPluginHttpClient()
 
     val registryClient = RegistryClient(httpClient)
@@ -57,7 +70,7 @@ class AppContainer(
     val dashboardRepository = DashboardRepository(accountRepository, scope)
 
     val backgroundCheck = BackgroundCheck(dashboardRepository, alertStore)
-    val actionService = ActionService(accountRepository, dashboardRepository)
+    val actionService = ActionService(accountRepository, dashboardRepository, writeLog)
 
     /** Process-wide, so the lock outlives the activity and covers every way back into the app. */
     val appLock = AppLockController(settingsStore.appLock, scope)

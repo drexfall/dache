@@ -38,6 +38,8 @@ sealed interface ActionStep {
         override val targetName: String,
         val values: Map<String, String>,
         val preview: ActionPreview,
+        /** What the user typed to confirm a destructive action where there's no device lock to ask for. */
+        val typed: String = "",
         val running: Boolean = false,
         val error: Throwable? = null,
     ) : ActionStep
@@ -51,13 +53,17 @@ sealed interface ActionStep {
 }
 
 /**
- * Runs one action at a time through form, review and run. Nothing is sent before the review screen's confirm;
- * a destructive action also needs [authorize], the device lock, at that point.
+ * Runs one action at a time through form, review and run. Nothing is sent before the review screen's confirm.
+ * A destructive action also needs [confirmWithLock], the device lock, at that point; without one (desktop, or a
+ * device with no screen lock) the user types the target's name instead.
  */
 class ActionsViewModel(
     private val service: ActionService,
-    private val authorize: suspend (ActionInfo) -> Boolean = { true },
+    private val confirmWithLock: (suspend () -> Boolean)? = null,
 ) : ViewModel() {
+    /** Destructive actions are confirmed by typing the target's name, as there's no device lock to ask for. */
+    val confirmsByTyping: Boolean get() = confirmWithLock == null
+
     private val step = MutableStateFlow<ActionStep?>(null)
     val state: StateFlow<ActionStep?> = step.asStateFlow()
 
@@ -113,14 +119,23 @@ class ActionsViewModel(
             ActionStep.Form(review.account, review.action, review.target, review.targetName, review.values, false)
     }
 
+    fun setTyped(text: String) {
+        step.update { (it as? ActionStep.Review)?.copy(typed = text) ?: it }
+    }
+
+    /** Whether the review's Run button may be pressed. */
+    fun canRun(review: ActionStep.Review): Boolean =
+        !review.running && (!review.action.destructive || !confirmsByTyping || review.typed.trim() == review.targetName)
+
     fun confirm() {
         val review = step.value as? ActionStep.Review ?: return
-        if (review.running) return
+        if (!canRun(review)) return
         viewModelScope.launch {
-            if (review.action.destructive && !authorize(review.action)) return@launch
+            val lock = confirmWithLock
+            if (review.action.destructive && lock != null && !lock()) return@launch
             step.value = review.copy(running = true, error = null)
             service
-                .run(review.account, ActionRequest(review.action.id, review.target, review.values))
+                .run(review.account, ActionRequest(review.action.id, review.target, review.values), review.targetName)
                 .onSuccess {
                     step.value =
                         ActionStep.Done(review.account, review.action, review.target, review.targetName)

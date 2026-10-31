@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -102,5 +103,34 @@ class AppLockControllerTest {
                 true
             }
             assertEquals(LockState.UNLOCKED, lock.state.value)
+        }
+
+    @Test
+    fun aDestructiveConfirmReusesAnUnlockFromTheLastHalfMinute() =
+        runTest(dispatcher) {
+            val lock = controller()
+            var prompts = 0
+            val prompt: suspend () -> Boolean = {
+                prompts++
+                true
+            }
+
+            lock.authenticate(prompt)
+            clock.advance(20.seconds)
+            assertTrue(lock.confirm(prompt))
+            assertEquals(1, prompts)
+
+            clock.advance(20.seconds)
+            assertTrue(lock.confirm(prompt))
+            assertEquals(2, prompts)
+        }
+
+    @Test
+    fun aFailedConfirmDoesntCount() =
+        runTest(dispatcher) {
+            val lock = controller()
+
+            assertFalse(lock.confirm({ false }))
+            assertFalse(lock.confirm({ false }))
         }
 }

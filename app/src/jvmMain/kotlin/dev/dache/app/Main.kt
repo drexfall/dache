@@ -50,10 +50,14 @@ fun main(args: Array<String>) {
     val container =
         AppContainer(
             vault = SecretServiceTokenVault(),
-            accountStore = DataStoreAccountStore.create(File(dataDir, "accounts.preferences_pb").absolutePath),
-            settingsStore = settings,
-            alertStore = if (headless) HeadlessAlertStore(settings, File(dataDir, "reported-alerts")) else settings,
-            pluginStore = DataStorePluginStore.create(File(dataDir, "plugins.preferences_pb").absolutePath),
+            stores =
+                AppStores(
+                    accounts = DataStoreAccountStore.create(File(dataDir, "accounts.preferences_pb").absolutePath),
+                    settings = settings,
+                    alerts = if (headless) HeadlessAlertStore(settings, File(dataDir, "reported-alerts")) else settings,
+                    writeLog = settings,
+                    plugins = DataStorePluginStore.create(File(dataDir, "plugins.preferences_pb").absolutePath),
+                ),
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
             // Off unless a developer opts in; requests are redacted either way.
             requestLogger = if (System.getenv("DACHE_LOG_HTTP") == "1") RequestLogger.Console else RequestLogger.None,

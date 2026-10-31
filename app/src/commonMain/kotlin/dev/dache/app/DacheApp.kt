@@ -97,19 +97,28 @@ fun DacheApp(
         val destinationState =
             rememberSaveable(stateSaver = DestinationSaver) { mutableStateOf<Destination>(Destination.Overview) }
         if (lockAuthenticator == null) {
-            DacheContent(container, destinationState, signals, backgroundChecks, securityCard = null)
+            DacheContent(container, destinationState, signals, backgroundChecks, null, securityCard = null)
         } else {
             val lockState by container.appLock.state.collectAsStateWithLifecycle()
             when (lockState) {
                 LockState.LOADING -> LockLoading()
                 LockState.LOCKED -> LockGate(container.appLock, lockAuthenticator)
                 LockState.UNLOCKED ->
-                    DacheContent(container, destinationState, signals, backgroundChecks) {
+                    DacheContent(container, destinationState, signals, backgroundChecks, lockAuthenticator) {
                         AppLockSection(container, lockAuthenticator)
                     }
             }
         }
     }
+}
+
+/** Destructive actions ask for the device lock where there is one, and for the target's name otherwise. */
+private fun actionsViewModel(
+    container: AppContainer,
+    lockAuthenticator: LockAuthenticator?,
+): ActionsViewModel {
+    val lock = lockAuthenticator?.takeIf { it.isAvailable() }
+    return ActionsViewModel(container.actionService, lock?.let { { container.appLock.confirm(it::authenticate) } })
 }
 
 @Composable
@@ -185,6 +194,7 @@ private fun DacheContent(
     destinationState: MutableState<Destination>,
     signals: Set<IntegritySignal>,
     backgroundChecks: BackgroundChecksPlatform?,
+    lockAuthenticator: LockAuthenticator?,
     securityCard: (@Composable () -> Unit)?,
 ) {
     val dashboardViewModel =
@@ -198,10 +208,11 @@ private fun DacheContent(
                 container.dashboardRepository,
             )
         }
-    val actionsViewModel = viewModel { ActionsViewModel(container.actionService) }
+    val actionsViewModel = viewModel { actionsViewModel(container, lockAuthenticator) }
     val state by dashboardViewModel.state.collectAsStateWithLifecycle()
     val accountsState by accountsViewModel.state.collectAsStateWithLifecycle()
     val tokenChecks by accountsViewModel.tokenChecks.collectAsStateWithLifecycle()
+    val writeLog by container.writeLog.entries.collectAsStateWithLifecycle(emptyList())
     val confirmLinks by container.settingsStore.confirmExternalLinks.collectAsStateWithLifecycle(
         initialValue = true,
     )
@@ -296,6 +307,7 @@ private fun DacheContent(
                                     securityCard?.invoke()
                                 },
                                 backgroundCard = backgroundCard(container, backgroundChecks),
+                                writeLog = writeLog,
                             )
                     }
                 }

@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 enum class LockState { LOADING, LOCKED, UNLOCKED }
@@ -27,6 +29,7 @@ class AppLockController(
     private val unlocked = MutableStateFlow(false)
     private var backgroundedAt: Instant? = null
     private var authenticating = false
+    private var authenticatedAt: Instant? = null
 
     val state: StateFlow<LockState> =
         combine(this.settings, unlocked) { current, isUnlocked ->
@@ -57,8 +60,27 @@ class AppLockController(
             } finally {
                 authenticating = false
             }
-        if (passed) unlocked.value = true
+        if (passed) {
+            unlocked.value = true
+            authenticatedAt = clock.now()
+        }
         return passed
+    }
+
+    /**
+     * Asks for the device lock before something destructive, unless it was passed within [window], so confirming
+     * right after unlocking doesn't ask twice.
+     */
+    suspend fun confirm(
+        authenticate: suspend () -> Boolean,
+        window: Duration = CONFIRM_WINDOW,
+    ): Boolean {
+        val recent = authenticatedAt?.let { clock.now() - it <= window } == true
+        return recent || authenticate(authenticate)
+    }
+
+    private companion object {
+        val CONFIRM_WINDOW = 30.seconds
     }
 
     /** Opens without asking, for a device that no longer has a screen lock to ask for. */

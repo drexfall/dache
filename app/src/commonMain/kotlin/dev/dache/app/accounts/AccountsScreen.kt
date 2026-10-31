@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import dev.dache.app.actions.WriteLogCard
 import dev.dache.app.navigation.ProviderAvatar
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.accounts_empty_body
@@ -41,6 +42,7 @@ import dev.dache.app.ui.components.OpenInNewIcon
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
 import dev.dache.app.ui.layout.PageScaffold
+import dev.dache.core.actions.WriteLogEntry
 import dev.dache.core.model.ConnectedAccount
 import org.jetbrains.compose.resources.stringResource
 
@@ -63,6 +65,8 @@ fun AccountsScreen(
     securityCard: (@Composable () -> Unit)? = null,
     /** Background checks, where the platform can run them. */
     backgroundCard: (@Composable () -> Unit)? = null,
+    /** Writes sent from Dache, newest first. */
+    writeLog: List<WriteLogEntry> = emptyList(),
 ) {
     var pendingRemoval by remember { mutableStateOf<ConnectedAccount?>(null) }
     val compact = LocalFormFactor.current == FormFactor.COMPACT
@@ -89,6 +93,7 @@ fun AccountsScreen(
         PreferencesCard(confirmExternalLinks, onConfirmExternalLinksChange)
         backgroundCard?.invoke()
         securityCard?.invoke()
+        WriteLogCard(writeLog)
         if (accounts.isEmpty()) {
             EmptyState(
                 icon = Icons.Filled.AccountCircle,
