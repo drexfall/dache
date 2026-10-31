@@ -2,6 +2,7 @@ package dev.dache.plugin.runtime.mapping
 
 import dev.dache.core.model.Certificate
 import dev.dache.core.model.CertificateStatus
+import dev.dache.core.model.CiRun
 import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.Deployment
 import dev.dache.core.model.DnsRecord
@@ -57,6 +58,23 @@ internal class Binder(
                 type = record.required("type"),
                 name = record.required("name"),
                 content = record.required("content"),
+            )
+        }
+
+    fun ciRun(record: Mapping.Record): CiRun? =
+        orSkip {
+            CiRun(
+                providerId = providerId,
+                accountId = accountId,
+                nativeId = record.required("nativeId"),
+                webUrl = record.webUrl(),
+                repoFullName = record.required("repoFullName"),
+                repoUrl = record.required("repoUrl"),
+                workflowName = record.required("workflowName"),
+                branch = record.required("branch"),
+                status = record.status("status", DeployStatus.UNKNOWN),
+                createdAt = record.time("createdAt") ?: throw MissingFieldException("createdAt"),
+                durationSeconds = record.int("durationSeconds"),
             )
         }
 

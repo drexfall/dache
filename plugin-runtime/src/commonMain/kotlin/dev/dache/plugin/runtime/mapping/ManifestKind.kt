@@ -118,6 +118,23 @@ enum class ManifestKind(
                 "content" to text(required = true),
             ),
     ),
+    CI_RUN(
+        kindName = "ciRun",
+        resourceKind = ResourceKind.CI_RUN,
+        capability = Capability.CI,
+        fields =
+            mapOf(
+                "nativeId" to text(required = true),
+                "webUrl" to text(),
+                "repoFullName" to text(required = true),
+                "repoUrl" to text(required = true),
+                "workflowName" to text(required = true),
+                "branch" to text(required = true),
+                "status" to status(DeployStatus.entries.toTypedArray()),
+                "createdAt" to time(required = true),
+                "durationSeconds" to FieldDef(FieldType.INT, required = false),
+            ),
+    ),
     WORKER(
         kindName = "worker",
         resourceKind = ResourceKind.WORKER,
