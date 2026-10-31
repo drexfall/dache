@@ -1,5 +1,6 @@
 package dev.dache.plugin.cli
 
+import dev.dache.plugin.runtime.http.createPluginHttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
@@ -57,7 +58,15 @@ class FixtureTest {
             ]}""",
         )
 
-        val outcome = runBlocking { refresh(uptimeRobot, Fixtures(dir).engine(), "fixture-token", emptyMap()) }
+        val outcome =
+            runBlocking {
+                refresh(
+                    uptimeRobot,
+                    createPluginHttpClient(Fixtures(dir).engine()),
+                    "fixture-token",
+                    emptyMap(),
+                )
+            }
 
         assertTrue(outcome.ok, outcome.text)
         assertEquals(
@@ -75,7 +84,15 @@ class FixtureTest {
         fixture("api.uptimerobot.com/v3/user/me.json", """{"email": "ops@acme.dev"}""")
         fixture("api.uptimerobot.com/v3/monitors.403.json", "{}")
 
-        val outcome = runBlocking { refresh(uptimeRobot, Fixtures(dir).engine(), "fixture-token", emptyMap()) }
+        val outcome =
+            runBlocking {
+                refresh(
+                    uptimeRobot,
+                    createPluginHttpClient(Fixtures(dir).engine()),
+                    "fixture-token",
+                    emptyMap(),
+                )
+            }
 
         assertFalse(outcome.ok)
         assertTrue("refresh failed: MissingScope" in outcome.text, outcome.text)
@@ -87,11 +104,21 @@ class FixtureTest {
         var sent = 0
         val engine = MockEngine { error("sent ${++sent} requests") }
 
-        val outcome = runBlocking { refresh(broken, engine, "fixture-token", emptyMap()) }
+        val outcome = runBlocking { refresh(broken, createPluginHttpClient(engine), "fixture-token", emptyMap()) }
 
         assertFalse(outcome.ok)
         assertTrue("hosts[0]" in outcome.text, outcome.text)
         assertEquals(0, sent)
+    }
+
+    @Test
+    fun runNeedsTheTokenVariable() {
+        val arguments = Arguments(uptimeRobot, "UPTIMEROBOT_TOKEN", emptyMap())
+
+        val outcome = run(arguments) { name -> " ".takeIf { name == "UPTIMEROBOT_TOKEN" } }
+
+        assertFalse(outcome.ok)
+        assertEquals("environment variable UPTIMEROBOT_TOKEN is not set", outcome.text)
     }
 
     @Test

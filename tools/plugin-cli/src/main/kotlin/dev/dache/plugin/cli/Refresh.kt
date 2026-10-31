@@ -9,17 +9,17 @@ import dev.dache.plugin.api.PluginManifest
 import dev.dache.plugin.runtime.LoadResult
 import dev.dache.plugin.runtime.ManifestLoader
 import dev.dache.plugin.runtime.ManifestProvider
-import dev.dache.plugin.runtime.http.createPluginHttpClient
-import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.HttpClient
 import java.io.File
 
 /**
- * Validates the manifest at [file], checks [token] and refreshes once through [engine], and describes what came
- * back. [settings] are the account settings the manifest asks for, by key.
+ * Validates the manifest at [file], checks [token] and refreshes once through [client], and describes what came
+ * back. [settings] are the account settings the manifest asks for, by key. Make [client] with
+ * createPluginHttpClient, so requests get the same timeouts and redirect handling as in the app.
  */
 suspend fun refresh(
     file: File,
-    engine: HttpClientEngine,
+    client: HttpClient,
     token: String,
     settings: Map<String, String>,
 ): Outcome {
@@ -29,7 +29,7 @@ suspend fun refresh(
     val id = providerId(manifest)
     val account = ConnectedAccount(id = "cli", providerId = id, displayName = manifest.name, settings = settings)
     val vault = SingleTokenVault(account.tokenKey(), token)
-    val provider = ManifestProvider(manifest, id, vault, createPluginHttpClient(engine))
+    val provider = ManifestProvider(manifest, id, vault, client)
     val check = provider.checkToken(token, settings)
     val snapshot = check.mapCatching { provider.fetchSnapshot(account).getOrThrow() }
     val text =

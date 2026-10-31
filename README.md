@@ -32,6 +32,8 @@ export JAVA_HOME=~/.local/share/JetBrains/Toolbox/apps/android-studio/jbr   # ad
 
 `test <manifest> --fixtures <dir>` runs a manifest against recorded responses and prints the token check and the models it produced. A request's response is the file `<dir>/<host><path>.json`, or `<host><path>?<query>.json` for one exact query (parameters sorted by name), with a status before `.json` (`….403.json`) to answer with it. A request with no file gets a 404. Add `--setting key=value` for each account setting the manifest asks for.
 
+`run <manifest> --token-env VAR` does the same against the live API, with the token read from environment variable `VAR` so it stays out of shell history: `NETLIFY_TOKEN=… ./gradlew :tools:plugin-cli:run --args="run $PWD/plugin-registry/manifests/netlify.json --token-env NETLIFY_TOKEN"`.
+
 On Linux, connecting an account stores the token in your keyring via `secret-tool` (package `libsecret` / `libsecret-tools`). A running Secret Service (GNOME Keyring or KWallet) is required; without one, connecting fails with an explanation.
 
 Debug request logging: debuggable Android builds log every plugin request to Logcat; on desktop set `DACHE_LOG_HTTP=1`. Tokens are redacted from URLs, headers and bodies before anything is logged. Release builds log nothing.

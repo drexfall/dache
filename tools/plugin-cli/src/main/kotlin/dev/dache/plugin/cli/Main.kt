@@ -2,6 +2,7 @@ package dev.dache.plugin.cli
 
 import dev.dache.plugin.runtime.LoadResult
 import dev.dache.plugin.runtime.ManifestLoader
+import dev.dache.plugin.runtime.http.createPluginHttpClient
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import kotlin.system.exitProcess
@@ -10,6 +11,10 @@ private val USAGE =
     """
     usage: dache-plugin validate <manifest.json>...
            dache-plugin test <manifest.json> --fixtures <dir> [--setting key=value]...
+           dache-plugin run <manifest.json> --token-env <VAR> [--setting key=value]...
+
+    run sends real requests with the token from environment variable <VAR>. Pass the token that way, never as an
+    argument, so it stays out of shell history and process lists.
     """.trimIndent()
 
 /** The token `test` sends; fixtures don't check it. */
@@ -20,6 +25,7 @@ fun main(args: Array<String>) {
         when (args.firstOrNull()) {
             "validate" -> args.drop(1).takeIf { it.isNotEmpty() }?.let(::validateAll)
             "test" -> Arguments.parse(args.drop(1), "--fixtures")?.let(::test)
+            "run" -> Arguments.parse(args.drop(1), "--token-env")?.let { run(it, System::getenv) }
             else -> null
         }
     if (outcome == null) {
@@ -38,7 +44,18 @@ private fun validateAll(paths: List<String>): Outcome {
 private fun test(arguments: Arguments): Outcome {
     val dir = File(arguments.option)
     if (!dir.isDirectory) return Outcome("${dir.path}: not a directory", ok = false)
-    return runBlocking { refresh(arguments.manifest, Fixtures(dir).engine(), FIXTURE_TOKEN, arguments.settings) }
+    val client = createPluginHttpClient(Fixtures(dir).engine())
+    return runBlocking { refresh(arguments.manifest, client, FIXTURE_TOKEN, arguments.settings) }
+}
+
+/** Against the live API. [env] reads the environment, so tests can supply their own. */
+fun run(
+    arguments: Arguments,
+    env: (String) -> String?,
+): Outcome {
+    val token = env(arguments.option)?.trim()
+    if (token.isNullOrEmpty()) return Outcome("environment variable ${arguments.option} is not set", ok = false)
+    return runBlocking { refresh(arguments.manifest, createPluginHttpClient(), token, arguments.settings) }
 }
 
 /** `<manifest> <flag> <value> [--setting key=value]...`, in any order after the manifest. */
