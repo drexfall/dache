@@ -13,6 +13,8 @@ data class ProviderSnapshot(
     val billing: Billing? = null,
     /** Permissions the token lacked for optional resources, which were left out rather than failing the refresh. */
     val missingPermissions: Set<String> = emptySet(),
+    /** Permissions of optional resources that failed to load for another reason, e.g. a server error. */
+    val unavailable: Set<String> = emptySet(),
 ) {
     val resources: List<Resource>
         get() = sites + domains + dnsRecords + ciRuns + servers + workers + monitors + services
@@ -29,5 +31,6 @@ data class ProviderSnapshot(
             monitors = monitors.filter(page::shows),
             services = services.filter(page::shows),
             missingPermissions = missingPermissions intersect page.permissions,
+            unavailable = unavailable intersect page.permissions,
         )
 }

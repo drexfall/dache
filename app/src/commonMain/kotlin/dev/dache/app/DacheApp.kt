@@ -60,6 +60,7 @@ import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.model.AccountSetting
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ResourceRef
+import dev.dache.core.model.TokenPermission
 import dev.dache.core.security.IntegrityChecker
 import dev.dache.core.security.IntegritySignal
 import dev.dache.core.settings.AppLockSettings
@@ -213,7 +214,8 @@ private fun DacheContent(
                                     account = account,
                                     state = state,
                                     check = tokenChecks[account.id] ?: TokenCheckState(),
-                                    settings = { container.accountRepository.settings(account.providerId) },
+                                    settings = container.accountRepository.settings(account.providerId),
+                                    permissions = container.accountRepository.tokenPermissions(account.providerId),
                                     onCheck = { accountsViewModel.checkAccount(account) },
                                     onRefresh = dashboardViewModel::refresh,
                                     onOpenMenu = onOpenMenu,
@@ -291,7 +293,8 @@ private fun AccountPage(
     account: ConnectedAccount,
     state: DashboardState,
     check: TokenCheckState,
-    settings: () -> List<AccountSetting>,
+    settings: List<AccountSetting>,
+    permissions: List<TokenPermission>,
     onCheck: () -> Unit,
     onRefresh: () -> Unit,
     onOpenMenu: (() -> Unit)?,
@@ -305,7 +308,8 @@ private fun AccountPage(
             AccountSettingsScreen(
                 destination = target,
                 account = account,
-                settings = settings(),
+                settings = settings,
+                permissions = permissions,
                 state = state,
                 check = check,
                 onCheck = onCheck,

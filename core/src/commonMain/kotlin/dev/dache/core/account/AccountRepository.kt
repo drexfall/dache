@@ -5,6 +5,7 @@ import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.TokenCheck
+import dev.dache.core.model.TokenPermission
 import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.security.TokenKey
 import dev.dache.core.security.TokenVault
@@ -21,6 +22,10 @@ class AccountRepository(
     private val newId: () -> String = ::randomId,
 ) {
     val accounts: Flow<List<ConnectedAccount>> = store.accounts
+
+    /** What [providerId]'s token check reports on, to list before a token is checked. */
+    fun tokenPermissions(providerId: ProviderId): List<TokenPermission> =
+        providers[providerId]?.tokenPermissions.orEmpty()
 
     /** The settings [providerId] asks for besides the token. */
     fun settings(providerId: ProviderId): List<AccountSetting> = providers[providerId]?.accountSettings.orEmpty()

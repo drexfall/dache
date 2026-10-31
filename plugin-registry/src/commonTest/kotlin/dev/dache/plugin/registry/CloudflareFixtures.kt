@@ -7,7 +7,7 @@ object CloudflareFixtures {
     const val ZONE_ID = "fedcba9876543210fedcba9876543210"
 
     const val UNAUTHORIZED =
-        """{"success":false,"errors":[{"code":10000,"message":"Authentication error"}],"result":null}"""
+        """{"success":false,"errors":[{"code":9109,"message":"Invalid access token"}],"messages":[],"result":null}"""
 
     private fun list(result: String) = """{"success": true, "errors": [], "messages": [], "result": $result}"""
 

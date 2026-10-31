@@ -242,6 +242,12 @@
     <string name="settings_connection">Connection</string>
     <string name="settings_token">Token permissions</string>
     <string name="token_checking">Checking the token…</string>
+    <string name="token_needs">The token needs</string>
+    <string name="token_refused">%1$s refused the token. Check that it was copied whole, hasn’t expired and isn’t limited to other IP addresses, and that it has the permission marked below.</string>
+    <string name="permission_needed">%1$s: needed</string>
+    <string name="permission_checking">%1$s: checking</string>
+    <string name="service_unavailable">Part of this page couldn’t load (%1$s). It’s tried again on the next refresh.</string>
+    <string name="service_card_unavailable">Part of this page couldn’t load</string>
     <string name="token_valid">Token works for %1$s</string>
     <string name="token_missing_required">The token is missing a required permission. Add it, or create a new token.</string>
     <string name="token_no_permissions">%1$s tokens aren’t split into permissions, so there’s nothing more to check.</string>

@@ -8,6 +8,7 @@ import dev.dache.core.model.AccountSetting
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.TokenCheck
+import dev.dache.core.model.TokenPermission
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,14 +46,16 @@ data class AddAccountState(
     val sampleData: Boolean = false,
     /** Checked while the user types, so missing permissions show before connecting. */
     val check: TokenCheckState = TokenCheckState(),
+    /** What the selected provider's token check reports on, listed before there is a token. */
+    val permissions: List<TokenPermission> = emptyList(),
 ) {
     /** A token and every required setting are filled in. */
     val isFilledIn: Boolean
         get() = token.isNotBlank() && settings.none { it.required && settingValues[it.key].isNullOrBlank() }
 
-    /** A token known to lack a required permission can't refresh, so it isn't connected. */
+    /** A token the provider refused, or that lacks a required permission, can't refresh, so it isn't connected. */
     val canSubmit: Boolean
-        get() = isFilledIn && !isValidating && check.result?.missingRequired != true
+        get() = isFilledIn && !isValidating && check.result?.usable != false
 
     // The generated toString would print the token into any log or crash report that dumps the state.
     override fun toString(): String =
@@ -144,6 +147,7 @@ class AccountsViewModel(
     ) = state.copy(
         provider = provider,
         settings = accounts.settings(provider),
+        permissions = accounts.tokenPermissions(provider),
         settingValues = emptyMap(),
         error = null,
         sampleData = provider in sampleDataProviders,

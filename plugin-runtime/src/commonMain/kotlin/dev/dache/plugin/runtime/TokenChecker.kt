@@ -22,23 +22,45 @@ internal class TokenChecker(
         val field: RequestedField?,
     )
 
+    private val probes =
+        resources.flatMap { resource ->
+            listOfNotNull(resource.permission?.let { Probe(it, !resource.optional, resource, null) }) +
+                resource.requested.values.mapNotNull { field ->
+                    field.permission?.let { Probe(it, !field.optional, resource, field) }
+                }
+        }
+
+    /**
+     * Every permission the check reports on, in order: the validate request's first, then the lists'. One
+     * permission used by several lists appears once, required if any of them is.
+     */
+    val declared: List<TokenPermission> =
+        (
+            listOfNotNull(validatePermission?.let { TokenPermission(it, required = true) }) +
+                probes.groupBy { it.permission }.map { (name, group) ->
+                    TokenPermission(name, group.any { it.required })
+                }
+        ).distinctBy { it.name }
+
     suspend fun check(account: AccountContext): List<PermissionCheck> {
-        val probes =
-            resources.flatMap { resource ->
-                listOfNotNull(resource.permission?.let { Probe(it, !resource.optional, resource, null) }) +
-                    resource.requested.values.mapNotNull { field ->
-                        field.permission?.let { Probe(it, !field.optional, resource, field) }
-                    }
-            }
         val results = fanOut(probes) { granted(it, account) }
-        val validated = listOfNotNull(validatePermission?.let { PermissionCheck(TokenPermission(it, true), true) })
-        val probed =
-            probes.zip(results).groupBy { (probe, _) -> probe.permission }.map { (name, group) ->
-                val required = group.any { (probe, _) -> probe.required }
-                PermissionCheck(TokenPermission(name, required), merge(group.map { (_, granted) -> granted }))
-            }
-        return (validated + probed).distinctBy { it.permission.name }
+        val byPermission = probes.zip(results).groupBy({ (probe, _) -> probe.permission }, { (_, granted) -> granted })
+        return declared.map { permission ->
+            val granted =
+                if (permission.name ==
+                    validatePermission
+                ) {
+                    true
+                } else {
+                    merge(byPermission.getValue(permission.name))
+                }
+            PermissionCheck(permission, granted)
+        }
     }
+
+    /** The validate request was refused: its permission is missing, and nothing else could be checked. */
+    fun refused(): List<PermissionCheck> =
+        declared.map { PermissionCheck(it, granted = false.takeIf { _ -> it.name == validatePermission }) }
 
     /** Null when there was no parent item to send the request for, or the answer says nothing about permissions. */
     private suspend fun granted(

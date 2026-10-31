@@ -25,6 +25,7 @@ import dev.dache.app.resources.nav_problems
 import dev.dache.app.resources.section_count
 import dev.dache.app.resources.service_card_empty
 import dev.dache.app.resources.service_card_missing_permissions
+import dev.dache.app.resources.service_card_unavailable
 import dev.dache.core.dashboard.DashboardSummary
 import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.ServicePage
@@ -100,9 +101,15 @@ private fun ServiceCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (shown.missingPermissions.isNotEmpty()) {
+            val partly =
+                when {
+                    shown.missingPermissions.isNotEmpty() -> Res.string.service_card_missing_permissions
+                    shown.unavailable.isNotEmpty() -> Res.string.service_card_unavailable
+                    else -> null
+                }
+            if (partly != null) {
                 Text(
-                    stringResource(Res.string.service_card_missing_permissions),
+                    stringResource(partly),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.error,
                 )

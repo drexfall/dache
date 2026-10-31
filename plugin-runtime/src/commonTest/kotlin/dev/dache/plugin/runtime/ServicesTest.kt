@@ -115,6 +115,7 @@ class ServicesTest {
     private fun provider(
         denied: Set<String> = emptySet(),
         requested: MutableList<String> = mutableListOf(),
+        failing: Map<String, HttpStatusCode> = emptyMap(),
         body: (String) -> String? = bodies::get,
     ): ManifestProvider {
         val engine =
@@ -122,8 +123,8 @@ class ServicesTest {
                 val path = request.url.encodedPath
                 requested += path
                 val json = headersOf(HttpHeaders.ContentType, "application/json")
-                if (path in denied) {
-                    respond("{}", HttpStatusCode.Forbidden, json)
+                if (path in denied || path in failing) {
+                    respond("{}", failing[path] ?: HttpStatusCode.Forbidden, json)
                 } else {
                     respond(body(path) ?: "[]", HttpStatusCode.OK, json)
                 }
@@ -175,6 +176,37 @@ class ServicesTest {
         }
 
     @Test
+    fun anOptionalListCanNeverFailTheRefresh() =
+        runTest {
+            listOf(
+                HttpStatusCode.Unauthorized,
+                HttpStatusCode.BadRequest,
+                HttpStatusCode.InternalServerError,
+                HttpStatusCode.TooManyRequests,
+            ).forEach { status ->
+                val snapshot =
+                    provider(failing = mapOf("/buckets" to status, "/zones/z1/certs" to status))
+                        .fetchSnapshot(account)
+                        .getOrThrow()
+
+                assertEquals(2, snapshot.domains.size, "$status")
+                assertEquals(2, snapshot.services.count { it.service == "tunnel" }, "$status")
+            }
+        }
+
+    @Test
+    fun refusalsAreMissingPermissionsAndOtherFailuresAreUnavailable() =
+        runTest {
+            val snapshot =
+                provider(
+                    failing = mapOf("/buckets" to HttpStatusCode.Unauthorized, "/tunnels" to HttpStatusCode.BadGateway),
+                ).fetchSnapshot(account).getOrThrow()
+
+            assertEquals(setOf("Storage Read"), snapshot.missingPermissions)
+            assertEquals(setOf("Tunnel Read"), snapshot.unavailable)
+        }
+
+    @Test
     fun aRequiredListTheTokenCantReadStillFailsTheRefresh() =
         runTest {
             val result = provider(denied = setOf("/zones")).fetchSnapshot(account)
@@ -223,11 +255,37 @@ class ServicesTest {
         }
 
     @Test
-    fun anInvalidTokenFailsTheCheck() =
+    fun aRefusedTokenStillGetsAChecklist() =
         runTest {
-            val result = provider(denied = setOf("/user")).checkToken("fake-token-123")
+            val check = provider(denied = setOf("/user")).checkToken("fake-token-123").getOrThrow()
 
-            assertIs<ProviderError.MissingScope>(result.exceptionOrNull())
+            assertEquals(null, check.displayName)
+            assertEquals(
+                listOf(false, null, null, null, null, null),
+                check.permissions.map { it.granted },
+            )
+            assertEquals(
+                "Account Read",
+                check.permissions
+                    .first()
+                    .permission.name,
+            )
+            assertTrue(!check.usable)
+        }
+
+    @Test
+    fun theDeclaredPermissionsMatchTheCheck() =
+        runTest {
+            val provider = provider()
+
+            assertEquals(
+                provider
+                    .checkToken("fake-token-123")
+                    .getOrThrow()
+                    .permissions
+                    .map { it.permission },
+                provider.tokenPermissions,
+            )
         }
 
     @Test

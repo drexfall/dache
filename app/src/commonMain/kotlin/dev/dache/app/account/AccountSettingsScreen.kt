@@ -36,6 +36,7 @@ import dev.dache.app.ui.layout.PageScaffold
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.model.AccountSetting
 import dev.dache.core.model.ConnectedAccount
+import dev.dache.core.model.TokenPermission
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -48,6 +49,7 @@ fun AccountSettingsScreen(
     destination: Destination.AccountSettings,
     account: ConnectedAccount,
     settings: List<AccountSetting>,
+    permissions: List<TokenPermission>,
     state: DashboardState,
     check: TokenCheckState,
     onCheck: () -> Unit,
@@ -73,7 +75,7 @@ fun AccountSettingsScreen(
             }
         }
         SettingsCard(Res.string.settings_token) {
-            TokenChecklist(check, provider)
+            TokenChecklist(check, provider, permissions)
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),

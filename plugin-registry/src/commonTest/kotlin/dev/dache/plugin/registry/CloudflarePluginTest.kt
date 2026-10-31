@@ -45,7 +45,9 @@ class CloudflarePluginTest {
             "/accounts/$ACCOUNT_ID/queues" to (HttpStatusCode.Forbidden to CloudflareFixtures.UNAUTHORIZED),
         )
 
-    private fun cloudflare(): DevOpsProvider {
+    /** Paths in [failing] answer with that status, as a product the account doesn't use might. */
+    private fun cloudflare(failing: Map<String, HttpStatusCode> = emptyMap()): DevOpsProvider {
+        val routes = services + failing.mapValues { (_, status) -> status to FAILED }
         val engine =
             MockEngine { request ->
                 requests += request
@@ -69,7 +71,7 @@ class CloudflarePluginTest {
                         path == "/accounts/$ACCOUNT_ID/workers/scripts" ->
                             HttpStatusCode.OK to
                                 CloudflareFixtures.workers
-                        path in services -> services.getValue(path)
+                        path in routes -> routes.getValue(path)
                         else -> HttpStatusCode.NotFound to """{"success":false,"errors":[{"code":7003}]}"""
                     }
                 respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
@@ -159,6 +161,41 @@ class CloudflarePluginTest {
             val info = cloudflare().validateCredentials(CloudflareFixtures.TOKEN).getOrThrow()
 
             assertEquals("Acme Inc", info.displayName)
+        }
+
+    @Test
+    fun anInvalidTokenGetsAChecklistSayingSo() =
+        runTest {
+            // What Cloudflare really answers for a token it doesn't accept: 403 with code 9109.
+            val check = cloudflare().checkToken("cf_wrong").getOrThrow()
+
+            assertEquals(null, check.displayName)
+            assertEquals(
+                "Account Settings Read",
+                check.permissions
+                    .first()
+                    .permission.name,
+            )
+            assertEquals(false, check.permissions.first().granted)
+            assertTrue(check.permissions.drop(1).all { it.granted == null })
+        }
+
+    @Test
+    fun productsTheAccountDoesntUseNeverFailTheRefresh() =
+        runTest {
+            val failing =
+                mapOf(
+                    "/accounts/$ACCOUNT_ID/r2/buckets" to HttpStatusCode.Unauthorized,
+                    "/accounts/$ACCOUNT_ID/d1/database" to HttpStatusCode.BadRequest,
+                    "/accounts/$ACCOUNT_ID/cfd_tunnel" to HttpStatusCode.InternalServerError,
+                )
+
+            val snapshot = cloudflare(failing).fetchSnapshot(account).getOrThrow()
+
+            assertTrue(snapshot.domains.isNotEmpty())
+            assertTrue(snapshot.workers.isNotEmpty())
+            assertTrue("Workers R2 Storage Read" in snapshot.missingPermissions)
+            assertEquals(setOf("D1 Read", "Cloudflare Tunnel Read"), snapshot.unavailable)
         }
 
     @Test
@@ -258,3 +295,5 @@ private const val TUNNELS =
     """{"success": true, "result": [
       {"id": "t1", "name": "office", "status": "degraded", "created_at": "2026-01-01T00:00:00Z"}
     ]}"""
+
+private const val FAILED = """{"success": false, "errors": [{"code": 10000, "message": "Authentication error"}]}"""

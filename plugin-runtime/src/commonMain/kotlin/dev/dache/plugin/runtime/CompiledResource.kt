@@ -46,17 +46,24 @@ internal val ResourceSpec.permissions: List<String>
     get() = listOfNotNull(permission) + fields.values.mapNotNull { (it as? FieldSpec.Nested)?.permission }
 
 /**
- * Runs [fetch]. When [optional], a list the token can't read (403) or that doesn't exist (404) gives null
- * instead of failing.
+ * Runs [fetch]. A required list's failure fails the refresh. An optional list's failure, whatever it is, comes
+ * back as a failed result instead, so one product the account doesn't use, or one bad endpoint, can't take the
+ * rest of the account down with it.
  */
 internal suspend fun <T> readable(
     optional: Boolean,
     fetch: suspend () -> T,
-): T? =
+): Result<T> =
     try {
-        fetch()
-    } catch (e: ProviderError.MissingScope) {
-        if (optional) null else throw e
-    } catch (e: ProviderError.NotFound) {
-        if (optional) null else throw e
+        Result.success(fetch())
+    } catch (e: ProviderError) {
+        if (!optional) throw e
+        Result.failure(e)
     }
+
+/**
+ * The provider said no to this list for this token: a 401 or 403, or a 404 for a product the account doesn't
+ * have. Anything else, like a server error or a rate limit, is a failure to load.
+ */
+internal val Throwable.isRefusal: Boolean
+    get() = this is ProviderError.MissingScope || this is ProviderError.Unauthorized || this is ProviderError.NotFound

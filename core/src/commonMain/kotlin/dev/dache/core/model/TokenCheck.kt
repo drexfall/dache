@@ -2,14 +2,20 @@ package dev.dache.core.model
 
 /**
  * What a token can do, checked before connecting and again from an account's settings. [displayName] is the
- * account the token belongs to.
+ * account the token belongs to, or null when the provider refused the token outright (a 403 on the request that
+ * identifies the account); its permissions then say which one that request needed and leave the rest unchecked.
  */
 data class TokenCheck(
-    val displayName: String,
+    val displayName: String?,
     val permissions: List<PermissionCheck>,
 ) {
+    val accepted: Boolean get() = displayName != null
+
     /** A required permission is known to be missing, so refreshes would fail. */
     val missingRequired: Boolean get() = permissions.any { it.permission.required && it.granted == false }
+
+    /** Refreshes would work with this token. */
+    val usable: Boolean get() = accepted && !missingRequired
 }
 
 /**

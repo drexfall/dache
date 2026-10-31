@@ -31,6 +31,7 @@ import dev.dache.app.resources.overview_resources
 import dev.dache.app.resources.service_empty
 import dev.dache.app.resources.service_missing
 import dev.dache.app.resources.service_missing_permissions
+import dev.dache.app.resources.service_unavailable
 import dev.dache.app.ui.layout.AdaptiveGrid
 import dev.dache.app.ui.layout.PageScaffold
 import dev.dache.core.dashboard.DashboardState
@@ -76,9 +77,11 @@ fun ServiceScreen(
             return@PageScaffold
         }
         val shown = snapshot.only(page)
-        if (shown.missingPermissions.isNotEmpty()) {
-            MissingPermissions(shown.missingPermissions) { onNavigate(Destination.AccountSettings(account.id)) }
-        }
+        val partly = shown.missingPermissions + shown.unavailable
+        PartlyLoaded(
+            shown.missingPermissions,
+            shown.unavailable,
+        ) { onNavigate(Destination.AccountSettings(account.id)) }
         val now = state.lastUpdated ?: Clock.System.now()
         val stats = accountStats(shown, now)
         if (stats.isNotEmpty()) StatTiles(stats)
@@ -89,25 +92,40 @@ fun ServiceScreen(
         val sections = resourceSections(listOf(shown), state)
         if (sections.isNotEmpty()) {
             CollapsibleSection(Res.string.overview_resources) { AdaptiveGrid(sections, minCellWidth = 420.dp) }
-        } else if (shown.missingPermissions.isEmpty()) {
+        } else if (partly.isEmpty()) {
             Text(stringResource(Res.string.service_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
-/** Some of the page was left out because the token can't read it; the settings page shows the full check. */
+/**
+ * Some of the page was left out: [missing] are permissions the token was refused, and the settings page shows the
+ * full check; [unavailable] are lists that failed some other way and are retried on the next refresh.
+ */
 @Composable
-private fun MissingPermissions(
-    permissions: Set<String>,
+private fun PartlyLoaded(
+    missing: Set<String>,
+    unavailable: Set<String>,
     onOpenSettings: () -> Unit,
 ) {
+    if (missing.isEmpty() && unavailable.isEmpty()) return
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                stringResource(Res.string.service_missing_permissions, permissions.sorted().joinToString(", ")),
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            TextButton(onClick = onOpenSettings) { Text(stringResource(Res.string.action_account_settings)) }
+            if (missing.isNotEmpty()) {
+                Text(
+                    stringResource(Res.string.service_missing_permissions, missing.sorted().joinToString(", ")),
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+            if (unavailable.isNotEmpty()) {
+                Text(
+                    stringResource(Res.string.service_unavailable, unavailable.sorted().joinToString(", ")),
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+            if (missing.isNotEmpty()) {
+                TextButton(onClick = onOpenSettings) { Text(stringResource(Res.string.action_account_settings)) }
+            }
         }
     }
 }

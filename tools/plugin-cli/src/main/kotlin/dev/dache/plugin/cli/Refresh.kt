@@ -31,14 +31,15 @@ suspend fun refresh(
     val vault = SingleTokenVault(account.tokenKey(), token)
     val provider = ManifestProvider(manifest, id, vault, client)
     val check = provider.checkToken(token, settings)
-    val snapshot = check.mapCatching { provider.fetchSnapshot(account).getOrThrow() }
+    // A refused token would only fail again, so there is no refresh to show.
+    val snapshot = check.mapCatching { if (it.accepted) provider.fetchSnapshot(account).getOrThrow() else null }
     val text =
         listOfNotNull(
             check.fold(::describe) { "token check failed: ${it.describe()}" },
             snapshot.getOrNull()?.let(::describe),
             snapshot.exceptionOrNull()?.takeIf { check.isSuccess }?.let { "refresh failed: ${it.describe()}" },
         ).joinToString("\n")
-    return Outcome(text, ok = snapshot.isSuccess)
+    return Outcome(text, ok = snapshot.getOrNull() != null)
 }
 
 /** The provider the manifest's id names; any other manifest borrows the first, which only shows in fallbacks. */

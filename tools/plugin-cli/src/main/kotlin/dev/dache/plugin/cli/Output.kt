@@ -19,7 +19,7 @@ class Outcome(
 /** Whom the token belongs to and each permission it has, one line each. */
 fun describe(check: TokenCheck): String =
     buildString {
-        appendLine("token works for ${check.displayName}")
+        appendLine(check.displayName?.let { "token works for $it" } ?: "the provider refused the token")
         check.permissions.forEach { appendLine("  ${mark(it)} ${it.permission.name} (${need(it)})") }
     }.trimEnd()
 

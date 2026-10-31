@@ -10,6 +10,7 @@ import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.ServicePage
 import dev.dache.core.model.TokenCheck
+import dev.dache.core.model.TokenPermission
 import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.security.TokenVault
 import dev.dache.plugin.api.PluginManifest
@@ -60,13 +61,22 @@ class ManifestProvider(
             AccountInfo(displayName = displayName.evaluate(body)?.asText()?.ifBlank { null } ?: manifest.name)
         }
 
+    override val tokenPermissions: List<TokenPermission> get() = checker.declared
+
+    // A 403 on the request every usable token passes means the provider won't take this token as it is. Some
+    // providers, like Cloudflare, answer an invalid token that way too, so it's reported as a refusal with the
+    // permission that request needed, not as a bare error.
     override suspend fun checkToken(
         token: String,
         settings: Map<String, String>,
-    ): Result<TokenCheck> =
-        validateCredentials(token, settings).map { info ->
-            TokenCheck(info.displayName, checker.check(AccountContext(token, settings)))
+    ): Result<TokenCheck> {
+        val validated = validateCredentials(token, settings)
+        return when (val error = validated.exceptionOrNull()) {
+            null -> validated.map { TokenCheck(it.displayName, checker.check(AccountContext(token, settings))) }
+            is ProviderError.MissingScope -> Result.success(TokenCheck(displayName = null, checker.refused()))
+            else -> Result.failure(error)
         }
+    }
 
     override suspend fun fetchSnapshot(account: ConnectedAccount): Result<ProviderSnapshot> =
         attempt {
@@ -74,10 +84,15 @@ class ManifestProvider(
             val context = AccountContext(token, account.settings)
             val binder = Binder(id, account.id)
             resources.fold(ProviderSnapshot()) { snapshot, resource ->
-                val fetched = readable(resource.optional) { records(resource, items(resource, context), context) }
-                val missing = fetched?.missing ?: listOfNotNull(resource.permission)
-                add(snapshot, resource, fetched?.records.orEmpty(), binder)
-                    .let { it.copy(missingPermissions = it.missingPermissions + missing) }
+                val fetched =
+                    readable(resource.optional) { records(resource, items(resource, context), context) }
+                        .getOrElse { Fetched.unread(it, resource.permission) }
+                add(snapshot, resource, fetched.records, binder).let {
+                    it.copy(
+                        missingPermissions = it.missingPermissions + fetched.missing,
+                        unavailable = it.unavailable + fetched.unavailable,
+                    )
+                }
             }
         }
 
@@ -115,11 +130,32 @@ class ManifestProvider(
         return fanOut(parents) { parent -> lists.fetch(resource.list, account, parent) }.flatten()
     }
 
-    /** The records, and the permissions of optional nested lists the token couldn't read. */
+    /**
+     * The records, and the permissions of optional lists that weren't read: [missing] for the ones the token was
+     * refused, [unavailable] for the ones that failed some other way.
+     */
     private class Fetched(
         val records: List<Mapping.Record>,
-        val missing: Set<String>,
-    )
+        val missing: Set<String> = emptySet(),
+        val unavailable: Set<String> = emptySet(),
+    ) {
+        companion object {
+            fun unread(
+                error: Throwable,
+                permission: String?,
+            ): Fetched {
+                val names = setOfNotNull(permission)
+                return if (error.isRefusal) {
+                    Fetched(
+                        emptyList(),
+                        missing = names,
+                    )
+                } else {
+                    Fetched(emptyList(), unavailable = names)
+                }
+            }
+        }
+    }
 
     /** Items past the fan-out limit keep their own fields but get no requested nested records. */
     private suspend fun records(
@@ -128,30 +164,32 @@ class ManifestProvider(
         account: AccountContext,
     ): Fetched {
         val settings = account.settings
-        if (resource.requested.isEmpty()) {
-            return Fetched(
-                items.map { resource.mapping.Record(it, settings) },
-                emptySet(),
-            )
-        }
+        if (resource.requested.isEmpty()) return Fetched(items.map { resource.mapping.Record(it, settings) })
         val fetched =
             fanOut(items) { item ->
                 resource.requested.mapValues { (_, field) ->
                     readable(field.optional) { lists.fetch(field.list, account, parent = item) }
                 }
             }
-        val missing =
-            fetched
-                .flatMap { byField -> byField.filterValues { it == null }.keys }
-                .mapNotNull { resource.requested[it]?.permission }
-                .toSet()
+        val errors =
+            fetched.flatMap { byField ->
+                byField.mapNotNull { (name, read) -> read.exceptionOrNull()?.let { name to it } }
+            }
+
+        fun permissions(refused: Boolean) =
+            errors
+                .filter { (_, error) ->
+                    error.isRefusal == refused
+                }.mapNotNull { (name, _) ->
+                    resource.requested[name]?.permission
+                }.toSet()
         val none = emptyMap<String, List<JsonElement>>()
         val records =
             items.mapIndexed { index, item ->
-                val nested = fetched.getOrNull(index)?.mapValues { it.value.orEmpty() } ?: none
+                val nested = fetched.getOrNull(index)?.mapValues { it.value.getOrDefault(emptyList()) } ?: none
                 resource.mapping.Record(item, settings, nested)
             }
-        return Fetched(records, missing)
+        return Fetched(records, missing = permissions(refused = true), unavailable = permissions(refused = false))
     }
 
     private inline fun <T> attempt(block: () -> T): Result<T> =
