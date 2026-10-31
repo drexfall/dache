@@ -12,7 +12,7 @@ One dashboard for the hosting, DNS, CI, server and uptime services you use. Kotl
 | `plugin-api` | KMP. The plugin manifest schema (`PluginManifest`) and its strict JSON codec. No code runs from a manifest. |
 | `plugin-runtime` | KMP. The declarative engine: manifest validator, mapping expressions, `ManifestProvider` (a `DevOpsProvider` that runs a manifest), and the HTTP layer with `HostGuard`, `AuthInjector` and redaction. Ktor with OkHttp on both targets. |
 | `plugin-registry` | KMP. Bundled plugins. Manifests live in `plugin-registry/manifests/*.json` and are compiled into the app at build time. |
-| `tools/plugin-cli` | JVM command line for plugin authors: `dache-plugin validate <manifest.json>...`. |
+| `tools/plugin-cli` | JVM command line for plugin authors: `validate`, `test` against recorded responses, `run` against the live API. |
 | `app` | KMP Compose Multiplatform UI: sidebar navigation (overview + one page per account), Canvas charts, adaptive phone/desktop layouts. Also the desktop entry point (`jvmMain/Main.kt`). |
 | `androidApp` | Android shell: `Application`, `MainActivity`, and three Glance home-screen widgets (status summary, deploys, monitors). |
 
@@ -29,6 +29,8 @@ export JAVA_HOME=~/.local/share/JetBrains/Toolbox/apps/android-studio/jbr   # ad
 ./gradlew ktlintCheck detekt        # lint
 ./gradlew :tools:plugin-cli:run --args="validate plugin-registry/manifests/netlify.json"
 ```
+
+`test <manifest> --fixtures <dir>` runs a manifest against recorded responses and prints the token check and the models it produced. A request's response is the file `<dir>/<host><path>.json`, or `<host><path>?<query>.json` for one exact query (parameters sorted by name), with a status before `.json` (`….403.json`) to answer with it. A request with no file gets a 404. Add `--setting key=value` for each account setting the manifest asks for.
 
 On Linux, connecting an account stores the token in your keyring via `secret-tool` (package `libsecret` / `libsecret-tools`). A running Secret Service (GNOME Keyring or KWallet) is required; without one, connecting fails with an explanation.
 

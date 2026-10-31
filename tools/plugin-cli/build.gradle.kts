@@ -14,6 +14,8 @@ java {
 
 dependencies {
     implementation(projects.pluginRuntime)
+    // Serves recorded responses for `test --fixtures`.
+    implementation(libs.ktor.client.mock)
     testImplementation(kotlin("test"))
 }
 
