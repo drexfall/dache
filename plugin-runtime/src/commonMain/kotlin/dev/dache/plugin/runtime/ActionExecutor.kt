@@ -214,7 +214,9 @@ internal class ActionExecutor(
 
     companion object {
         private const val INPUT = "input"
-        private val wholeInput = Regex("""\{\s*input\.([A-Za-z0-9_]+)\s*}""")
+
+        // The closing brace is escaped too: Android's regex engine rejects a bare one.
+        private val wholeInput = Regex("""\{\s*input\.([A-Za-z0-9_]+)\s*\}""")
         private val prettyJson = Json { prettyPrint = true }
 
         fun targetKey(
