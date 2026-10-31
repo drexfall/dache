@@ -270,4 +270,15 @@
     <string name="lock_title">Dache is locked</string>
     <string name="lock_body">Unlock with your fingerprint, face or screen lock.</string>
     <string name="action_unlock">Unlock</string>
+    <string name="integrity_title">This device’s protections are weakened</string>
+    <string name="integrity_body">Other apps, or someone holding the phone, could read your tokens more easily than on a locked-down device. Dache keeps working. Give tokens here an expiry date, and revoke them if the phone leaves your hands.</string>
+    <string name="integrity_note_title">Device protections are weakened</string>
+    <string name="integrity_note_body">Tokens on this device are easier to read for other apps.</string>
+    <string name="integrity_su_binary">An su binary is installed</string>
+    <string name="integrity_test_keys">The system is signed with test keys</string>
+    <string name="integrity_root_manager">A root manager app is installed</string>
+    <string name="integrity_bootloader_unlocked">The bootloader is unlocked</string>
+    <string name="integrity_unverified_boot">The boot chain isn’t verified</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_dont_show_again">Don’t show again</string>
 </resources>

@@ -43,10 +43,13 @@ import dev.dache.app.overview.OverviewScreen
 import dev.dache.app.resource.ResourceScreen
 import dev.dache.app.security.AppLockCard
 import dev.dache.app.security.AppLockController
+import dev.dache.app.security.IntegrityNote
+import dev.dache.app.security.IntegrityWarning
 import dev.dache.app.security.LockAuthenticator
 import dev.dache.app.security.LockLoading
 import dev.dache.app.security.LockScreen
 import dev.dache.app.security.LockState
+import dev.dache.app.security.rememberIntegritySignals
 import dev.dache.app.service.ServiceScreen
 import dev.dache.app.ui.components.ExternalLinkHost
 import dev.dache.app.ui.layout.EXPANDED_MIN_WIDTH
@@ -57,28 +60,35 @@ import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.model.AccountSetting
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ResourceRef
+import dev.dache.core.security.IntegrityChecker
+import dev.dache.core.security.IntegritySignal
 import dev.dache.core.settings.AppLockSettings
 import kotlinx.coroutines.launch
 
-/** Pass [lockAuthenticator] on platforms with a screen lock; without one the app lock isn't offered. */
+/**
+ * Pass [lockAuthenticator] on platforms with a screen lock; without one the app lock isn't offered. Pass
+ * [integrityChecker] where the device can be checked for root; without one no warning is shown.
+ */
 @Composable
 fun DacheApp(
     container: AppContainer,
     lockAuthenticator: LockAuthenticator? = null,
+    integrityChecker: IntegrityChecker? = null,
 ) {
     DacheTheme {
+        val signals = rememberIntegritySignals(integrityChecker)
         // Above the lock, so the open page is still there after unlocking.
         val destinationState =
             rememberSaveable(stateSaver = DestinationSaver) { mutableStateOf<Destination>(Destination.Overview) }
         if (lockAuthenticator == null) {
-            DacheContent(container, destinationState, securityCard = null)
+            DacheContent(container, destinationState, signals, securityCard = null)
         } else {
             val lockState by container.appLock.state.collectAsStateWithLifecycle()
             when (lockState) {
                 LockState.LOADING -> LockLoading()
                 LockState.LOCKED -> LockGate(container.appLock, lockAuthenticator)
                 LockState.UNLOCKED ->
-                    DacheContent(container, destinationState) { AppLockSection(container, lockAuthenticator) }
+                    DacheContent(container, destinationState, signals) { AppLockSection(container, lockAuthenticator) }
             }
         }
     }
@@ -125,6 +135,7 @@ private fun AppLockSection(
 private fun DacheContent(
     container: AppContainer,
     destinationState: MutableState<Destination>,
+    signals: Set<IntegritySignal>,
     securityCard: (@Composable () -> Unit)?,
 ) {
     val dashboardViewModel =
@@ -228,7 +239,10 @@ private fun DacheContent(
                                 onOpenSettings = { destination = Destination.AccountSettings(it.id) },
                                 confirmExternalLinks = confirmLinks,
                                 onConfirmExternalLinksChange = container::setConfirmExternalLinks,
-                                securityCard = securityCard,
+                                securityCard = {
+                                    IntegrityNote(signals)
+                                    securityCard?.invoke()
+                                },
                             )
                     }
                 }
@@ -246,6 +260,12 @@ private fun DacheContent(
                     ) { page { scope.launch { drawerState.open() } } }
                 }
 
+                IntegrityWarning(
+                    signals = signals,
+                    hasAccounts = state.accounts.isNotEmpty(),
+                    settingsStore = container.settingsStore,
+                    onSave = container::setIntegrityWarning,
+                )
                 accountsState.addAccount?.let { addState ->
                     AddAccountFlow(
                         state = addState,

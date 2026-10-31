@@ -7,6 +7,7 @@ import dev.dache.core.dashboard.DashboardRepository
 import dev.dache.core.model.ProviderId
 import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.provider.mock.MockProvider
+import dev.dache.core.security.IntegrityWarningSettings
 import dev.dache.core.security.TokenVault
 import dev.dache.core.settings.AppLockSettings
 import dev.dache.core.settings.SettingsStore
@@ -47,6 +48,10 @@ class AppContainer(
 
     fun setAppLock(settings: AppLockSettings) {
         scope.launch { settingsStore.setAppLock(settings) }
+    }
+
+    fun setIntegrityWarning(settings: IntegrityWarningSettings) {
+        scope.launch { settingsStore.setIntegrityWarning(settings) }
     }
 
     /** Fire-and-forget refresh for entry points outside the UI tree, e.g. a keyboard shortcut. */
