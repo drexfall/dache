@@ -20,13 +20,14 @@ import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.takeFrom
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.io.IOException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
 /** The provider answered with something that isn't usable. Messages never include response content. */
@@ -48,8 +49,18 @@ internal class PluginHttp(
     private val client: HttpClient,
     private val manifest: PluginManifest,
     private val logger: RequestLogger,
+    private val timeSource: TimeSource.WithComparableMarks = TimeSource.Monotonic,
 ) {
     private val guard = HostGuard(manifest.hosts)
+    private val limitersLock = Mutex()
+
+    // Keyed by a hash so tokens aren't kept around as map keys; each account's limit is its own.
+    private val limiters = mutableMapOf<Int, RateLimiter>()
+
+    private suspend fun limiter(secret: String): RateLimiter =
+        limitersLock.withLock {
+            limiters.getOrPut(secret.hashCode()) { RateLimiter(manifest.limits.requestsPerMinute, timeSource) }
+        }
 
     private class RawResponse(
         val status: Int,
@@ -71,14 +82,39 @@ internal class PluginHttp(
         secret: String,
     ): JsonResponse {
         val redactor = Redactor(manifest.auth, secret)
+        val limiter = limiter(secret)
         var target = url
         repeat(MAX_REDIRECTS + 1) {
-            val response = send(target, headers, secret, redactor)
+            val response = sendPaced(target, headers, secret, redactor, limiter)
             val location = response.headers[HttpHeaders.Location]
             if (response.status !in REDIRECT_CODES || location == null) return decode(response)
             target = target.resolve(location)
         }
         throw ProviderError.Unknown(InvalidResponseException("too many redirects"))
+    }
+
+    /**
+     * Sends through [limiter]. A 429 that asks for a short wait is waited out and retried; a response saying no
+     * requests are left holds back the next ones until the reset.
+     */
+    private suspend fun sendPaced(
+        target: Url,
+        headers: Map<String, String>,
+        secret: String,
+        redactor: Redactor,
+        limiter: RateLimiter,
+    ): RawResponse {
+        repeat(MAX_RATE_LIMIT_RETRIES) {
+            takeFromBudget()
+            limiter.acquire()
+            val response = send(target, headers, secret, redactor)
+            val wait = waitFrom(response.headers)
+            if (wait != null) limiter.block(wait)
+            if (response.status != TOO_MANY_REQUESTS || wait == null || wait > RateLimiter.MAX_WAIT) return response
+        }
+        takeFromBudget()
+        limiter.acquire()
+        return send(target, headers, secret, redactor)
     }
 
     private suspend fun send(
@@ -135,8 +171,7 @@ internal class PluginHttp(
             UNAUTHORIZED -> throw ProviderError.Unauthorized()
             FORBIDDEN -> throw ProviderError.MissingScope(scope = null)
             NOT_FOUND -> throw ProviderError.NotFound()
-            TOO_MANY_REQUESTS ->
-                throw ProviderError.RateLimited(response.headers[HttpHeaders.RetryAfter]?.toLongOrNull()?.seconds)
+            TOO_MANY_REQUESTS -> throw ProviderError.RateLimited(waitFrom(response.headers))
             else -> throw ProviderError.Server(response.status)
         }
 
@@ -162,6 +197,7 @@ internal class PluginHttp(
 
     private companion object {
         const val MAX_REDIRECTS = 5
+        const val MAX_RATE_LIMIT_RETRIES = 2
         const val USER_AGENT = "Dache (+https://github.com/drexfall/dache)"
         const val UNAUTHORIZED = 401
         const val FORBIDDEN = 403

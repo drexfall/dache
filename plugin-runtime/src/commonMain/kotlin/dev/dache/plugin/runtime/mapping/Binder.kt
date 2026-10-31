@@ -16,6 +16,7 @@ import dev.dache.core.model.ServerStatus
 import dev.dache.core.model.ServiceResource
 import dev.dache.core.model.ServiceStatus
 import dev.dache.core.model.Site
+import dev.dache.core.model.TimedValue
 import dev.dache.core.model.Worker
 import dev.dache.plugin.api.ServiceSpec
 
@@ -84,8 +85,14 @@ internal class Binder(
             )
         }
 
+    /** Without a current response time of its own, a monitor shows the latest of its series. */
     fun monitor(record: Mapping.Record): Monitor? =
         orSkip {
+            val series =
+                record
+                    .records("responseTimes")
+                    .mapNotNull { point -> orSkip { TimedValue(point.time("at")!!, point.number("value")!!) } }
+                    .sortedBy { it.at }
             Monitor(
                 providerId = providerId,
                 accountId = accountId,
@@ -95,7 +102,8 @@ internal class Binder(
                 url = record.required("url"),
                 status = record.status("status", MonitorStatus.UNKNOWN),
                 uptimePercent = record.number("uptimePercent"),
-                responseTimeMs = record.int("responseTimeMs"),
+                responseTimeMs = record.int("responseTimeMs") ?: series.lastOrNull()?.value?.toInt(),
+                responseTimes = series,
             )
         }
 

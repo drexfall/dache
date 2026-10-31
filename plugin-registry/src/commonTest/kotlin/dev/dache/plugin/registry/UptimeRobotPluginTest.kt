@@ -18,6 +18,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 /** Response shapes follow UptimeRobot's v3 OpenAPI spec (MonitorPaginationDto, MonitorDto, UserDto). */
 class UptimeRobotPluginTest {
@@ -39,6 +40,8 @@ class UptimeRobotPluginTest {
                             HttpStatusCode.Unauthorized to """{"message":"Unauthorized"}"""
                         request.url.encodedPath == "/v3/user/me" ->
                             HttpStatusCode.OK to """{"email": "ops@acme.dev", "fullName": "Ops", "monitorsCount": 3}"""
+                        request.url.encodedPath == "/v3/monitors/800001/stats/response-time" ->
+                            HttpStatusCode.OK to STATS
                         request.url.encodedPath != "/v3/monitors" -> HttpStatusCode.NotFound to "{}"
                         request.url.parameters["cursor"] == null -> HttpStatusCode.OK to PAGE_1
                         else -> HttpStatusCode.OK to PAGE_2
@@ -97,6 +100,26 @@ class UptimeRobotPluginTest {
         }
 
     @Test
+    fun responseTimesComeFromEachMonitorsStats() =
+        runTest {
+            val monitors = uptimeRobot().fetchSnapshot(account).getOrThrow().monitors
+            val website = monitors.first()
+
+            assertEquals(listOf(180.0, 240.0), website.responseTimes.map { it.value })
+            assertEquals(240, website.responseTimeMs)
+            assertEquals(
+                "true",
+                requests
+                    .first {
+                        it.url.encodedPath.endsWith(
+                            "/stats/response-time",
+                        )
+                    }.url.parameters["includeTimeSeries"],
+            )
+            assertTrue(monitors.drop(1).all { it.responseTimes.isEmpty() })
+        }
+
+    @Test
     fun aHeartbeatWithoutAUrlStillShows() =
         runTest {
             val heartbeat =
@@ -110,6 +133,18 @@ class UptimeRobotPluginTest {
         }
 
     private companion object {
+        // The shape of GET /v3/monitors/{id}/stats/response-time?includeTimeSeries=true.
+        const val STATS = """{
+          "summary": { "min": 180, "max": 240, "avg": 210 },
+          "data_points": 2,
+          "from": "2026-10-31T00:00:00Z",
+          "to": "2026-11-01T00:00:00Z",
+          "time_series": [
+            { "timestamp": "2026-10-31T23:30:00Z", "value": 240 },
+            { "timestamp": "2026-10-31T23:00:00Z", "value": 180 }
+          ]
+        }"""
+
         const val TOKEN = "ur_fake_key_for_tests_only"
 
         const val PAGE_1 = """{

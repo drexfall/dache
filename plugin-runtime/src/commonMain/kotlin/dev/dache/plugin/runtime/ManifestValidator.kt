@@ -3,6 +3,7 @@ package dev.dache.plugin.runtime
 import dev.dache.core.model.Capability
 import dev.dache.plugin.api.AuthSpec
 import dev.dache.plugin.api.FieldSpec
+import dev.dache.plugin.api.LimitsSpec
 import dev.dache.plugin.api.ManifestJson
 import dev.dache.plugin.api.PagingSpec
 import dev.dache.plugin.api.PluginManifest
@@ -123,6 +124,7 @@ object ManifestValidator {
             listOf("dashboardUrl" to manifest.dashboardUrl, "tokenUrl" to manifest.tokenUrl).forEach { (key, url) ->
                 if (url != null && !isWebLink(url)) problem(key, "must be an https:// URL")
             }
+            problems += limitProblems(manifest.limits)
             if (manifest.capabilities.isEmpty()) problem("capabilities", "declare at least one capability")
             manifest.capabilities.forEachIndexed { index, name ->
                 if (Capability.entries.none { it.name == name }) {
@@ -309,3 +311,13 @@ private fun isWebLink(url: String): Boolean {
             .substringBefore('?')
             .let(HostGuard::isValidHost)
 }
+
+private fun limitProblems(limits: LimitsSpec): List<ManifestProblem> =
+    listOfNotNull(
+        limits.requestsPerMinute?.takeIf { it !in 1..LimitsSpec.MAX_REQUESTS_PER_MINUTE }?.let {
+            ManifestProblem("limits.requestsPerMinute", "must be 1 to ${LimitsSpec.MAX_REQUESTS_PER_MINUTE}")
+        },
+        limits.maxRequestsPerRefresh.takeIf { it !in 1..LimitsSpec.MAX_REQUESTS_PER_REFRESH }?.let {
+            ManifestProblem("limits.maxRequestsPerRefresh", "must be 1 to ${LimitsSpec.MAX_REQUESTS_PER_REFRESH}")
+        },
+    )

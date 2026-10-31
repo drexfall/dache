@@ -105,6 +105,19 @@
       ],
       "additionalProperties": false
     },
+    "LimitsSpec": {
+      "type": "object",
+      "properties": {
+        "requestsPerMinute": {
+          "type": "integer"
+        },
+        "maxRequestsPerRefresh": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
     "ListSpec": {
       "type": "object",
       "properties": {
@@ -294,6 +307,9 @@
         },
         "dashboardUrl": {
           "type": "string"
+        },
+        "limits": {
+          "$ref": "#/$defs/LimitsSpec"
         },
         "tokenUrl": {
           "type": "string"
@@ -711,6 +727,27 @@
                   },
                   "responseTimeMs": {
                     "type": "string"
+                  },
+                  "responseTimes": {
+                    "$ref": "#/$defs/FieldSpecNested",
+                    "properties": {
+                      "fields": {
+                        "type": "object",
+                        "properties": {
+                          "at": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "at",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 },
                 "required": [

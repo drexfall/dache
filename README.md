@@ -84,6 +84,8 @@ Each resource, nested request and the validate request can name the token `permi
 
 `pages` splits an account into pages beside its dashboard, e.g. `{ "id": "dns", "title": "DNS", "resources": ["domain", "dnsRecord"] }`, naming kinds and service ids. Every resource must be on a page; without `pages`, each kind and service gets its own.
 
+Requests are paced per account. `"limits": { "requestsPerMinute": 10 }` keeps a plugin under a provider's documented limit (UptimeRobot's free plan), and `maxRequestsPerRefresh` (default 300) stops a refresh that would send more. A `429` whose `Retry-After` is short is waited out and retried; a response with `X-RateLimit-Remaining: 0` (or `RateLimit-Remaining`) holds the account's next requests until the reset. A hold longer than 15 seconds fails the request as rate-limited instead of stalling the refresh.
+
 Values filled into the path are percent-encoded whole, so they can't add path segments, and placeholders can't appear in the host. A fan-out sends at most 100 requests, four at a time; a parent whose list returns 404 just has no items.
 
 ## Plugin registry

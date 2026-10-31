@@ -80,6 +80,10 @@ Bundled plugins live in `plugin-registry/manifests/` and need, in the same chang
 
 `./gradlew test` loads every bundled manifest, and fails if one doesn't validate.
 
+## Rate limits
+
+If the provider documents a request limit, declare it: `"limits": { "requestsPerMinute": 10 }`. The engine paces each account to it, and honours `Retry-After` and `X-RateLimit-Remaining`/`X-RateLimit-Reset` (or the IETF `RateLimit-*` names) on its own. `maxRequestsPerRefresh` (default 300, at most 2000) caps one refresh; a refresh that would need more fails instead of hammering the API.
+
 ## Rules the engine enforces
 
 - Hosts are exact names over HTTPS. No wildcards, ports or schemes. Redirects are followed only to declared hosts.

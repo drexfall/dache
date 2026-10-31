@@ -154,6 +154,12 @@ enum class ManifestKind(
                 "status" to status(MonitorStatus.entries.toTypedArray()),
                 "uptimePercent" to FieldDef(FieldType.NUMBER, required = false),
                 "responseTimeMs" to FieldDef(FieldType.INT, required = false),
+                "responseTimes" to
+                    FieldDef(
+                        FieldType.RECORDS,
+                        required = false,
+                        nested = mapOf("at" to time(required = true), "value" to FieldDef(FieldType.NUMBER, true)),
+                    ),
             ),
     ),
     SERVER(

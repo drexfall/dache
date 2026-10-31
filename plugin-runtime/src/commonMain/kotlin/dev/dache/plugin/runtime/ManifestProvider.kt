@@ -15,13 +15,16 @@ import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.security.TokenVault
 import dev.dache.plugin.api.PluginManifest
 import dev.dache.plugin.runtime.http.PluginHttp
+import dev.dache.plugin.runtime.http.RequestBudget
 import dev.dache.plugin.runtime.mapping.Binder
 import dev.dache.plugin.runtime.mapping.Expression
 import dev.dache.plugin.runtime.mapping.ManifestKind
 import dev.dache.plugin.runtime.mapping.Mapping
 import dev.dache.plugin.runtime.mapping.asText
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
+import kotlin.time.TimeSource
 
 /**
  * Runs a declarative plugin. [manifest] must have passed [ManifestValidator] (use [ManifestLoader]); this
@@ -33,13 +36,14 @@ class ManifestProvider(
     private val vault: TokenVault,
     client: HttpClient,
     logger: RequestLogger = RequestLogger.None,
+    timeSource: TimeSource.WithComparableMarks = TimeSource.Monotonic,
 ) : DevOpsProvider {
     override val capabilities: Set<Capability> =
         manifest.capabilities.mapNotNull { name -> Capability.entries.firstOrNull { it.name == name } }.toSet()
 
     override val pages: List<ServicePage> = manifestPages(manifest)
 
-    private val http = PluginHttp(client, manifest, logger)
+    private val http = PluginHttp(client, manifest, logger, timeSource)
     private val lists = ListFetcher(http)
     private val validate = CompiledList(manifest.validate.request, items = null)
     private val displayName = Expression.parse(manifest.validate.displayName)
@@ -80,21 +84,25 @@ class ManifestProvider(
 
     override suspend fun fetchSnapshot(account: ConnectedAccount): Result<ProviderSnapshot> =
         attempt {
-            val token = vault.get(account.tokenKey()) ?: throw ProviderError.Unauthorized()
-            val context = AccountContext(token, account.settings)
-            val binder = Binder(id, account.id)
-            resources.fold(ProviderSnapshot()) { snapshot, resource ->
-                val fetched =
-                    readable(resource.optional) { records(resource, items(resource, context), context) }
-                        .getOrElse { Fetched.unread(it, resource.permission) }
-                add(snapshot, resource, fetched.records, binder).let {
-                    it.copy(
-                        missingPermissions = it.missingPermissions + fetched.missing,
-                        unavailable = it.unavailable + fetched.unavailable,
-                    )
-                }
+            withContext(RequestBudget(manifest.limits.maxRequestsPerRefresh)) { fetch(account) }
+        }
+
+    private suspend fun fetch(account: ConnectedAccount): ProviderSnapshot {
+        val token = vault.get(account.tokenKey()) ?: throw ProviderError.Unauthorized()
+        val context = AccountContext(token, account.settings)
+        val binder = Binder(id, account.id)
+        return resources.fold(ProviderSnapshot()) { snapshot, resource ->
+            val fetched =
+                readable(resource.optional) { records(resource, items(resource, context), context) }
+                    .getOrElse { Fetched.unread(it, resource.permission) }
+            add(snapshot, resource, fetched.records, binder).let {
+                it.copy(
+                    missingPermissions = it.missingPermissions + fetched.missing,
+                    unavailable = it.unavailable + fetched.unavailable,
+                )
             }
         }
+    }
 
     private fun add(
         snapshot: ProviderSnapshot,

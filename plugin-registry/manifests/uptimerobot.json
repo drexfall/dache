@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "uptimerobot",
   "name": "UptimeRobot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "Dache",
   "dashboardUrl": "https://dashboard.uptimerobot.com",
   "tokenUrl": "https://dashboard.uptimerobot.com/integrations",
@@ -11,6 +11,7 @@
   "hosts": ["api.uptimerobot.com"],
   "auth": { "type": "bearer" },
   "capabilities": ["MONITORS"],
+  "limits": { "requestsPerMinute": 10 },
   "validate": {
     "request": { "url": "https://api.uptimerobot.com/v3/user/me" },
     "displayName": "email | default:UptimeRobot"
@@ -29,7 +30,17 @@
         "webUrl": "https://dashboard.uptimerobot.com/monitors/{id}",
         "url": "url | default:",
         "status": "status",
-        "uptimePercent": "lastDayUptimes.histogram.uptime | avg"
+        "uptimePercent": "lastDayUptimes.histogram.uptime | avg",
+        "responseTimes": {
+          "request": {
+            "url": "https://api.uptimerobot.com/v3/monitors/{id}/stats/response-time",
+            "query": { "includeTimeSeries": "true" }
+          },
+          "from": "time_series",
+          "fields": { "at": "timestamp | date", "value": "value" },
+          "permission": "Monitor statistics",
+          "optional": true
+        }
       },
       "statusMap": { "UP": "UP", "DOWN": "DOWN", "LOOKS_DOWN": "DOWN", "PAUSED": "PAUSED" }
     }

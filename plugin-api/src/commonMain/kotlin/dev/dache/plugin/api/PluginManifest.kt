@@ -33,6 +33,8 @@ data class PluginManifest(
      * Required; nullable only so a manifest missing it is reported by the validator rather than the parser.
      */
     val dashboardUrl: String? = null,
+    /** How hard the plugin may hit the provider. */
+    val limits: LimitsSpec = LimitsSpec(),
     /** Where users create a token. */
     val tokenUrl: String? = null,
     /** Least-privilege guidance shown before the user creates a token: which permissions to grant, and why. */
@@ -41,6 +43,23 @@ data class PluginManifest(
     @SerialName("\$schema")
     val schema: String? = null,
 )
+
+/**
+ * Request limits, per account. [requestsPerMinute] paces requests to the provider's documented limit, e.g. 10 on
+ * UptimeRobot's free plan. [maxRequestsPerRefresh] stops a refresh that would send more; fan-outs already stop
+ * at 100 requests each, so this bounds a manifest with several of them.
+ */
+@Serializable
+data class LimitsSpec(
+    val requestsPerMinute: Int? = null,
+    val maxRequestsPerRefresh: Int = DEFAULT_MAX_REQUESTS_PER_REFRESH,
+) {
+    companion object {
+        const val DEFAULT_MAX_REQUESTS_PER_REFRESH = 300
+        const val MAX_REQUESTS_PER_REFRESH = 2000
+        const val MAX_REQUESTS_PER_MINUTE = 6000
+    }
+}
 
 /**
  * One page beside the account's dashboard, e.g. DNS. [resources] names what it shows: kind names such as

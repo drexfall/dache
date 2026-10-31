@@ -57,6 +57,10 @@ class FixtureTest {
               {"id": 1, "friendlyName": "Website", "url": "https://acme.dev", "status": "UP"}
             ]}""",
         )
+        fixture(
+            "api.uptimerobot.com/v3/monitors/1/stats/response-time?includeTimeSeries=true.json",
+            """{"summary": {"avg": 120}, "time_series": [{"timestamp": "2026-10-31T23:00:00Z", "value": 120}]}""",
+        )
 
         val outcome =
             runBlocking {
@@ -72,6 +76,7 @@ class FixtureTest {
         assertEquals(
             """
             token works for ops@acme.dev
+              [x] Monitor statistics (optional)
             monitor (1)
               Website  UP  https://dashboard.uptimerobot.com/monitors/1
             """.trimIndent(),
