@@ -1,5 +1,6 @@
 package dev.dache.plugin.api
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -25,6 +26,9 @@ data class PluginManifest(
     val resources: List<ResourceSpec>,
     /** How the account's resources are split into pages. Without any, each kind and service gets its own. */
     val pages: List<PageSpec> = emptyList(),
+    /** Where editors find the JSON Schema, e.g. `../../schema/manifest.schema.json`. The engine ignores it. */
+    @SerialName("\$schema")
+    val schema: String? = null,
 )
 
 /**

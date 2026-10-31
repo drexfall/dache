@@ -1,0 +1,955 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/drexfall/dache/main/schema/manifest.schema.json",
+  "title": "Dache plugin manifest",
+  "$ref": "#/$defs/PluginManifest",
+  "$defs": {
+    "AuthSpec": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "bearer"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "header"
+            },
+            "name": {
+              "type": "string"
+            },
+            "prefix": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "query"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "FieldSpec": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "$ref": "#/$defs/FieldSpecNested"
+        }
+      ]
+    },
+    "FieldSpecNested": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/FieldSpec"
+          }
+        },
+        "statusMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "request": {
+          "$ref": "#/$defs/RequestSpec"
+        },
+        "permission": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "from",
+        "fields"
+      ],
+      "additionalProperties": false
+    },
+    "ListSpec": {
+      "type": "object",
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/RequestSpec"
+        },
+        "items": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "request"
+      ],
+      "additionalProperties": false
+    },
+    "PageSpec": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "resources"
+      ],
+      "additionalProperties": false
+    },
+    "PagingSpec": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "cursor"
+            },
+            "param": {
+              "type": "string"
+            },
+            "next": {
+              "type": "string"
+            },
+            "sizeParam": {
+              "type": "string"
+            },
+            "size": {
+              "type": "integer"
+            },
+            "maxPages": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "param",
+            "next"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "link"
+            },
+            "next": {
+              "type": "string"
+            },
+            "sizeParam": {
+              "type": "string"
+            },
+            "size": {
+              "type": "integer"
+            },
+            "maxPages": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "page"
+            },
+            "param": {
+              "type": "string"
+            },
+            "sizeParam": {
+              "type": "string"
+            },
+            "size": {
+              "type": "integer"
+            },
+            "start": {
+              "type": "integer"
+            },
+            "maxPages": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "PluginManifest": {
+      "type": "object",
+      "properties": {
+        "manifestVersion": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "auth": {
+          "$ref": "#/$defs/AuthSpec"
+        },
+        "settings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SettingSpec"
+          }
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "SITES",
+              "DEPLOYMENTS",
+              "DOMAINS",
+              "DNS",
+              "CI",
+              "SERVERS",
+              "WORKERS",
+              "MONITORS",
+              "SERVICES",
+              "BILLING"
+            ]
+          }
+        },
+        "validate": {
+          "$ref": "#/$defs/ValidateSpec"
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ResourceSpec"
+          }
+        },
+        "pages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PageSpec"
+          }
+        },
+        "$schema": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "manifestVersion",
+        "id",
+        "name",
+        "version",
+        "hosts",
+        "auth",
+        "capabilities",
+        "validate",
+        "resources"
+      ],
+      "additionalProperties": false
+    },
+    "RequestSpec": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "query": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "paging": {
+          "$ref": "#/$defs/PagingSpec"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "additionalProperties": false
+    },
+    "ResourceSpec": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "site",
+            "domain",
+            "dnsRecord",
+            "ciRun",
+            "monitor",
+            "server",
+            "billing",
+            "worker",
+            "service"
+          ]
+        },
+        "request": {
+          "$ref": "#/$defs/RequestSpec"
+        },
+        "items": {
+          "type": "string"
+        },
+        "forEach": {
+          "$ref": "#/$defs/ListSpec"
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/FieldSpec"
+          }
+        },
+        "statusMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "service": {
+          "$ref": "#/$defs/ServiceSpec"
+        },
+        "permission": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "request",
+        "fields"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "site"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "nativeId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "webUrl": {
+                    "type": "string"
+                  },
+                  "primaryUrl": {
+                    "type": "string"
+                  },
+                  "customDomains": {
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    ]
+                  },
+                  "repoUrl": {
+                    "type": "string"
+                  },
+                  "deployments": {
+                    "$ref": "#/$defs/FieldSpecNested",
+                    "properties": {
+                      "fields": {
+                        "type": "object",
+                        "properties": {
+                          "nativeId": {
+                            "type": "string"
+                          },
+                          "webUrl": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "branch": {
+                            "type": "string"
+                          },
+                          "commitMessage": {
+                            "type": "string"
+                          },
+                          "durationSeconds": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "nativeId",
+                          "webUrl",
+                          "status",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "nativeId",
+                  "name",
+                  "primaryUrl"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "domain"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "nativeId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "webUrl": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string"
+                  },
+                  "certificates": {
+                    "$ref": "#/$defs/FieldSpecNested",
+                    "properties": {
+                      "fields": {
+                        "type": "object",
+                        "properties": {
+                          "nativeId": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "hosts": {
+                            "oneOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            ]
+                          },
+                          "expiresAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "nativeId",
+                          "status"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "nativeId",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "dnsRecord"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "nativeId": {
+                    "type": "string"
+                  },
+                  "webUrl": {
+                    "type": "string"
+                  },
+                  "zoneName": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "nativeId",
+                  "zoneName",
+                  "type",
+                  "name",
+                  "content"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "ciRun"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "nativeId": {
+                    "type": "string"
+                  },
+                  "webUrl": {
+                    "type": "string"
+                  },
+                  "repoFullName": {
+                    "type": "string"
+                  },
+                  "repoUrl": {
+                    "type": "string"
+                  },
+                  "workflowName": {
+                    "type": "string"
+                  },
+                  "branch": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "durationSeconds": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "nativeId",
+                  "repoFullName",
+                  "repoUrl",
+                  "workflowName",
+                  "branch",
+                  "status",
+                  "createdAt"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "monitor"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "nativeId": {
+                    "type": "string"
+                  },
+                  "webUrl": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "uptimePercent": {
+                    "type": "string"
+                  },
+                  "responseTimeMs": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "nativeId",
+                  "name",
+                  "url",
+                  "status"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "server"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "nativeId": {
+                    "type": "string"
+                  },
+                  "webUrl": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "region": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "publicIpv4": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "nativeId",
+                  "name",
+                  "region",
+                  "status"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "billing"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  },
+                  "monthToDateUsage": {
+                    "type": "string"
+                  },
+                  "accountBalance": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "currency",
+                  "monthToDateUsage",
+                  "accountBalance"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "worker"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "nativeId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "webUrl": {
+                    "type": "string"
+                  },
+                  "routes": {
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    ]
+                  },
+                  "modifiedAt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "nativeId",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "service"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "fields": {
+                "type": "object",
+                "properties": {
+                  "nativeId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "webUrl": {
+                    "type": "string"
+                  },
+                  "detail": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "updatedAt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "nativeId",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ServiceSpec": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "SettingSpec": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "hint": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "key",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "ValidateSpec": {
+      "type": "object",
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/RequestSpec"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "permission": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "request",
+        "displayName"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

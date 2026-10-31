@@ -4,6 +4,9 @@ import dev.dache.plugin.runtime.LoadResult
 import dev.dache.plugin.runtime.ManifestLoader
 import dev.dache.plugin.runtime.http.createPluginHttpClient
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import java.io.File
 import kotlin.system.exitProcess
 
@@ -12,6 +15,7 @@ private val USAGE =
     usage: dache-plugin validate <manifest.json>...
            dache-plugin test <manifest.json> --fixtures <dir> [--setting key=value]...
            dache-plugin run <manifest.json> --token-env <VAR> [--setting key=value]...
+           dache-plugin schema
 
     run sends real requests with the token from environment variable <VAR>. Pass the token that way, never as an
     argument, so it stays out of shell history and process lists.
@@ -25,6 +29,7 @@ fun main(args: Array<String>) {
         when (args.firstOrNull()) {
             "validate" -> args.drop(1).takeIf { it.isNotEmpty() }?.let(::validateAll)
             "test" -> Arguments.parse(args.drop(1), "--fixtures")?.let(::test)
+            "schema" -> Outcome(schemaText(), ok = true).takeIf { args.size == 1 }
             "run" -> Arguments.parse(args.drop(1), "--token-env")?.let { run(it, System::getenv) }
             else -> null
         }
@@ -35,6 +40,14 @@ fun main(args: Array<String>) {
     println(outcome.text)
     exitProcess(if (outcome.ok) 0 else 1)
 }
+
+/** The schema as committed under `schema/`: two-space indent, so diffs stay readable. */
+@OptIn(ExperimentalSerializationApi::class)
+fun schemaText(): String =
+    Json {
+        prettyPrint = true
+        prettyPrintIndent = "  "
+    }.encodeToString(JsonObject.serializer(), ManifestSchema.generate())
 
 private fun validateAll(paths: List<String>): Outcome {
     val reports = paths.map { validate(File(it)) }
