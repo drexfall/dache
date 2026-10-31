@@ -4,13 +4,16 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * A parsed mapping expression: `path.to.field | pipe | pipe:argument`.
  *
  * The path is dot-separated keys, with numeric segments indexing into arrays (`deploys.0.id`). A key applied to
  * an array reads it from every object in the array (`alias.domain` is each alias's domain), skipping the ones
- * without it. `$` alone is the element itself. Pipes run left to right.
+ * without it. A `key=value` segment keeps the objects of an array whose key has that value, so
+ * `networks.v4.type=public.0.ip_address` is the first public address. `$` alone is the element itself. Pipes run
+ * left to right.
  *
  * An item fetched once per item of another list (a fan-out or a nested request) carries that item as `^`, so
  * `^.name` is the parent's name and `^.^.id` its parent's id.
@@ -30,12 +33,23 @@ class Expression private constructor(
 
     private fun resolve(element: JsonElement): JsonElement? =
         path.fold(element as JsonElement?) { current, segment ->
-            when (current) {
-                is JsonObject -> current[segment]
-                is JsonArray -> segment.toIntOrNull()?.let(current::getOrNull) ?: project(current, segment)
+            when {
+                '=' in segment -> (current as? JsonArray)?.let { filter(it, segment) }
+                current is JsonObject -> current[segment]
+                current is JsonArray -> segment.toIntOrNull()?.let(current::getOrNull) ?: project(current, segment)
                 else -> null
             }
         }
+
+    /** The objects in [array] whose key, the part of [segment] before `=`, has the text after it. */
+    private fun filter(
+        array: JsonArray,
+        segment: String,
+    ): JsonArray {
+        val key = segment.substringBefore('=')
+        val value = segment.substringAfter('=')
+        return JsonArray(array.filter { ((it as? JsonObject)?.get(key) as? JsonPrimitive)?.content == value })
+    }
 
     /** [segment] read from every object in [array]; null for a numeric [segment], which is an index. */
     private fun project(
@@ -54,7 +68,7 @@ class Expression private constructor(
         /** The key a fanned-out item keeps the item it was fetched for under. */
         const val PARENT = "^"
 
-        private val keyPattern = Regex("[A-Za-z_][A-Za-z0-9_-]*|[0-9]+|\\^")
+        private val keyPattern = Regex("[A-Za-z_][A-Za-z0-9_-]*(=[A-Za-z0-9_-]+)?|[0-9]+|\\^")
 
         /** @throws ExpressionException with a message that says what is wrong with [source]. */
         fun parse(source: String): Expression {

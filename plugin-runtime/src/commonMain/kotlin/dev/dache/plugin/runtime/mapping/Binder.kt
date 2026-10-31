@@ -49,14 +49,15 @@ internal class Binder(
 
     fun dnsRecord(record: Mapping.Record): DnsRecord? =
         orSkip {
+            val zone = record.required("zoneName")
             DnsRecord(
                 providerId = providerId,
                 accountId = accountId,
                 nativeId = record.required("nativeId"),
                 webUrl = record.webUrl(),
-                zoneName = record.required("zoneName"),
+                zoneName = zone,
                 type = record.required("type"),
-                name = record.required("name"),
+                name = qualified(record.required("name"), zone),
                 content = record.required("content"),
             )
         }
@@ -156,3 +157,19 @@ private inline fun <reified E : Enum<E>> Mapping.Record.status(
 private class MissingFieldException(
     field: String,
 ) : Exception("missing $field")
+
+/**
+ * Some providers name records relative to their zone (`www`, or `@` for the zone itself); others give the full
+ * hostname. Dache always uses the full hostname, so records link the same way whichever provider they're from.
+ */
+internal fun qualified(
+    name: String,
+    zone: String,
+): String {
+    val host = name.trimEnd('.')
+    return when {
+        host == "@" || host.isEmpty() -> zone
+        host.equals(zone, ignoreCase = true) || host.endsWith(".$zone", ignoreCase = true) -> host
+        else -> "$host.$zone"
+    }
+}

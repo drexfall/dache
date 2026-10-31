@@ -62,11 +62,17 @@ internal class CompiledList(
         return URLBuilder(base).apply { params.forEach { (name, value) -> parameters.append(name, value) } }.build()
     }
 
-    fun items(body: JsonElement): List<JsonElement> {
-        val list = itemsPath?.evaluate(body) ?: (body as? JsonArray)?.let(Value::Items)
-        return (list as? Value.Items)?.values
-            ?: throw ProviderError.Unknown(InvalidResponseException("expected a list at ${itemsPath ?: "$"}"))
-    }
+    /**
+     * The items at the items path, or the response itself when there is none. An items path that names an object,
+     * such as `$` for a balance, gives a one-item list; without a path the response must be an array, so a list
+     * endpoint that answers with something else fails loudly.
+     */
+    fun items(body: JsonElement): List<JsonElement> =
+        when (val list = itemsPath?.evaluate(body) ?: (body as? JsonArray)?.let(Value::Items)) {
+            is Value.Items -> list.values
+            is Value.Record -> listOf(list.value)
+            else -> throw ProviderError.Unknown(InvalidResponseException("expected a list at ${itemsPath ?: "$"}"))
+        }
 
     /** One whole path segment: `/`, `?` and `#` are encoded, and dot segments refused, so the path keeps its shape. */
     private fun encodePathSegment(value: String): String? =

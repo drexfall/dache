@@ -36,6 +36,24 @@ class ExpressionTest {
     }
 
     @Test
+    fun aKeyValueSegmentFiltersAnArray() {
+        val droplet =
+            Json.parseToJsonElement(
+                """{"networks": {"v4": [
+                  {"ip_address": "10.0.0.2", "type": "private"},
+                  {"ip_address": "203.0.113.7", "type": "public"}
+                ]}}""",
+            )
+
+        assertEquals(
+            Value.Text("203.0.113.7"),
+            Expression.parse("networks.v4.type=public.0.ip_address").evaluate(droplet),
+        )
+        assertNull(Expression.parse("networks.v4.type=floating.0.ip_address").evaluate(droplet))
+        assertNull(Expression.parse("networks.type=public").evaluate(droplet))
+    }
+
+    @Test
     fun keepsLargeNumericIdsExact() {
         assertEquals("123456789012345678", eval("id")?.asText())
     }
