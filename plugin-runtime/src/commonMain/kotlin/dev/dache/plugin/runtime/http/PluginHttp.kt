@@ -93,7 +93,10 @@ internal class PluginHttp(
                 method = HttpMethod.Get
                 url.takeFrom(target)
                 headers.forEach { (name, value) -> this.headers.append(name, value) }
-                this.headers[HttpHeaders.Accept] = ContentType.Application.Json.toString()
+                // A manifest may ask for a vendor JSON type, such as GitHub's application/vnd.github+json.
+                if (HttpHeaders.Accept !in this.headers) {
+                    this.headers[HttpHeaders.Accept] = ContentType.Application.Json.toString()
+                }
                 this.headers[HttpHeaders.UserAgent] = USER_AGENT
             }
         AuthInjector.inject(request, manifest.auth, secret)

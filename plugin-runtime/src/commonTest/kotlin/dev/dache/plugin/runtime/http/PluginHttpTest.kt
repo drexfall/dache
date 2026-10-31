@@ -75,6 +75,14 @@ class PluginHttpTest {
         }
 
     @Test
+    fun aDeclaredAcceptHeaderIsKept() =
+        runTest {
+            http { json("{}") }.getJson(url, mapOf("Accept" to "application/vnd.github+json"), secret)
+
+            assertEquals(listOf("application/vnd.github+json"), requests.single().headers.getAll(HttpHeaders.Accept))
+        }
+
+    @Test
     fun mapsHttpStatusesToProviderErrors() =
         runTest {
             suspend fun errorFor(
