@@ -50,7 +50,8 @@ fun OverviewScreen(
     onRefresh: () -> Unit,
     onOpenMenu: (() -> Unit)?,
     onConnectAccount: () -> Unit,
-    onTryDemo: () -> Unit,
+    /** Null when no provider serves sample data, so there is nothing to demo. */
+    onTryDemo: (() -> Unit)?,
 ) {
     PageScaffold(
         title = stringResource(Res.string.overview_title),
@@ -66,7 +67,7 @@ fun OverviewScreen(
                 body = stringResource(Res.string.overview_empty_body),
             ) {
                 Button(onClick = onConnectAccount) { Text(stringResource(Res.string.action_connect_account)) }
-                OutlinedButton(onClick = onTryDemo) { Text(stringResource(Res.string.action_try_demo)) }
+                onTryDemo?.let { OutlinedButton(onClick = it) { Text(stringResource(Res.string.action_try_demo)) } }
             }
             return@PageScaffold
         }

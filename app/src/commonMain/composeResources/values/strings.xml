@@ -73,7 +73,7 @@
 
     <string name="overview_title">Overview</string>
     <string name="overview_empty_title">No accounts connected</string>
-    <string name="overview_empty_body">Connect Netlify, Vercel, Cloudflare, GitHub, DigitalOcean or UptimeRobot with a read-only token to see everything in one place.</string>
+    <string name="overview_empty_body">Connect Netlify, Vercel, Cloudflare, GitHub, DigitalOcean or UptimeRobot with a token to see everything in one place.</string>
     <string name="updated_at">Updated %1$s</string>
 
     <string name="summary_failing_deploys">Failing deploys</string>
@@ -155,7 +155,7 @@
     <string name="scope_cloudflare">Create a custom token with Account Settings, Zone, DNS, Cloudflare Pages and Workers Scripts. Add SSL and Certificates, R2, KV, D1, Queues and Cloudflare Tunnel to fill those pages too. The checklist below shows what the token can read.</string>
     <string name="scope_github">Use a fine-grained token with Metadata, Actions and Deployments on the repos you pick. Without Actions or Deployments, only those pages stay empty.</string>
     <string name="scope_digitalocean">Use custom scopes for account, droplet, app, domain and billing. Without one of the last four, only that part stays empty.</string>
-    <string name="scope_uptimerobot">Use the read-only API key, not the main API key.</string>
+    <string name="scope_uptimerobot">Use an account API key from Integrations › API. A monitor-specific key only shows that one monitor.</string>
 
     <string name="state_expanded">Expanded</string>
     <string name="state_collapsed">Collapsed</string>

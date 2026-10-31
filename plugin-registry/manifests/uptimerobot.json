@@ -1,0 +1,33 @@
+{
+  "manifestVersion": 1,
+  "id": "uptimerobot",
+  "name": "UptimeRobot",
+  "version": "1.0.0",
+  "hosts": ["api.uptimerobot.com"],
+  "auth": { "type": "bearer" },
+  "capabilities": ["MONITORS"],
+  "validate": {
+    "request": { "url": "https://api.uptimerobot.com/v3/user/me" },
+    "displayName": "email | default:UptimeRobot"
+  },
+  "resources": [
+    {
+      "kind": "monitor",
+      "request": {
+        "url": "https://api.uptimerobot.com/v3/monitors",
+        "paging": { "type": "link", "next": "nextLink", "sizeParam": "limit", "size": 200, "maxPages": 5 }
+      },
+      "items": "data",
+      "fields": {
+        "nativeId": "id",
+        "name": "friendlyName",
+        "webUrl": "https://dashboard.uptimerobot.com/monitors/{id}",
+        "url": "url | default:",
+        "status": "status",
+        "uptimePercent": "lastDayUptimes.histogram.uptime | avg"
+      },
+      "statusMap": { "UP": "UP", "DOWN": "DOWN", "LOOKS_DOWN": "DOWN", "PAUSED": "PAUSED" }
+    }
+  ],
+  "pages": [{ "id": "monitors", "title": "Monitors", "resources": ["monitor"] }]
+}
