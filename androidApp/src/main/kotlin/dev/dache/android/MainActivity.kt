@@ -26,7 +26,8 @@ class MainActivity : FragmentActivity() {
                 .collect(::hideFromRecents)
         }
         val authenticator = BiometricLockAuthenticator(this)
-        setContent { DacheApp(container, authenticator) }
+        val integrity = AndroidIntegrityChecker(applicationContext)
+        setContent { DacheApp(container, authenticator, integrity) }
     }
 
     /**

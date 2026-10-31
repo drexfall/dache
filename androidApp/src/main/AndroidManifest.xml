@@ -3,6 +3,18 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Root managers the integrity warning looks for. Visible only because they're listed here. -->
+    <queries>
+        <package android:name="com.topjohnwu.magisk" />
+        <package android:name="io.github.vvb2060.magisk" />
+        <package android:name="me.weishu.kernelsu" />
+        <package android:name="me.bmax.apatch" />
+        <package android:name="eu.chainfire.supersu" />
+        <package android:name="com.koushikdutta.superuser" />
+        <package android:name="com.noshufou.android.su" />
+        <package android:name="com.kingroot.kinguser" />
+    </queries>
+
     <!-- Tokens must never leave the device through backups or device transfer.
          AppCompat theme: the biometric prompt on Android 8 is an AppCompat dialog. -->
     <application
