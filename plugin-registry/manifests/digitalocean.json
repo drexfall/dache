@@ -1,0 +1,134 @@
+{
+  "manifestVersion": 1,
+  "id": "digitalocean",
+  "name": "DigitalOcean",
+  "version": "1.0.0",
+  "hosts": ["api.digitalocean.com"],
+  "auth": { "type": "bearer" },
+  "capabilities": ["SERVERS", "SITES", "DEPLOYMENTS", "DOMAINS", "DNS", "BILLING"],
+  "validate": {
+    "request": { "url": "https://api.digitalocean.com/v2/account" },
+    "displayName": "account.team.name | default:DigitalOcean",
+    "permission": "account:read"
+  },
+  "resources": [
+    {
+      "kind": "server",
+      "permission": "droplet:read",
+      "optional": true,
+      "request": {
+        "url": "https://api.digitalocean.com/v2/droplets",
+        "paging": { "type": "page", "sizeParam": "per_page", "size": 200, "maxPages": 5 }
+      },
+      "items": "droplets",
+      "fields": {
+        "nativeId": "id",
+        "name": "name",
+        "webUrl": "https://cloud.digitalocean.com/droplets/{id}",
+        "region": "region.slug",
+        "status": "status",
+        "publicIpv4": "networks.v4.type=public.0.ip_address"
+      },
+      "statusMap": { "active": "ACTIVE", "off": "OFF", "archive": "OFF", "new": "PROVISIONING" }
+    },
+    {
+      "kind": "site",
+      "permission": "app:read",
+      "optional": true,
+      "request": {
+        "url": "https://api.digitalocean.com/v2/apps",
+        "paging": { "type": "page", "sizeParam": "per_page", "size": 100, "maxPages": 5 }
+      },
+      "items": "apps",
+      "fields": {
+        "nativeId": "id",
+        "name": "spec.name",
+        "webUrl": "https://cloud.digitalocean.com/apps/{id}",
+        "primaryUrl": "live_url",
+        "customDomains": "spec.domains.domain",
+        "repoUrl": "https://github.com/{spec.services.0.github.repo}",
+        "deployments": {
+          "request": {
+            "url": "https://api.digitalocean.com/v2/apps/{id}/deployments",
+            "query": { "per_page": "10" }
+          },
+          "from": "deployments",
+          "fields": {
+            "nativeId": "id",
+            "webUrl": "https://cloud.digitalocean.com/apps/{^.id}/deployments/{id}",
+            "status": "phase",
+            "commitMessage": "cause",
+            "createdAt": "created_at | date"
+          },
+          "statusMap": {
+            "ACTIVE": "SUCCESS",
+            "SUPERSEDED": "SUCCESS",
+            "ERROR": "FAILED",
+            "CANCELED": "CANCELLED",
+            "PENDING_BUILD": "BUILDING",
+            "BUILDING": "BUILDING",
+            "PENDING_DEPLOY": "BUILDING",
+            "DEPLOYING": "BUILDING"
+          }
+        }
+      }
+    },
+    {
+      "kind": "domain",
+      "permission": "domain:read",
+      "optional": true,
+      "request": {
+        "url": "https://api.digitalocean.com/v2/domains",
+        "paging": { "type": "page", "sizeParam": "per_page", "size": 200, "maxPages": 5 }
+      },
+      "items": "domains",
+      "fields": {
+        "nativeId": "name",
+        "name": "name",
+        "webUrl": "https://cloud.digitalocean.com/networking/domains/{name}"
+      }
+    },
+    {
+      "kind": "dnsRecord",
+      "permission": "domain:read",
+      "optional": true,
+      "forEach": {
+        "request": {
+          "url": "https://api.digitalocean.com/v2/domains",
+          "paging": { "type": "page", "sizeParam": "per_page", "size": 200, "maxPages": 5 }
+        },
+        "items": "domains"
+      },
+      "request": {
+        "url": "https://api.digitalocean.com/v2/domains/{name}/records",
+        "paging": { "type": "page", "sizeParam": "per_page", "size": 200, "maxPages": 5 }
+      },
+      "items": "domain_records",
+      "fields": {
+        "nativeId": "id",
+        "webUrl": "https://cloud.digitalocean.com/networking/domains/{^.name}",
+        "zoneName": "^.name",
+        "type": "type",
+        "name": "name",
+        "content": "data"
+      }
+    },
+    {
+      "kind": "billing",
+      "permission": "billing:read",
+      "optional": true,
+      "request": { "url": "https://api.digitalocean.com/v2/customers/my/balance" },
+      "items": "$",
+      "fields": {
+        "currency": "currency | default:USD",
+        "monthToDateUsage": "month_to_date_usage",
+        "accountBalance": "account_balance"
+      }
+    }
+  ],
+  "pages": [
+    { "id": "droplets", "title": "Droplets", "resources": ["server"] },
+    { "id": "apps", "title": "App Platform", "resources": ["site"] },
+    { "id": "dns", "title": "Networking", "resources": ["domain", "dnsRecord"] }
+  ]
+}
