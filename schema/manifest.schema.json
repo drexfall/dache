@@ -385,6 +385,9 @@
             "$ref": "#/$defs/PageSpec"
           }
         },
+        "selfHosted": {
+          "$ref": "#/$defs/SelfHostedSpec"
+        },
         "actions": {
           "type": "array",
           "items": {
@@ -1028,6 +1031,21 @@
           }
         }
       ]
+    },
+    "SelfHostedSpec": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "hint": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "label"
+      ],
+      "additionalProperties": false
     },
     "ServiceSpec": {
       "type": "object",

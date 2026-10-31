@@ -28,6 +28,8 @@ data class PluginManifest(
     val resources: List<ResourceSpec>,
     /** How the account's resources are split into pages. Without any, each kind and service gets its own. */
     val pages: List<PageSpec> = emptyList(),
+    /** For software people run themselves: each account names its own server. */
+    val selfHosted: SelfHostedSpec? = null,
     /** Writes the plugin offers. Without any, the plugin only reads. */
     val actions: List<ActionSpec> = emptyList(),
     /**
@@ -45,6 +47,24 @@ data class PluginManifest(
     @SerialName("\$schema")
     val schema: String? = null,
 )
+
+/**
+ * A self-hosted plugin's manifest names the placeholder host [PLACEHOLDER_HOST] in `hosts` and every URL. Each
+ * account gives its own server (a hostname or IPv4 address, with a port if it isn't 443), which replaces the
+ * placeholder for that account only, so a token is only ever sent to the server it was entered for. [label] and
+ * [hint] describe the server field.
+ */
+@Serializable
+data class SelfHostedSpec(
+    val label: String,
+    val hint: String? = null,
+) {
+    companion object {
+        const val PLACEHOLDER_HOST = "self.hosted"
+        const val HOST_SETTING = "server"
+        const val CERTIFICATE_SETTING = "certificate"
+    }
+}
 
 /**
  * Request limits, per account. [requestsPerMinute] paces requests to the provider's documented limit, e.g. 10 on

@@ -99,6 +99,10 @@ A plugin reads with GET only. Anything else is an action, declared under `action
 
 `target` is a kind the plugin lists, or `deployment` for one of a site's deployments (its site is `^`). Placeholders read the target exactly as the provider listed it, `{@key}` an account setting, `{input.key}` an input. An input's `default` is an expression on the target, so the confirmation screen shows each value before and after. A body string that is only a number or boolean input is sent as that type. Mark deletes, power cycles and production rollbacks `destructive` and name their `permission`; the app then asks for the device lock as well. Writes never follow redirects, and the engine refuses any non-GET request that isn't one of the manifest's actions.
 
+## Self-hosted software
+
+For software people run themselves, add `"selfHosted": { "label": "Coolify server", "hint": "coolify.example.com" }`, list only `"hosts": ["self.hosted"]`, and write every URL against `https://self.hosted`. Each account enters its own server (a hostname or IPv4 address, `:port` if it isn't 443); the engine swaps it in for that account only, so its token goes to that server and nowhere else. A server whose certificate the device trusts just works. A self-signed one fails with its SHA-256 fingerprint; the user can compare it with the server's and trust it, after which only that certificate is accepted from that server. Plain HTTP isn't supported. See `coolify.json` and `proxmox.json`.
+
 ## Rate limits
 
 If the provider documents a request limit, declare it: `"limits": { "requestsPerMinute": 10 }`. The engine paces each account to it, and honours `Retry-After` and `X-RateLimit-Remaining`/`X-RateLimit-Reset` (or the IETF `RateLimit-*` names) on its own. `maxRequestsPerRefresh` (default 300, at most 2000) caps one refresh; a refresh that would need more fails instead of hammering the API.

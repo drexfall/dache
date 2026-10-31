@@ -6,8 +6,8 @@ import dev.dache.core.security.TokenVault
 import dev.dache.plugin.api.PluginManifest
 import dev.dache.plugin.runtime.LoadResult
 import dev.dache.plugin.runtime.ManifestLoader
-import dev.dache.plugin.runtime.ManifestProvider
 import dev.dache.plugin.runtime.RequestLogger
+import dev.dache.plugin.runtime.providerFor
 import io.ktor.client.HttpClient
 
 /** Plugins that ship inside the app. Their manifests live in `plugin-registry/manifests`. */
@@ -29,7 +29,7 @@ object BundledPlugins {
         logger: RequestLogger = RequestLogger.None,
     ): Map<ProviderId, DevOpsProvider> =
         manifests.associate { manifest ->
-            val provider = ManifestProvider(manifest, vault = vault, client = client, logger = logger)
+            val provider = providerFor(manifest, vault, client, logger)
             provider.id to provider
         }
 }

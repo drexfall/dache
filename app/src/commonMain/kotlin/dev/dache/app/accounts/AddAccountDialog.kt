@@ -16,6 +16,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -23,6 +24,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -31,16 +33,20 @@ import dev.dache.app.resources.Res
 import dev.dache.app.resources.action_cancel
 import dev.dache.app.resources.action_connect
 import dev.dache.app.resources.action_create_token
+import dev.dache.app.resources.action_trust_certificate
 import dev.dache.app.resources.add_account_title
 import dev.dache.app.resources.setting_optional_label
 import dev.dache.app.resources.token_label
+import dev.dache.app.resources.trust_certificate_body
 import dev.dache.app.ui.components.ExternalLinkButton
 import dev.dache.app.ui.components.errorMessage
 import dev.dache.app.ui.components.secureDialogProperties
 import dev.dache.app.ui.components.secureSheetProperties
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
+import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
+import dev.dache.plugin.api.SelfHostedSpec
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -158,7 +164,25 @@ private fun AddAccountForm(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+        val untrusted = (state.error ?: state.check.error) as? ProviderError.UntrustedCertificate
+        untrusted?.let { TrustCertificate(it.fingerprint) { onSettingChanged(SelfHostedSpec.CERTIFICATE_SETTING, it) } }
         TokenChecklist(state.check, state.provider.displayName, state.permissions)
         if (state.isValidating) LinearProgressIndicator(Modifier.fillMaxWidth())
+    }
+}
+
+/**
+ * A self-hosted server's self-signed certificate: its fingerprint, to compare with the one on the server, and
+ * a button that pins it for this account.
+ */
+@Composable
+private fun TrustCertificate(
+    fingerprint: String,
+    onTrust: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(stringResource(Res.string.trust_certificate_body), style = MaterialTheme.typography.bodySmall)
+        Text(fingerprint, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+        OutlinedButton(onClick = { onTrust(fingerprint) }) { Text(stringResource(Res.string.action_trust_certificate)) }
     }
 }

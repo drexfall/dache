@@ -19,6 +19,7 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.URLBuilder
+import io.ktor.http.URLProtocol
 import io.ktor.http.Url
 import io.ktor.http.content.TextContent
 import io.ktor.http.takeFrom
@@ -53,8 +54,9 @@ internal class PluginHttp(
     private val manifest: PluginManifest,
     private val logger: RequestLogger,
     private val timeSource: TimeSource.WithComparableMarks = TimeSource.Monotonic,
+    port: Int = URLProtocol.HTTPS.defaultPort,
 ) {
-    private val guard = HostGuard(manifest.hosts)
+    private val guard = HostGuard(manifest.hosts, port)
     private val limitersLock = Mutex()
 
     // Keyed by a hash so tokens aren't kept around as map keys; each account's limit is its own.

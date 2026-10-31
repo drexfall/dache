@@ -1,0 +1,140 @@
+{
+  "$schema": "../../schema/manifest.schema.json",
+  "manifestVersion": 1,
+  "id": "coolify",
+  "name": "Coolify",
+  "version": "1.0.0",
+  "publisher": "Dache",
+  "selfHosted": {
+    "label": "Coolify server",
+    "hint": "coolify.example.com, or 192.168.1.20:8000"
+  },
+  "dashboardUrl": "https://self.hosted",
+  "tokenUrl": "https://self.hosted/security/api-tokens",
+  "tokenHelp": "Create an API token under Keys & Tokens › API tokens with read access. Add deploy to deploy, restart, start and stop applications.",
+  "hosts": [
+    "self.hosted"
+  ],
+  "auth": {
+    "type": "bearer"
+  },
+  "capabilities": [
+    "SERVERS",
+    "SERVICES"
+  ],
+  "validate": {
+    "request": {
+      "url": "https://self.hosted/api/v1/team"
+    },
+    "displayName": "name | default:Coolify"
+  },
+  "resources": [
+    {
+      "kind": "server",
+      "request": {
+        "url": "https://self.hosted/api/v1/servers"
+      },
+      "fields": {
+        "nativeId": "uuid",
+        "name": "name",
+        "region": "ip",
+        "publicIpv4": "ip",
+        "status": "settings.is_reachable"
+      },
+      "statusMap": {
+        "true": "ACTIVE",
+        "false": "OFF"
+      }
+    },
+    {
+      "kind": "service",
+      "service": {
+        "id": "applications",
+        "label": "Applications"
+      },
+      "request": {
+        "url": "https://self.hosted/api/v1/applications"
+      },
+      "fields": {
+        "nativeId": "uuid",
+        "name": "name",
+        "detail": "fqdn | default:",
+        "status": "status",
+        "updatedAt": "updated_at | date"
+      },
+      "statusMap": {
+        "running:healthy": "HEALTHY",
+        "running:unknown": "HEALTHY",
+        "running:unhealthy": "DEGRADED",
+        "restarting:unhealthy": "DEGRADED",
+        "exited:unhealthy": "DOWN",
+        "exited": "INACTIVE",
+        "exited:unknown": "INACTIVE"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "deploy",
+      "label": "Deploy",
+      "target": "service:applications",
+      "permission": "deploy",
+      "description": "Builds and deploys the application's latest code.",
+      "request": {
+        "url": "https://self.hosted/api/v1/deploy",
+        "method": "POST",
+        "query": {
+          "uuid": "{uuid}"
+        }
+      }
+    },
+    {
+      "id": "restart",
+      "label": "Restart",
+      "target": "service:applications",
+      "permission": "deploy",
+      "request": {
+        "url": "https://self.hosted/api/v1/applications/{uuid}/restart",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "target": "service:applications",
+      "permission": "deploy",
+      "request": {
+        "url": "https://self.hosted/api/v1/applications/{uuid}/start",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "stop",
+      "label": "Stop",
+      "target": "service:applications",
+      "destructive": true,
+      "permission": "deploy",
+      "description": "Stops the application; it stays down until started again.",
+      "request": {
+        "url": "https://self.hosted/api/v1/applications/{uuid}/stop",
+        "method": "POST"
+      }
+    }
+  ],
+  "pages": [
+    {
+      "id": "applications",
+      "title": "Applications",
+      "resources": [
+        "applications"
+      ]
+    },
+    {
+      "id": "servers",
+      "title": "Servers",
+      "resources": [
+        "server"
+      ]
+    }
+  ]
+}

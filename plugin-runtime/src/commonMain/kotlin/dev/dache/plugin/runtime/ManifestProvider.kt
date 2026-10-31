@@ -40,13 +40,15 @@ class ManifestProvider(
     client: HttpClient,
     logger: RequestLogger = RequestLogger.None,
     timeSource: TimeSource.WithComparableMarks = TimeSource.Monotonic,
+    /** A self-hosted server's port; every other plugin talks to port 443. */
+    port: Int = DEFAULT_PORT,
 ) : DevOpsProvider {
     override val capabilities: Set<Capability> =
         manifest.capabilities.mapNotNull { name -> Capability.entries.firstOrNull { it.name == name } }.toSet()
 
     override val pages: List<ServicePage> = manifestPages(manifest)
 
-    private val http = PluginHttp(client, manifest, logger, timeSource)
+    private val http = PluginHttp(client, manifest, logger, timeSource, port)
     private val lists = ListFetcher(http)
     private val validate = CompiledList(manifest.validate.request, items = null)
     private val displayName = Expression.parse(manifest.validate.displayName)
@@ -250,3 +252,5 @@ private fun add(
 
 private suspend fun TokenVault.tokenFor(account: ConnectedAccount): String =
     get(account.tokenKey()) ?: throw ProviderError.Unauthorized()
+
+private const val DEFAULT_PORT = 443

@@ -241,8 +241,9 @@ internal class ActionExecutor(
             records
                 .flatMap { record ->
                     val id = record.text("nativeId") ?: return@flatMap emptyList()
-                    val prefix = service?.let { ActionRules.SERVICE_PREFIX + it } ?: kind.kindName
-                    val own = listOf("$prefix:$id" to record.item)
+                    // A service resource's id carries its service, as the binder builds it: `<service>/<id>`.
+                    val key = service?.let { "${ActionRules.SERVICE_PREFIX}$it:$it/$id" } ?: "${kind.kindName}:$id"
+                    val own = listOf(key to record.item)
                     val deployments =
                         if (kind == ManifestKind.SITE) {
                             record.records("deployments").mapNotNull { deploy ->

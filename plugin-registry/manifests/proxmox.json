@@ -1,0 +1,98 @@
+{
+  "$schema": "../../schema/manifest.schema.json",
+  "manifestVersion": 1,
+  "id": "proxmox",
+  "name": "Proxmox VE",
+  "version": "1.0.0",
+  "publisher": "Dache",
+  "selfHosted": {
+    "label": "Proxmox server",
+    "hint": "pve.lan:8006, or 192.168.1.5:8006"
+  },
+  "dashboardUrl": "https://self.hosted",
+  "tokenHelp": "Create one under Datacenter › Permissions › API Tokens and enter it as USER@REALM!TOKENID=SECRET. PVEAuditor lets it read; PVEVMUser on the guests lets it start, shut down and reboot them.",
+  "hosts": [
+    "self.hosted"
+  ],
+  "auth": {
+    "type": "header",
+    "name": "Authorization",
+    "prefix": "PVEAPIToken="
+  },
+  "capabilities": [
+    "SERVERS"
+  ],
+  "validate": {
+    "request": {
+      "url": "https://self.hosted/api2/json/version"
+    },
+    "displayName": "data.version | default:Proxmox VE"
+  },
+  "resources": [
+    {
+      "kind": "server",
+      "request": {
+        "url": "https://self.hosted/api2/json/cluster/resources",
+        "query": {
+          "type": "vm"
+        }
+      },
+      "items": "data",
+      "fields": {
+        "nativeId": "id",
+        "name": "name | default:",
+        "region": "node",
+        "status": "status"
+      },
+      "statusMap": {
+        "running": "ACTIVE",
+        "stopped": "OFF",
+        "paused": "OFF"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "start",
+      "label": "Start",
+      "target": "server",
+      "permission": "VM.PowerMgmt",
+      "request": {
+        "url": "https://self.hosted/api2/json/nodes/{node}/{type}/{vmid}/status/start",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "shutdown",
+      "label": "Shut down",
+      "target": "server",
+      "destructive": true,
+      "permission": "VM.PowerMgmt",
+      "description": "Asks the guest to shut down cleanly.",
+      "request": {
+        "url": "https://self.hosted/api2/json/nodes/{node}/{type}/{vmid}/status/shutdown",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "reboot",
+      "label": "Reboot",
+      "target": "server",
+      "destructive": true,
+      "permission": "VM.PowerMgmt",
+      "request": {
+        "url": "https://self.hosted/api2/json/nodes/{node}/{type}/{vmid}/status/reboot",
+        "method": "POST"
+      }
+    }
+  ],
+  "pages": [
+    {
+      "id": "guests",
+      "title": "Virtual machines and containers",
+      "resources": [
+        "server"
+      ]
+    }
+  ]
+}

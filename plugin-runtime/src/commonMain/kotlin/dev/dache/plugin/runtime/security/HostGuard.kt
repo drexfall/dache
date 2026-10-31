@@ -11,6 +11,8 @@ import io.ktor.http.Url
  */
 class HostGuard(
     hosts: Collection<String>,
+    /** Only a self-hosted server may use another port, the one its account names. */
+    private val port: Int = URLProtocol.HTTPS.defaultPort,
 ) {
     private val allowed = hosts.map { it.lowercase() }.toSet()
 
@@ -24,7 +26,14 @@ class HostGuard(
         when {
             url.protocol != URLProtocol.HTTPS -> "only https is allowed, got ${url.protocol.name}"
             url.encodedUser != null || url.encodedPassword != null -> "credentials in URLs are not allowed"
-            url.port != URLProtocol.HTTPS.defaultPort -> "only the default https port is allowed"
+            url.port != port ->
+                if (port ==
+                    URLProtocol.HTTPS.defaultPort
+                ) {
+                    "only the default https port is allowed"
+                } else {
+                    "only port $port is allowed"
+                }
             url.host.lowercase() !in allowed -> "host ${url.host} is not declared in the manifest"
             else -> null
         }
@@ -39,6 +48,15 @@ class HostGuard(
         private val hostPattern = Regex("([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}")
 
         fun isValidHost(host: String): Boolean = hostPattern.matches(host)
+
+        private val ipv4Pattern =
+            Regex("((25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])")
+
+        /** A self-hosted server: a hostname (a LAN name without a dot too) or an IPv4 address. */
+        fun isValidServerHost(host: String): Boolean =
+            hostPattern.matches(host) ||
+                ipv4Pattern.matches(host) ||
+                Regex("[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?").matches(host)
 
         fun parseUrl(url: String): Url? =
             try {

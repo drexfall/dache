@@ -18,9 +18,9 @@ import dev.dache.plugin.registry.BundledPlugins
 import dev.dache.plugin.registry.PluginManager
 import dev.dache.plugin.registry.PluginStore
 import dev.dache.plugin.registry.RegistryClient
-import dev.dache.plugin.runtime.ManifestProvider
 import dev.dache.plugin.runtime.RequestLogger
 import dev.dache.plugin.runtime.http.createPluginHttpClient
+import dev.dache.plugin.runtime.providerFor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -63,7 +63,7 @@ class AppContainer(
             catalog = catalog,
             registry = registryClient,
             bundled = BundledPlugins.manifests,
-            providerFor = { ManifestProvider(it, vault = vault, client = httpClient, logger = requestLogger) },
+            providerFor = { providerFor(it, vault, httpClient, requestLogger) },
         ).apply { start(scope) }
 
     val accountRepository = AccountRepository(accountStore, vault, catalog)

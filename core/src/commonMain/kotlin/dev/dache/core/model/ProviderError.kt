@@ -21,6 +21,14 @@ sealed class ProviderError(
 
     class Network : ProviderError("Network error")
 
+    /**
+     * A self-hosted server presented a certificate the system doesn't trust. The user may trust this one
+     * certificate, by its SHA-256 [fingerprint], after checking it on the server.
+     */
+    class UntrustedCertificate(
+        val fingerprint: String,
+    ) : ProviderError("Untrusted certificate")
+
     class Server(
         val code: Int,
     ) : ProviderError("Server error")

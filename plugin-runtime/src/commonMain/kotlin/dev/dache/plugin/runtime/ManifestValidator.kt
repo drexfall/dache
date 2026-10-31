@@ -8,6 +8,7 @@ import dev.dache.plugin.api.ManifestJson
 import dev.dache.plugin.api.PagingSpec
 import dev.dache.plugin.api.PluginManifest
 import dev.dache.plugin.api.RequestSpec
+import dev.dache.plugin.api.SelfHostedSpec
 import dev.dache.plugin.runtime.mapping.Expression
 import dev.dache.plugin.runtime.mapping.ExpressionException
 import dev.dache.plugin.runtime.mapping.FieldDef
@@ -126,6 +127,7 @@ object ManifestValidator {
                 if (url != null && !isWebLink(url)) problem(key, "must be an https:// URL")
             }
             problems += limitProblems(manifest.limits)
+            problems += selfHostedProblems(manifest)
             if (manifest.capabilities.isEmpty()) problem("capabilities", "declare at least one capability")
             manifest.capabilities.forEachIndexed { index, name ->
                 if (Capability.entries.none { it.name == name }) {
@@ -322,3 +324,33 @@ private fun limitProblems(limits: LimitsSpec): List<ManifestProblem> =
             ManifestProblem("limits.maxRequestsPerRefresh", "must be 1 to ${LimitsSpec.MAX_REQUESTS_PER_REFRESH}")
         },
     )
+
+/**
+ * A self-hosted manifest calls the placeholder host only, and leaves the server and certificate settings to the
+ * engine; any other manifest never names the placeholder.
+ */
+private fun selfHostedProblems(manifest: PluginManifest): List<ManifestProblem> {
+    val placeholder = SelfHostedSpec.PLACEHOLDER_HOST
+    val reserved = setOf(SelfHostedSpec.HOST_SETTING, SelfHostedSpec.CERTIFICATE_SETTING)
+    val spec = manifest.selfHosted
+    return if (spec == null) {
+        listOfNotNull(
+            ManifestProblem("hosts", "$placeholder is only for self-hosted plugins").takeIf {
+                placeholder in
+                    manifest.hosts
+            },
+        )
+    } else {
+        listOfNotNull(
+            ManifestProblem("hosts", "a self-hosted plugin calls only \"$placeholder\"").takeIf {
+                manifest.hosts != listOf(placeholder)
+            },
+            ManifestProblem("selfHosted.label", "must not be blank").takeIf { spec.label.isBlank() },
+        ) +
+            manifest.settings.mapIndexedNotNull { index, setting ->
+                ManifestProblem("settings[$index].key", "\"${setting.key}\" is set by the engine").takeIf {
+                    setting.key in reserved
+                }
+            }
+    }
+}

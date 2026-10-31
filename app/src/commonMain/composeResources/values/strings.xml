@@ -353,4 +353,7 @@
     <string name="write_log_title">Recent changes</string>
     <string name="write_log_empty">Nothing changed from Dache yet.</string>
     <string name="write_log_failed">failed: %1$s</string>
+    <string name="error_untrusted_certificate">The server’s certificate isn’t trusted by this device.</string>
+    <string name="trust_certificate_body">The server presented a certificate this device doesn’t trust, usually a self-signed one. Compare its SHA-256 fingerprint with the one on the server before trusting it. Dache will then accept only this certificate from the server.</string>
+    <string name="action_trust_certificate">Trust this certificate</string>
 </resources>

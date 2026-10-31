@@ -10,6 +10,7 @@ import dev.dache.app.resources.error_rate_limited_retry
 import dev.dache.app.resources.error_server
 import dev.dache.app.resources.error_unauthorized
 import dev.dache.app.resources.error_unknown
+import dev.dache.app.resources.error_untrusted_certificate
 import dev.dache.app.resources.error_vault_unavailable
 import dev.dache.app.resources.time_days_ago
 import dev.dache.app.resources.time_hours_ago
@@ -54,6 +55,7 @@ fun errorMessage(error: Throwable): String =
                 ?: stringResource(Res.string.error_rate_limited)
         is ProviderError.NotFound -> stringResource(Res.string.error_not_found)
         is ProviderError.Network -> stringResource(Res.string.error_network)
+        is ProviderError.UntrustedCertificate -> stringResource(Res.string.error_untrusted_certificate)
         is ProviderError.Server -> stringResource(Res.string.error_server, error.code)
         is VaultUnavailableException -> stringResource(Res.string.error_vault_unavailable)
         else -> stringResource(Res.string.error_unknown)
