@@ -107,6 +107,13 @@ class DashboardRepository(
         }
     }
 
+    /** Refreshes, or waits for the refresh already under way, and returns what was fetched. */
+    suspend fun refreshAndGet(): DashboardState {
+        refresh()
+        refreshLock.withLock { }
+        return fetched.value
+    }
+
     // A bug in one provider must never take down the whole overview, so anything it throws is contained here.
     @Suppress("TooGenericExceptionCaught")
     private suspend fun fetch(account: ConnectedAccount): AccountResult {

@@ -57,4 +57,5 @@ dependencies {
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
+    implementation(libs.androidx.work.runtime)
 }

@@ -5,11 +5,15 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import dev.dache.core.alerts.AlertSettings
+import dev.dache.core.alerts.AlertStore
 import dev.dache.core.security.IntegritySignal
 import dev.dache.core.security.IntegrityWarningSettings
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import okio.Path.Companion.toPath
 
@@ -31,7 +35,8 @@ interface SettingsStore {
 
 class DataStoreSettingsStore(
     private val dataStore: DataStore<Preferences>,
-) : SettingsStore {
+) : SettingsStore,
+    AlertStore {
     override val confirmExternalLinks: Flow<Boolean> = dataStore.data.map { it[CONFIRM_LINKS] ?: true }
 
     override suspend fun setConfirmExternalLinks(confirm: Boolean) {
@@ -75,7 +80,43 @@ class DataStoreSettingsStore(
         }
     }
 
+    override val alertSettings: Flow<AlertSettings> =
+        dataStore.data.map { prefs ->
+            val defaults = AlertSettings()
+            AlertSettings(
+                enabled = prefs[ALERTS] ?: defaults.enabled,
+                intervalMinutes =
+                    prefs[ALERT_INTERVAL]?.coerceAtLeast(AlertSettings.MIN_INTERVAL_MINUTES)
+                        ?: defaults.intervalMinutes,
+                deploys = prefs[ALERT_DEPLOYS] ?: defaults.deploys,
+                monitors = prefs[ALERT_MONITORS] ?: defaults.monitors,
+                ci = prefs[ALERT_CI] ?: defaults.ci,
+            )
+        }
+
+    override suspend fun setAlertSettings(settings: AlertSettings) {
+        dataStore.edit {
+            it[ALERTS] = settings.enabled
+            it[ALERT_INTERVAL] = settings.intervalMinutes
+            it[ALERT_DEPLOYS] = settings.deploys
+            it[ALERT_MONITORS] = settings.monitors
+            it[ALERT_CI] = settings.ci
+        }
+    }
+
+    override suspend fun reportedAlerts(): Set<String>? = dataStore.data.first()[REPORTED_ALERTS]
+
+    override suspend fun setReportedAlerts(keys: Set<String>) {
+        dataStore.edit { it[REPORTED_ALERTS] = keys }
+    }
+
     companion object {
+        private val ALERTS = booleanPreferencesKey("alerts")
+        private val ALERT_INTERVAL = intPreferencesKey("alert_interval_minutes")
+        private val ALERT_DEPLOYS = booleanPreferencesKey("alert_deploys")
+        private val ALERT_MONITORS = booleanPreferencesKey("alert_monitors")
+        private val ALERT_CI = booleanPreferencesKey("alert_ci")
+        private val REPORTED_ALERTS = stringSetPreferencesKey("reported_alerts")
         private val INTEGRITY_SEEN = stringSetPreferencesKey("integrity_warning_seen")
         private val INTEGRITY_NEVER_SHOW = booleanPreferencesKey("integrity_warning_never_show")
         private val CONFIRM_LINKS = booleanPreferencesKey("confirm_external_links")

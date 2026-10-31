@@ -3,6 +3,9 @@ package dev.dache.app
 import dev.dache.app.security.AppLockController
 import dev.dache.core.account.AccountRepository
 import dev.dache.core.account.AccountStore
+import dev.dache.core.alerts.AlertSettings
+import dev.dache.core.alerts.AlertStore
+import dev.dache.core.alerts.BackgroundCheck
 import dev.dache.core.dashboard.DashboardRepository
 import dev.dache.core.provider.ProviderCatalog
 import dev.dache.core.security.IntegrityWarningSettings
@@ -27,6 +30,7 @@ class AppContainer(
     vault: TokenVault,
     accountStore: AccountStore,
     val settingsStore: SettingsStore,
+    val alertStore: AlertStore,
     pluginStore: PluginStore,
     private val scope: CoroutineScope,
     requestLogger: RequestLogger = RequestLogger.None,
@@ -51,6 +55,8 @@ class AppContainer(
     val accountRepository = AccountRepository(accountStore, vault, catalog)
     val dashboardRepository = DashboardRepository(accountRepository, scope)
 
+    val backgroundCheck = BackgroundCheck(dashboardRepository, alertStore)
+
     /** Process-wide, so the lock outlives the activity and covers every way back into the app. */
     val appLock = AppLockController(settingsStore.appLock, scope)
 
@@ -60,6 +66,10 @@ class AppContainer(
 
     fun setAppLock(settings: AppLockSettings) {
         scope.launch { settingsStore.setAppLock(settings) }
+    }
+
+    fun setAlertSettings(settings: AlertSettings) {
+        scope.launch { alertStore.setAlertSettings(settings) }
     }
 
     fun setIntegrityWarning(settings: IntegrityWarningSettings) {

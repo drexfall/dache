@@ -34,4 +34,13 @@
     <string name="status_paused">– Paused</string>
 
     <string name="lock_prompt_title">Unlock Dache</string>
+    <string name="alerts_channel">Alerts</string>
+    <string name="alerts_channel_description">Failed deploys, monitors going down and failed CI runs found by background checks.</string>
+    <plurals name="alerts_summary">
+        <item quantity="one">%1$d new problem</item>
+        <item quantity="other">%1$d new problems</item>
+    </plurals>
+    <string name="alert_deploy_failed">A deploy failed</string>
+    <string name="alert_monitor_down">A monitor is down</string>
+    <string name="alert_ci_failed">A CI run failed</string>
 </resources>

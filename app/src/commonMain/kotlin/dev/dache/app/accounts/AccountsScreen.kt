@@ -61,6 +61,8 @@ fun AccountsScreen(
     onConfirmExternalLinksChange: (Boolean) -> Unit,
     /** Platform security preferences, e.g. the app lock where the device has a screen lock. */
     securityCard: (@Composable () -> Unit)? = null,
+    /** Background checks, where the platform can run them. */
+    backgroundCard: (@Composable () -> Unit)? = null,
 ) {
     var pendingRemoval by remember { mutableStateOf<ConnectedAccount?>(null) }
     val compact = LocalFormFactor.current == FormFactor.COMPACT
@@ -85,6 +87,7 @@ fun AccountsScreen(
         },
     ) {
         PreferencesCard(confirmExternalLinks, onConfirmExternalLinksChange)
+        backgroundCard?.invoke()
         securityCard?.invoke()
         if (accounts.isEmpty()) {
             EmptyState(

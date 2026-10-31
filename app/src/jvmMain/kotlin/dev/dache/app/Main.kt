@@ -27,11 +27,13 @@ import java.io.File
 fun main() {
     val dataDir = File(System.getenv("XDG_DATA_HOME") ?: "${System.getProperty("user.home")}/.local/share", "dache")
     dataDir.mkdirs()
+    val settings = DataStoreSettingsStore.create(File(dataDir, "settings.preferences_pb").absolutePath)
     val container =
         AppContainer(
             vault = SecretServiceTokenVault(),
             accountStore = DataStoreAccountStore.create(File(dataDir, "accounts.preferences_pb").absolutePath),
-            settingsStore = DataStoreSettingsStore.create(File(dataDir, "settings.preferences_pb").absolutePath),
+            settingsStore = settings,
+            alertStore = settings,
             pluginStore = DataStorePluginStore.create(File(dataDir, "plugins.preferences_pb").absolutePath),
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
             // Off unless a developer opts in; requests are redacted either way.

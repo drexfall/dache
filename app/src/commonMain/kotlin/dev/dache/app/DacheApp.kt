@@ -30,6 +30,8 @@ import dev.dache.app.accounts.AccountsScreen
 import dev.dache.app.accounts.AccountsViewModel
 import dev.dache.app.accounts.AddAccountFlow
 import dev.dache.app.accounts.TokenCheckState
+import dev.dache.app.alerts.BackgroundChecksCard
+import dev.dache.app.alerts.BackgroundChecksPlatform
 import dev.dache.app.dashboard.DashboardViewModel
 import dev.dache.app.navigation.AppNavigator
 import dev.dache.app.navigation.Destination
@@ -58,6 +60,7 @@ import dev.dache.app.ui.layout.EXPANDED_MIN_WIDTH
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
 import dev.dache.app.ui.theme.DacheTheme
+import dev.dache.core.alerts.AlertSettings
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.model.AccountSetting
 import dev.dache.core.model.ConnectedAccount
@@ -70,13 +73,15 @@ import kotlinx.coroutines.launch
 
 /**
  * Pass [lockAuthenticator] on platforms with a screen lock; without one the app lock isn't offered. Pass
- * [integrityChecker] where the device can be checked for root; without one no warning is shown.
+ * [integrityChecker] where the device can be checked for root; without one no warning is shown. Pass
+ * [backgroundChecks] where the platform can check in the background and notify; without it they aren't offered.
  */
 @Composable
 fun DacheApp(
     container: AppContainer,
     lockAuthenticator: LockAuthenticator? = null,
     integrityChecker: IntegrityChecker? = null,
+    backgroundChecks: BackgroundChecksPlatform? = null,
 ) {
     DacheTheme {
         val signals = rememberIntegritySignals(integrityChecker)
@@ -84,17 +89,43 @@ fun DacheApp(
         val destinationState =
             rememberSaveable(stateSaver = DestinationSaver) { mutableStateOf<Destination>(Destination.Overview) }
         if (lockAuthenticator == null) {
-            DacheContent(container, destinationState, signals, securityCard = null)
+            DacheContent(container, destinationState, signals, backgroundChecks, securityCard = null)
         } else {
             val lockState by container.appLock.state.collectAsStateWithLifecycle()
             when (lockState) {
                 LockState.LOADING -> LockLoading()
                 LockState.LOCKED -> LockGate(container.appLock, lockAuthenticator)
                 LockState.UNLOCKED ->
-                    DacheContent(container, destinationState, signals) { AppLockSection(container, lockAuthenticator) }
+                    DacheContent(container, destinationState, signals, backgroundChecks) {
+                        AppLockSection(container, lockAuthenticator)
+                    }
             }
         }
     }
+}
+
+@Composable
+private fun PluginsPage(
+    container: AppContainer,
+    onOpenMenu: (() -> Unit)?,
+) {
+    val pluginsViewModel = viewModel { PluginsViewModel(container.plugins, container.registryClient) }
+    val pluginsState by pluginsViewModel.state.collectAsStateWithLifecycle()
+    PluginsScreen(pluginsViewModel, pluginsState, onOpenMenu)
+}
+
+private fun backgroundCard(
+    container: AppContainer,
+    platform: BackgroundChecksPlatform?,
+): (@Composable () -> Unit)? = platform?.let { { BackgroundChecksSection(container, it) } }
+
+@Composable
+private fun BackgroundChecksSection(
+    container: AppContainer,
+    platform: BackgroundChecksPlatform,
+) {
+    val settings by container.alertStore.alertSettings.collectAsStateWithLifecycle(AlertSettings())
+    BackgroundChecksCard(settings, platform.access, container::setAlertSettings, platform.footer)
 }
 
 @Composable
@@ -139,6 +170,7 @@ private fun DacheContent(
     container: AppContainer,
     destinationState: MutableState<Destination>,
     signals: Set<IntegritySignal>,
+    backgroundChecks: BackgroundChecksPlatform?,
     securityCard: (@Composable () -> Unit)?,
 ) {
     val dashboardViewModel =
@@ -227,12 +259,7 @@ private fun DacheContent(
                                     onNavigate = { destination = it },
                                 )
                             }
-                        Destination.Plugins -> {
-                            val pluginsViewModel =
-                                viewModel { PluginsViewModel(container.plugins, container.registryClient) }
-                            val pluginsState by pluginsViewModel.state.collectAsStateWithLifecycle()
-                            PluginsScreen(pluginsViewModel, pluginsState, onOpenMenu)
-                        }
+                        Destination.Plugins -> PluginsPage(container, onOpenMenu)
                         Destination.ManageAccounts ->
                             AccountsScreen(
                                 accounts = accountsState.accounts,
@@ -248,6 +275,7 @@ private fun DacheContent(
                                     IntegrityNote(signals)
                                     securityCard?.invoke()
                                 },
+                                backgroundCard = backgroundCard(container, backgroundChecks),
                             )
                     }
                 }

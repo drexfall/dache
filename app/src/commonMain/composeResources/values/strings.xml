@@ -325,4 +325,14 @@
     <string name="consent_token">an API token</string>
     <string name="consent_shows">Shows</string>
     <string name="consent_trust_unverified">I trust this plugin with the token I give it</string>
+    <string name="alerts_title">Background checks</string>
+    <string name="alerts_body">Checks your accounts while Dache is closed and notifies you when something breaks.</string>
+    <string name="alerts_denied">Dache isn’t allowed to show notifications, so background checks stay off.</string>
+    <string name="action_open_notification_settings">Open notification settings</string>
+    <string name="alerts_every">Check every</string>
+    <string name="alerts_interval_minutes">%1$d min</string>
+    <string name="alerts_interval_hours">%1$d h</string>
+    <string name="alerts_deploys">Failed deploys</string>
+    <string name="alerts_monitors">Monitors going down</string>
+    <string name="alerts_ci">Failed CI runs</string>
 </resources>

@@ -5,6 +5,8 @@ import android.content.pm.ApplicationInfo
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import dev.dache.android.alerts.AlertNotifier
+import dev.dache.android.alerts.BackgroundChecks
 import dev.dache.android.widget.DacheWidgets
 import dev.dache.app.AppContainer
 import dev.dache.core.account.DataStoreAccountStore
@@ -25,10 +27,12 @@ class DacheApplication : Application() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val container: AppContainer by lazy {
+        val settings = DataStoreSettingsStore.create(File(filesDir, "settings.preferences_pb").absolutePath)
         AppContainer(
             vault = TinkTokenVault(this),
             accountStore = DataStoreAccountStore.create(File(filesDir, "accounts.preferences_pb").absolutePath),
-            settingsStore = DataStoreSettingsStore.create(File(filesDir, "settings.preferences_pb").absolutePath),
+            settingsStore = settings,
+            alertStore = settings,
             pluginStore = DataStorePluginStore.create(File(filesDir, "plugins.preferences_pb").absolutePath),
             scope = appScope,
             // Request logging is debug-only; release builds never log requests.
@@ -48,6 +52,13 @@ class DacheApplication : Application() {
                 override fun onStop(owner: LifecycleOwner) = container.appLock.onBackground()
             },
         )
+        AlertNotifier.createChannel(this)
+        // Keep WorkManager's schedule in step with the background check settings.
+        appScope.launch {
+            container.alertStore.alertSettings
+                .distinctUntilChanged()
+                .collect { BackgroundChecks.schedule(this@DacheApplication, it) }
+        }
         // Push fresh data to home-screen widgets whenever the dashboard changes.
         appScope.launch {
             container.dashboardRepository.state
