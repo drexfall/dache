@@ -2,7 +2,7 @@
 
 One dashboard for the hosting, DNS, CI, server and uptime services you use. Kotlin Multiplatform: Android and Linux desktop share one Compose UI.
 
-**Status: Phase 1b.** Netlify, Vercel and Cloudflare are real: they run as declarative plugins through the manifest engine and talk to the provider's API with your token. The other providers are still `MockProvider`s serving a fictional "acme" org (`core/.../provider/mock/MockFixtures.kt`) until their plugins land (see the project board).
+**Status: Phase 1c.** Netlify, Vercel, Cloudflare and GitHub are real: they run as declarative plugins through the manifest engine and talk to the provider's API with your token. The other providers are still `MockProvider`s serving a fictional "acme" org (`core/.../provider/mock/MockFixtures.kt`) until their plugins land (see the project board).
 
 ## Modules
 
@@ -97,7 +97,7 @@ Every chart has a **Table** toggle with the same numbers.
 
 ## Trying it
 
-- On the empty overview, **Try with demo data** connects one account per provider that still serves sample data (everything but Netlify, Vercel and Cloudflare).
-- Netlify, Vercel and Cloudflare need a real token. Add it under **Manage accounts**. For a Vercel team, also enter the team slug (the part after `vercel.com/` on the team's dashboard); leave it blank for your personal account.
+- On the empty overview, **Try with demo data** connects one account per provider that still serves sample data (everything but Netlify, Vercel, Cloudflare and GitHub).
+- Netlify, Vercel, Cloudflare and GitHub need a real token. Add it under **Manage accounts**. For a Vercel team, also enter the team slug (the part after `vercel.com/` on the team's dashboard); leave it blank for your personal account.
 - For sample-data providers, any token with 8+ characters is accepted. A token starting with `fail-` makes that account fail every refresh with a rate-limit error, so you can see how one provider failing looks.
 - Widgets: long-press the home screen → Widgets → Dache.
