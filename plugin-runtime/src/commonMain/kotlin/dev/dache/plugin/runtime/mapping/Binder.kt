@@ -1,5 +1,6 @@
 package dev.dache.plugin.runtime.mapping
 
+import dev.dache.core.model.Billing
 import dev.dache.core.model.Certificate
 import dev.dache.core.model.CertificateStatus
 import dev.dache.core.model.CiRun
@@ -8,6 +9,8 @@ import dev.dache.core.model.Deployment
 import dev.dache.core.model.DnsRecord
 import dev.dache.core.model.Domain
 import dev.dache.core.model.ProviderId
+import dev.dache.core.model.Server
+import dev.dache.core.model.ServerStatus
 import dev.dache.core.model.ServiceResource
 import dev.dache.core.model.ServiceStatus
 import dev.dache.core.model.Site
@@ -79,6 +82,31 @@ internal class Binder(
             )
         }
 
+    fun server(record: Mapping.Record): Server? =
+        orSkip {
+            Server(
+                providerId = providerId,
+                accountId = accountId,
+                nativeId = record.required("nativeId"),
+                webUrl = record.webUrl(),
+                name = record.required("name"),
+                region = record.required("region"),
+                status = record.status("status", ServerStatus.UNKNOWN),
+                publicIpv4 = record.text("publicIpv4"),
+            )
+        }
+
+    /** Providers give spend as totals only, so there is no daily history. */
+    fun billing(record: Mapping.Record): Billing? =
+        orSkip {
+            Billing(
+                currency = record.required("currency"),
+                monthToDateUsage = record.number("monthToDateUsage") ?: throw MissingFieldException("monthToDateUsage"),
+                accountBalance = record.number("accountBalance") ?: throw MissingFieldException("accountBalance"),
+                dailyCost = emptyList(),
+            )
+        }
+
     fun worker(record: Mapping.Record): Worker? =
         orSkip {
             Worker(
@@ -111,31 +139,6 @@ internal class Binder(
                 updatedAt = record.time("updatedAt"),
             )
         }
-
-    private fun deployment(record: Mapping.Record): Deployment? =
-        orSkip {
-            Deployment(
-                nativeId = record.required("nativeId"),
-                webUrl = record.required("webUrl"),
-                status = record.status("status", DeployStatus.UNKNOWN),
-                branch = record.text("branch"),
-                commitMessage = record.text("commitMessage"),
-                createdAt = record.time("createdAt") ?: throw MissingFieldException("createdAt"),
-                durationSeconds = record.int("durationSeconds"),
-            )
-        }
-
-    private fun certificate(record: Mapping.Record): Certificate? =
-        orSkip {
-            Certificate(
-                nativeId = record.required("nativeId"),
-                status = record.status("status", CertificateStatus.UNKNOWN),
-                hosts = record.textList("hosts").distinct(),
-                expiresAt = record.time("expiresAt"),
-            )
-        }
-
-    private fun Mapping.Record.required(field: String): String = text(field) ?: throw MissingFieldException(field)
 
     /** Without its own link, a resource links to the provider's dashboard. */
     private fun Mapping.Record.webUrl(): String = text("webUrl") ?: providerId.dashboardUrl
@@ -173,3 +176,28 @@ internal fun qualified(
         else -> "$host.$zone"
     }
 }
+
+private fun deployment(record: Mapping.Record): Deployment? =
+    orSkip {
+        Deployment(
+            nativeId = record.required("nativeId"),
+            webUrl = record.required("webUrl"),
+            status = record.status("status", DeployStatus.UNKNOWN),
+            branch = record.text("branch"),
+            commitMessage = record.text("commitMessage"),
+            createdAt = record.time("createdAt") ?: throw MissingFieldException("createdAt"),
+            durationSeconds = record.int("durationSeconds"),
+        )
+    }
+
+private fun certificate(record: Mapping.Record): Certificate? =
+    orSkip {
+        Certificate(
+            nativeId = record.required("nativeId"),
+            status = record.status("status", CertificateStatus.UNKNOWN),
+            hosts = record.textList("hosts").distinct(),
+            expiresAt = record.time("expiresAt"),
+        )
+    }
+
+private fun Mapping.Record.required(field: String): String = text(field) ?: throw MissingFieldException(field)

@@ -93,6 +93,12 @@ class ManifestProvider(
             ManifestKind.DNS_RECORD ->
                 snapshot.copy(dnsRecords = snapshot.dnsRecords + records.mapNotNull(binder::dnsRecord))
             ManifestKind.CI_RUN -> snapshot.copy(ciRuns = snapshot.ciRuns + records.mapNotNull(binder::ciRun))
+            ManifestKind.SERVER -> snapshot.copy(servers = snapshot.servers + records.mapNotNull(binder::server))
+            ManifestKind.BILLING ->
+                snapshot.copy(
+                    billing =
+                        records.firstNotNullOfOrNull(binder::billing) ?: snapshot.billing,
+                )
             ManifestKind.WORKER -> snapshot.copy(workers = snapshot.workers + records.mapNotNull(binder::worker))
             ManifestKind.SERVICE -> {
                 val service = checkNotNull(resource.service) { "manifest was not validated" }

@@ -62,6 +62,13 @@ fun Value.asInt(): Int? =
         else -> null
     }
 
+fun Value.asDouble(): Double? =
+    when (this) {
+        is Value.Num -> literal.toDoubleOrNull()
+        is Value.Text -> value.trim().toDoubleOrNull()
+        else -> null
+    }
+
 fun Value.asInstant(): Instant? = (this as? Value.Time)?.value
 
 /** A list of strings: array items that are primitives, or a single text value as a one-item list. */

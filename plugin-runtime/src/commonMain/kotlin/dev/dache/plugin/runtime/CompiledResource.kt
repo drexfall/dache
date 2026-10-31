@@ -38,6 +38,9 @@ internal class RequestedField(
 /** What pages call a resource: its service id, or its kind name. */
 internal val ResourceSpec.key: String get() = service?.id ?: kind
 
+/** Whether the resource is shown on a page. Billing isn't: it belongs to the account's dashboard. */
+internal val ResourceSpec.onPages: Boolean get() = ManifestKind.named(kind)?.resourceKind != null
+
 /** The token permissions a resource's requests need, its nested ones included. */
 internal val ResourceSpec.permissions: List<String>
     get() = listOfNotNull(permission) + fields.values.mapNotNull { (it as? FieldSpec.Nested)?.permission }

@@ -13,4 +13,7 @@ enum class Capability {
 
     /** [ServiceResource]s: storage, queues, tunnels and anything else a plugin describes itself. */
     SERVICES,
+
+    /** Account spend and balance, shown on the account's dashboard rather than a page. */
+    BILLING,
 }

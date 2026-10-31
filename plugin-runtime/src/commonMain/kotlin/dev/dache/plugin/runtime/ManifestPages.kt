@@ -10,6 +10,7 @@ internal fun manifestPages(manifest: PluginManifest): List<ServicePage> {
     val resources = manifest.resources
     if (manifest.pages.isNotEmpty()) return manifest.pages.map { page(it.id, it.title, it.resources, resources) }
     return resources
+        .filter { it.onPages }
         .map { it.key }
         .distinct()
         .map { key ->

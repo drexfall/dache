@@ -56,6 +56,8 @@ class Mapping(
 
         fun int(field: String): Int? = value(field)?.asInt()
 
+        fun number(field: String): Double? = value(field)?.asDouble()
+
         fun time(field: String): Instant? = value(field)?.asInstant()
 
         /** The status name [field]'s provider value maps to; null when it is missing or not in the statusMap. */

@@ -85,7 +85,11 @@ internal object PageRules {
 
     private fun pages(manifest: PluginManifest): List<ManifestProblem> {
         if (manifest.pages.isEmpty()) return emptyList()
-        val keys = manifest.resources.map { it.key }.toSet()
+        val keys =
+            manifest.resources
+                .filter { it.onPages }
+                .map { it.key }
+                .toSet()
         val problems = mutableListOf<ManifestProblem>()
         manifest.pages.forEachIndexed { index, page ->
             val path = "pages[$index]"

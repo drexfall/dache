@@ -4,6 +4,7 @@ import dev.dache.core.model.Capability
 import dev.dache.core.model.CertificateStatus
 import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.ResourceKind
+import dev.dache.core.model.ServerStatus
 import dev.dache.core.model.ServiceStatus
 
 enum class FieldType {
@@ -13,6 +14,9 @@ enum class FieldType {
     /** Must end in the `date` pipe. */
     TIME,
     INT,
+
+    /** A decimal, as a number or numeric text, e.g. an amount of money. */
+    NUMBER,
 
     /** Mapped through the record's statusMap to one of the field's `statuses`. */
     STATUS,
@@ -46,7 +50,8 @@ private fun status(
  */
 enum class ManifestKind(
     val kindName: String,
-    val resourceKind: ResourceKind,
+    /** Null for what isn't a resource, like billing, which belongs to the whole account. */
+    val resourceKind: ResourceKind?,
     val capability: Capability,
     val fields: Map<String, FieldDef>,
 ) {
@@ -133,6 +138,33 @@ enum class ManifestKind(
                 "status" to status(DeployStatus.entries.toTypedArray()),
                 "createdAt" to time(required = true),
                 "durationSeconds" to FieldDef(FieldType.INT, required = false),
+            ),
+    ),
+    SERVER(
+        kindName = "server",
+        resourceKind = ResourceKind.SERVER,
+        capability = Capability.SERVERS,
+        fields =
+            mapOf(
+                "nativeId" to text(required = true),
+                "webUrl" to text(),
+                "name" to text(required = true),
+                "region" to text(required = true),
+                "status" to status(ServerStatus.entries.toTypedArray()),
+                "publicIpv4" to text(),
+            ),
+    ),
+
+    /** The account's spend. Only the first item counts, so the items path usually names the one object (`$`). */
+    BILLING(
+        kindName = "billing",
+        resourceKind = null,
+        capability = Capability.BILLING,
+        fields =
+            mapOf(
+                "currency" to text(required = true),
+                "monthToDateUsage" to FieldDef(FieldType.NUMBER, required = true),
+                "accountBalance" to FieldDef(FieldType.NUMBER, required = true),
             ),
     ),
     WORKER(

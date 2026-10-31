@@ -37,5 +37,5 @@ val Capability.kind: ResourceKind?
             Capability.SERVERS -> ResourceKind.SERVER
             Capability.WORKERS -> ResourceKind.WORKER
             Capability.MONITORS -> ResourceKind.MONITOR
-            Capability.DEPLOYMENTS, Capability.SERVICES -> null
+            Capability.DEPLOYMENTS, Capability.SERVICES, Capability.BILLING -> null
         }
