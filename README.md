@@ -92,6 +92,8 @@ Besides the bundled plugins, the app installs plugins from the signed registry (
 
 Once a day the app checks the registry and installs updates that keep a plugin's hosts and auth. An update that changes either waits for the user to approve it again.
 
+**Plugins** in the sidebar lists the plugins in use (built in, from the registry, or from a link or file), updates, and registry plugins not installed yet. Installing shows a consent screen first: the hosts the plugin contacts (an update marks new ones), how it sends the token, what it asks for and shows, its publisher, and whether the registry verified it. Plugins from a link or file need **Install from outside the registry** switched on, are marked unverified, and need an extra confirmation.
+
 ## Layouts
 
 The layout follows window width, not platform, so a narrow desktop window gets the phone UI.

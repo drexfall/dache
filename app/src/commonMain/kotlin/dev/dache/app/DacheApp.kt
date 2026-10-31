@@ -40,6 +40,8 @@ import dev.dache.app.navigation.accountId
 import dev.dache.app.navigation.openResource
 import dev.dache.app.navigation.sidebarEntry
 import dev.dache.app.overview.OverviewScreen
+import dev.dache.app.plugins.PluginsScreen
+import dev.dache.app.plugins.PluginsViewModel
 import dev.dache.app.resource.ResourceScreen
 import dev.dache.app.security.AppLockCard
 import dev.dache.app.security.AppLockController
@@ -225,6 +227,12 @@ private fun DacheContent(
                                     onNavigate = { destination = it },
                                 )
                             }
+                        Destination.Plugins -> {
+                            val pluginsViewModel =
+                                viewModel { PluginsViewModel(container.plugins, container.registryClient) }
+                            val pluginsState by pluginsViewModel.state.collectAsStateWithLifecycle()
+                            PluginsScreen(pluginsViewModel, pluginsState, onOpenMenu)
+                        }
                         Destination.ManageAccounts ->
                             AccountsScreen(
                                 accounts = accountsState.accounts,

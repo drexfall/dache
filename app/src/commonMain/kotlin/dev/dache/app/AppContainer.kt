@@ -33,6 +33,8 @@ class AppContainer(
 ) {
     private val httpClient = createPluginHttpClient()
 
+    val registryClient = RegistryClient(httpClient)
+
     // Starts with the bundled plugins but isn't ready until installed ones are loaded over them.
     private val catalog =
         ProviderCatalog(BundledPlugins.providers(vault, httpClient, requestLogger), ready = false)
@@ -41,7 +43,7 @@ class AppContainer(
         PluginManager(
             store = pluginStore,
             catalog = catalog,
-            registry = RegistryClient(httpClient),
+            registry = registryClient,
             bundled = BundledPlugins.manifests,
             providerFor = { ManifestProvider(it, vault = vault, client = httpClient, logger = requestLogger) },
         ).apply { start(scope) }

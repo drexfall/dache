@@ -50,6 +50,12 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
         }
+        androidMain.dependencies {
+            implementation(libs.androidx.activity.compose)
+        }
+        jvmTest.dependencies {
+            implementation(libs.ktor.client.mock)
+        }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)

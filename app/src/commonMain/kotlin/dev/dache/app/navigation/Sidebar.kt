@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
@@ -34,6 +35,7 @@ import dev.dache.app.resources.nav_add_account
 import dev.dache.app.resources.nav_manage_accounts
 import dev.dache.app.resources.nav_no_accounts
 import dev.dache.app.resources.nav_overview
+import dev.dache.app.resources.nav_plugins
 import dev.dache.app.resources.nav_problems
 import dev.dache.app.resources.nav_refresh_failed
 import dev.dache.app.service.pageTitle
@@ -135,6 +137,12 @@ fun Sidebar(
             icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
             selected = current == Destination.ManageAccounts,
             onClick = { onSelect(Destination.ManageAccounts) },
+        )
+        NavigationDrawerItem(
+            label = { Text(stringResource(Res.string.nav_plugins)) },
+            icon = { Icon(Icons.Filled.Build, contentDescription = null) },
+            selected = current == Destination.Plugins,
+            onClick = { onSelect(Destination.Plugins) },
         )
     }
 }

@@ -15,6 +15,9 @@ sealed interface Destination {
 
     data object ManageAccounts : Destination
 
+    /** Plugins in use, the registry and sideloading. */
+    data object Plugins : Destination
+
     /** One of an account's pages beside its dashboard, such as DNS, named by the provider's page id. */
     data class Service(
         val accountId: String,
@@ -60,7 +63,7 @@ val Destination.accountId: String?
             is Destination.Service -> accountId
             is Destination.AccountSettings -> accountId
             is Destination.Resource -> ref.accountId
-            Destination.Overview, Destination.ManageAccounts -> null
+            Destination.Overview, Destination.ManageAccounts, Destination.Plugins -> null
         }
 
 /** Opens [ref] from this page. A resource already on the trail is gone back to, so linked loops don't pile up. */
@@ -77,6 +80,7 @@ private fun Destination.tokens(): List<String> =
     when (this) {
         Destination.Overview -> listOf("overview")
         Destination.ManageAccounts -> listOf("accounts")
+        Destination.Plugins -> listOf("plugins")
         is Destination.Account -> listOf("account", accountId)
         is Destination.Service -> listOf("service", accountId, pageId)
         is Destination.AccountSettings -> listOf("settings", accountId)
@@ -91,6 +95,7 @@ private fun decode(tokens: List<String>): Destination {
         destination =
             when (rest.removeFirst()) {
                 "accounts" -> Destination.ManageAccounts
+                "plugins" -> Destination.Plugins
                 "account" -> Destination.Account(rest.removeFirst())
                 "service" -> Destination.Service(rest.removeFirst(), rest.removeFirst())
                 "settings" -> Destination.AccountSettings(rest.removeFirst())

@@ -27,6 +27,7 @@ import dev.dache.app.resources.breadcrumb_current
 import dev.dache.app.resources.breadcrumb_settings
 import dev.dache.app.resources.nav_manage_accounts
 import dev.dache.app.resources.nav_overview
+import dev.dache.app.resources.nav_plugins
 import dev.dache.app.service.pageTitle
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.model.ProviderId
@@ -101,6 +102,7 @@ private fun crumbLabel(
     when (destination) {
         Destination.Overview -> stringResource(Res.string.nav_overview)
         Destination.ManageAccounts -> stringResource(Res.string.nav_manage_accounts)
+        Destination.Plugins -> stringResource(Res.string.nav_plugins)
         is Destination.Account ->
             state.accounts
                 .firstOrNull { it.id == destination.accountId }

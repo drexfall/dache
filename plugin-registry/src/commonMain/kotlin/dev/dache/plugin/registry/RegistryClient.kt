@@ -84,6 +84,15 @@ class RegistryClient(
             VerifiedManifest(manifest, bytes.decodeToString(), digest)
         }
 
+    /** A manifest from a link, for sideloading. HTTPS only, and no bigger than any real manifest. */
+    suspend fun download(url: String): Result<String> =
+        attempt {
+            if (!url.trim().startsWith("https://")) throw RegistryException("Links must start with https://.")
+            val bytes = fetch(url.trim())
+            if (bytes.size > MAX_MANIFEST_BYTES) throw RegistryException("That file is too large to be a plugin.")
+            bytes.decodeToString()
+        }
+
     private suspend fun fetch(url: String): ByteArray {
         val response = client.get(url)
         if (!response.status.isSuccess()) {
@@ -106,6 +115,9 @@ class RegistryClient(
         }
 
     companion object {
+        /** Bundled manifests are under 20 KB; a hundred times that is no plugin. */
+        const val MAX_MANIFEST_BYTES = 2_000_000
+
         /** Parses and validates a manifest, naming it [label] in the error. */
         fun load(
             json: String,
