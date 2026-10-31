@@ -29,6 +29,7 @@ import dev.dache.app.ui.components.deployStatusLabel
 import dev.dache.app.ui.components.monitorStatusLabel
 import dev.dache.app.ui.components.rememberValueFormats
 import dev.dache.app.ui.components.serverStatusLabel
+import dev.dache.app.ui.components.serviceStatusLabel
 import dev.dache.core.dashboard.StatusEvent
 import dev.dache.core.dashboard.dailyStatusCounts
 import dev.dache.core.dashboard.latestPerWorkflow
@@ -36,6 +37,7 @@ import dev.dache.core.dashboard.median
 import dev.dache.core.model.MonitorStatus
 import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.ServerStatus
+import dev.dache.core.model.ServiceStatus
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Instant
 
@@ -85,6 +87,7 @@ fun accountStats(
                 ),
             )
         }
+        addAll(serviceStats(snapshot))
         if (snapshot.dnsRecords.isNotEmpty()) {
             add(
                 Stat(
@@ -223,6 +226,24 @@ private fun serverStat(snapshot: ProviderSnapshot): Stat =
         caption = stringResource(Res.string.stat_of_total, snapshot.servers.size),
         details = snapshot.servers.map { StatDetail(it.name, serverStatusLabel(it.status)) },
     )
+
+/** One count per plugin-described service, named as the plugin names it. */
+@Composable
+private fun serviceStats(snapshot: ProviderSnapshot): List<Stat> =
+    snapshot.services.groupBy { it.serviceLabel }.map { (label, items) ->
+        Stat(
+            label = label,
+            value = items.size.toString(),
+            problem = items.any { it.status == ServiceStatus.DOWN },
+            details =
+                items.map {
+                    StatDetail(
+                        it.name,
+                        it.status?.let { status -> serviceStatusLabel(status) } ?: it.detail,
+                    )
+                },
+        )
+    }
 
 @Composable
 private fun monitorStats(

@@ -1,5 +1,6 @@
 package dev.dache.app.accounts
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
@@ -43,7 +44,10 @@ import dev.dache.app.ui.layout.PageScaffold
 import dev.dache.core.model.ConnectedAccount
 import org.jetbrains.compose.resources.stringResource
 
-/** Lists connected accounts with remove. Adding goes through the shared add-account flow. */
+/**
+ * Lists connected accounts with remove; tapping one opens its settings. Adding goes through the shared
+ * add-account flow.
+ */
 @Composable
 fun AccountsScreen(
     accounts: List<ConnectedAccount>,
@@ -52,6 +56,7 @@ fun AccountsScreen(
     onOpenMenu: (() -> Unit)?,
     onAddAccount: () -> Unit,
     onRemove: (ConnectedAccount) -> Unit,
+    onOpenSettings: (ConnectedAccount) -> Unit,
     confirmExternalLinks: Boolean,
     onConfirmExternalLinksChange: (Boolean) -> Unit,
     /** Platform security preferences, e.g. the app lock where the device has a screen lock. */
@@ -93,6 +98,7 @@ fun AccountsScreen(
             Column {
                 accounts.forEach { account ->
                     ListItem(
+                        modifier = Modifier.clickable(role = Role.Button) { onOpenSettings(account) },
                         leadingContent = { ProviderAvatar(account.providerId) },
                         headlineContent = { Text(account.displayName) },
                         supportingContent = { Text(account.providerId.displayName) },

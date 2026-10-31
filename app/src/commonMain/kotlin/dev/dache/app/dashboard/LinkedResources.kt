@@ -16,14 +16,14 @@ import dev.dache.app.navigation.LocalAppNavigator
 import dev.dache.app.navigation.ProviderAvatar
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.detail_linked
-import dev.dache.app.resources.link_go_to_account
+import dev.dache.app.resources.link_open_resource
 import dev.dache.app.resources.open_in
 import dev.dache.app.ui.components.ExternalLinkButton
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.model.Resource
 import org.jetbrains.compose.resources.stringResource
 
-/** Linked resources as chips that navigate inside the app (forward arrow), unlike external links. */
+/** Linked resources as chips that open the resource's page inside the app (forward arrow), unlike external links. */
 @Composable
 fun LinkedResources(
     resource: Resource,
@@ -46,17 +46,13 @@ fun LinkedResources(
         linked.forEach { other ->
             val label = "${other.providerId.displayName} · ${other.displayName}"
             AssistChip(
-                onClick = { navigator.openAccount(other.accountId) },
+                onClick = { navigator.openResource(other.ref) },
                 label = { Text(label) },
                 leadingIcon = { ProviderAvatar(other.providerId, Modifier.size(20.dp)) },
                 trailingIcon = {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription =
-                            stringResource(
-                                Res.string.link_go_to_account,
-                                other.providerId.displayName,
-                            ),
+                        contentDescription = stringResource(Res.string.link_open_resource, label),
                         modifier = Modifier.size(16.dp),
                     )
                 },

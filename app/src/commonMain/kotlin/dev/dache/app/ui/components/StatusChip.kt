@@ -38,6 +38,7 @@ import dev.dache.core.model.CertificateStatus
 import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.MonitorStatus
 import dev.dache.core.model.ServerStatus
+import dev.dache.core.model.ServiceStatus
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -127,6 +128,22 @@ fun StatusChip(
             CertificateStatus.UNKNOWN -> StatusTone.UNKNOWN
         }
     StatusChip(tone, certificateStatusText(status), modifier)
+}
+
+@Composable
+fun StatusChip(
+    status: ServiceStatus,
+    modifier: Modifier = Modifier,
+) {
+    val tone =
+        when (status) {
+            ServiceStatus.HEALTHY -> StatusTone.SUCCESS
+            ServiceStatus.DEGRADED -> StatusTone.BUILDING
+            ServiceStatus.DOWN -> StatusTone.FAILED
+            ServiceStatus.INACTIVE -> StatusTone.CANCELLED
+            ServiceStatus.UNKNOWN -> StatusTone.UNKNOWN
+        }
+    StatusChip(tone, serviceStatusText(status), modifier)
 }
 
 @Composable

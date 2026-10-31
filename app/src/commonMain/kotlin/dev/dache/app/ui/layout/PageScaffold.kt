@@ -34,7 +34,8 @@ import org.jetbrains.compose.resources.stringResource
 
 /**
  * Shared page frame. Compact: menu button for the modal sidebar and pull to refresh. Expanded: the sidebar is
- * always visible, so no menu button, and a thin progress bar replaces the pull indicator.
+ * always visible, so no menu button, and a thin progress bar replaces the pull indicator. [header] sits under
+ * the app bar and stays put while the body scrolls.
  */
 @Composable
 fun PageScaffold(
@@ -44,6 +45,7 @@ fun PageScaffold(
     onOpenMenu: (() -> Unit)?,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    header: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
@@ -86,6 +88,7 @@ fun PageScaffold(
                         }
                     },
                 )
+                header?.invoke()
                 if (!compact && isRefreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
             }
         },

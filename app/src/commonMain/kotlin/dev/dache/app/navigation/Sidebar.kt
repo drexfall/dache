@@ -36,9 +36,13 @@ import dev.dache.app.resources.nav_no_accounts
 import dev.dache.app.resources.nav_overview
 import dev.dache.app.resources.nav_problems
 import dev.dache.app.resources.nav_refresh_failed
+import dev.dache.app.service.pageTitle
+import dev.dache.app.service.problemsOn
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.dashboard.DashboardSummary
 import dev.dache.core.model.ProviderId
+import dev.dache.core.model.ProviderSnapshot
+import dev.dache.core.model.ServicePage
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Clock
 
@@ -59,7 +63,7 @@ fun Sidebar(
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(start = 16.dp, bottom = 16.dp),
         )
-        val totalProblems = state.summary.problemCount()
+        val totalProblems = state.summary.problemCount
         NavigationDrawerItem(
             label = { Text(stringResource(Res.string.nav_overview)) },
             icon = { Icon(Icons.Filled.Home, contentDescription = null) },
@@ -85,7 +89,7 @@ fun Sidebar(
         val now = Clock.System.now()
         state.accounts.forEach { account ->
             val result = state.results.firstOrNull { it.account.id == account.id }
-            val problems = result?.snapshot?.let { DashboardSummary.from(listOf(it), now).problemCount() } ?: 0
+            val problems = result?.snapshot?.let { DashboardSummary.from(listOf(it), now).problemCount } ?: 0
             NavigationDrawerItem(
                 label = {
                     Column {
@@ -114,6 +118,10 @@ fun Sidebar(
                     }
                 },
             )
+            // The open account's pages, so moving between them is one tap.
+            if (current.accountId == account.id) {
+                ServicePageItems(account.id, state.pages(account.providerId), result?.snapshot, current, onSelect)
+            }
         }
         NavigationDrawerItem(
             label = { Text(stringResource(Res.string.nav_add_account)) },
@@ -127,6 +135,27 @@ fun Sidebar(
             icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
             selected = current == Destination.ManageAccounts,
             onClick = { onSelect(Destination.ManageAccounts) },
+        )
+    }
+}
+
+@Composable
+private fun ServicePageItems(
+    accountId: String,
+    pages: List<ServicePage>,
+    snapshot: ProviderSnapshot?,
+    current: Destination,
+    onSelect: (Destination) -> Unit,
+) {
+    val now = Clock.System.now()
+    pages.forEach { page ->
+        val destination = Destination.Service(accountId, page.id)
+        NavigationDrawerItem(
+            label = { Text(pageTitle(page), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            selected = current == destination,
+            onClick = { onSelect(destination) },
+            badge = { ProblemBadge(snapshot?.problemsOn(page, now) ?: 0) },
+            modifier = Modifier.padding(start = 40.dp),
         )
     }
 }
@@ -157,5 +186,3 @@ fun ProviderAvatar(
         )
     }
 }
-
-private fun DashboardSummary.problemCount(): Int = failingDeploys + downMonitors + expiringDomains + failedCiRuns

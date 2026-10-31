@@ -14,6 +14,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -24,27 +25,38 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.dache.app.account.AccountScreen
+import dev.dache.app.account.AccountSettingsScreen
 import dev.dache.app.accounts.AccountsScreen
 import dev.dache.app.accounts.AccountsViewModel
 import dev.dache.app.accounts.AddAccountFlow
+import dev.dache.app.accounts.TokenCheckState
 import dev.dache.app.dashboard.DashboardViewModel
 import dev.dache.app.navigation.AppNavigator
 import dev.dache.app.navigation.Destination
 import dev.dache.app.navigation.DestinationSaver
 import dev.dache.app.navigation.LocalAppNavigator
 import dev.dache.app.navigation.Sidebar
+import dev.dache.app.navigation.accountId
+import dev.dache.app.navigation.openResource
+import dev.dache.app.navigation.sidebarEntry
 import dev.dache.app.overview.OverviewScreen
+import dev.dache.app.resource.ResourceScreen
 import dev.dache.app.security.AppLockCard
 import dev.dache.app.security.AppLockController
 import dev.dache.app.security.LockAuthenticator
 import dev.dache.app.security.LockLoading
 import dev.dache.app.security.LockScreen
 import dev.dache.app.security.LockState
+import dev.dache.app.service.ServiceScreen
 import dev.dache.app.ui.components.ExternalLinkHost
 import dev.dache.app.ui.layout.EXPANDED_MIN_WIDTH
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
 import dev.dache.app.ui.theme.DacheTheme
+import dev.dache.core.dashboard.DashboardState
+import dev.dache.core.model.AccountSetting
+import dev.dache.core.model.ConnectedAccount
+import dev.dache.core.model.ResourceRef
 import dev.dache.core.settings.AppLockSettings
 import kotlinx.coroutines.launch
 
@@ -133,6 +145,7 @@ private fun DacheContent(
         }
     val state by dashboardViewModel.state.collectAsStateWithLifecycle()
     val accountsState by accountsViewModel.state.collectAsStateWithLifecycle()
+    val tokenChecks by accountsViewModel.tokenChecks.collectAsStateWithLifecycle()
     val confirmLinks by container.settingsStore.confirmExternalLinks.collectAsStateWithLifecycle(
         initialValue = true,
     )
@@ -142,11 +155,11 @@ private fun DacheContent(
     LaunchedEffect(accountsViewModel) {
         accountsViewModel.connected.collect { destination = Destination.Account(it.id) }
     }
-    // A removed account's page has nothing left to show.
-    val current = destination
-    if (current is Destination.Account &&
+    // A removed account's pages have nothing left to show.
+    val currentAccountId = destination.accountId
+    if (currentAccountId != null &&
         state.lastUpdated != null &&
-        state.accounts.none { it.id == current.accountId }
+        state.accounts.none { it.id == currentAccountId }
     ) {
         destination = Destination.Overview
     }
@@ -158,7 +171,7 @@ private fun DacheContent(
                 val sidebar: @Composable (onPicked: () -> Unit) -> Unit = { onPicked ->
                     Sidebar(
                         state = state,
-                        current = destination,
+                        current = destination.sidebarEntry,
                         onSelect = {
                             destination = it
                             onPicked()
@@ -179,13 +192,29 @@ private fun DacheContent(
                                 onConnectAccount = accountsViewModel::startAdding,
                                 onTryDemo = dashboardViewModel::loadDemoAccounts,
                             )
-                        is Destination.Account ->
+                        is Destination.Account, is Destination.Service, is Destination.AccountSettings ->
                             state.accounts.firstOrNull { it.id == target.accountId }?.let { account ->
-                                AccountScreen(
+                                AccountPage(
+                                    target = target,
                                     account = account,
+                                    state = state,
+                                    check = tokenChecks[account.id] ?: TokenCheckState(),
+                                    settings = { container.accountRepository.settings(account.providerId) },
+                                    onCheck = { accountsViewModel.checkAccount(account) },
+                                    onRefresh = dashboardViewModel::refresh,
+                                    onOpenMenu = onOpenMenu,
+                                    onNavigate = { destination = it },
+                                )
+                            }
+                        is Destination.Resource ->
+                            // Keyed so each page starts scrolled to the top.
+                            key(target) {
+                                ResourceScreen(
+                                    destination = target,
                                     state = state,
                                     onRefresh = dashboardViewModel::refresh,
                                     onOpenMenu = onOpenMenu,
+                                    onNavigate = { destination = it },
                                 )
                             }
                         Destination.ManageAccounts ->
@@ -196,6 +225,7 @@ private fun DacheContent(
                                 onOpenMenu = onOpenMenu,
                                 onAddAccount = accountsViewModel::startAdding,
                                 onRemove = accountsViewModel::remove,
+                                onOpenSettings = { destination = Destination.AccountSettings(it.id) },
                                 confirmExternalLinks = confirmLinks,
                                 onConfirmExternalLinksChange = container::setConfirmExternalLinks,
                                 securityCard = securityCard,
@@ -231,11 +261,48 @@ private fun DacheContent(
     }
 }
 
+/** An account's dashboard, one of its service pages, or its settings. [target] is one of those three. */
+@Composable
+private fun AccountPage(
+    target: Destination,
+    account: ConnectedAccount,
+    state: DashboardState,
+    check: TokenCheckState,
+    settings: () -> List<AccountSetting>,
+    onCheck: () -> Unit,
+    onRefresh: () -> Unit,
+    onOpenMenu: (() -> Unit)?,
+    onNavigate: (Destination) -> Unit,
+) {
+    when (target) {
+        is Destination.Service ->
+            // Keyed so each page starts scrolled to the top.
+            key(target) { ServiceScreen(target, account, state, onRefresh, onOpenMenu, onNavigate) }
+        is Destination.AccountSettings ->
+            AccountSettingsScreen(
+                destination = target,
+                account = account,
+                settings = settings(),
+                state = state,
+                check = check,
+                onCheck = onCheck,
+                onRefresh = onRefresh,
+                onOpenMenu = onOpenMenu,
+                onNavigate = onNavigate,
+            )
+        else -> AccountScreen(account, state, onRefresh, onOpenMenu, onNavigate)
+    }
+}
+
 private class StateNavigator(
     private val destination: MutableState<Destination>,
 ) : AppNavigator {
     override fun openAccount(accountId: String) {
         destination.value = Destination.Account(accountId)
+    }
+
+    override fun openResource(ref: ResourceRef) {
+        destination.value = destination.value.openResource(ref)
     }
 
     override fun openManageAccounts() {

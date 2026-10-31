@@ -164,6 +164,7 @@ private fun AddAccountForm(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+        TokenChecklist(state.check, state.provider.displayName)
         if (state.isValidating) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (state.sampleData) {
             Text(

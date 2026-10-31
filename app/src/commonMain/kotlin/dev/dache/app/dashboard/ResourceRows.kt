@@ -51,8 +51,9 @@ import dev.dache.core.model.Site
 import dev.dache.core.model.Worker
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Clock
+import kotlin.time.Instant
 
-private const val SEPARATOR = " · "
+internal const val SEPARATOR = " · "
 
 @Composable
 fun SiteRow(
@@ -95,12 +96,7 @@ fun DomainRow(
 ) {
     val now = Clock.System.now()
     val expiresAt = domain.expiresAt
-    val expiry =
-        if (expiresAt != null) {
-            stringResource(Res.string.domain_expires_in, (expiresAt - now).inWholeDays.toInt())
-        } else {
-            stringResource(Res.string.domain_no_expiry)
-        }
+    val expiry = domainExpiry(domain, now)
     val expiring = expiresAt != null && expiresAt - now <= DashboardSummary.EXPIRY_WINDOW
     val brokenCertificate =
         domain.certificates.firstOrNull {
@@ -119,6 +115,15 @@ fun DomainRow(
             }
         },
     ) { DomainDetails(domain, expiry) }
+}
+
+@Composable
+fun domainExpiry(
+    domain: Domain,
+    now: Instant,
+): String {
+    val expiresAt = domain.expiresAt ?: return stringResource(Res.string.domain_no_expiry)
+    return stringResource(Res.string.domain_expires_in, (expiresAt - now).inWholeDays.toInt())
 }
 
 @Composable
@@ -192,7 +197,7 @@ fun MonitorRow(
  * icon-marked button inside the details.
  */
 @Composable
-private fun ResourceRow(
+internal fun ResourceRow(
     resource: Resource,
     state: DashboardState,
     title: String,

@@ -3,8 +3,11 @@ package dev.dache.app
 import app.cash.turbine.test
 import dev.dache.app.accounts.AccountsViewModel
 import dev.dache.core.model.AccountSetting
+import dev.dache.core.model.PermissionCheck
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
+import dev.dache.core.model.TokenCheck
+import dev.dache.core.model.TokenPermission
 import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.provider.mock.MockProvider
 import kotlinx.coroutines.CoroutineScope
@@ -177,5 +180,74 @@ class AccountsViewModelTest {
                 cancelAndIgnoreRemainingEvents()
             }
             assertTrue(graph.vault.tokens.isEmpty())
+        }
+
+    /** Vercel, but its tokens lack a required permission. Records the tokens it is asked to check. */
+    private fun lackingPermission(
+        checked: MutableList<String>,
+    ): (InMemoryTokenVault) -> Map<ProviderId, DevOpsProvider> =
+        { vault ->
+            val mock = MockProvider(ProviderId.VERCEL, vault, latency = Duration.ZERO)
+            val provider =
+                object : DevOpsProvider by mock {
+                    override suspend fun checkToken(
+                        token: String,
+                        settings: Map<String, String>,
+                    ): Result<TokenCheck> {
+                        checked += token
+                        val permissions =
+                            listOf(
+                                PermissionCheck(TokenPermission("Projects Read", required = true), granted = false),
+                                PermissionCheck(TokenPermission("Storage Read", required = false), granted = true),
+                            )
+                        return Result.success(TokenCheck("acme", permissions))
+                    }
+                }
+            mapOf(ProviderId.VERCEL to provider)
+        }
+
+    @Test
+    fun theTokenIsCheckedOnceTypingPausesAndAMissingRequiredPermissionBlocksConnecting() =
+        runTest(dispatcher) {
+            val checked = mutableListOf<String>()
+            val graph =
+                TestGraph(CoroutineScope(backgroundScope.coroutineContext + dispatcher), lackingPermission(checked))
+            val viewModel = AccountsViewModel(graph.accounts, graph.dashboard)
+
+            viewModel.state.test {
+                viewModel.startAdding()
+                viewModel.selectProvider(ProviderId.VERCEL)
+                viewModel.updateToken("fake-token")
+                viewModel.updateToken("fake-token-123")
+                assertTrue(assertNotNull(expectMostRecentItem().addAccount).check.isChecking)
+
+                testScheduler.advanceUntilIdle()
+
+                val dialog = assertNotNull(expectMostRecentItem().addAccount)
+                assertEquals(listOf("fake-token-123"), checked)
+                assertEquals(true, dialog.check.result?.missingRequired)
+                assertFalse(dialog.canSubmit)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun aConnectedAccountIsCheckedWithItsStoredToken() =
+        runTest(dispatcher) {
+            val checked = mutableListOf<String>()
+            val graph =
+                TestGraph(CoroutineScope(backgroundScope.coroutineContext + dispatcher), lackingPermission(checked))
+            val viewModel = AccountsViewModel(graph.accounts, graph.dashboard)
+            val account = graph.accounts.connect(ProviderId.VERCEL, " fake-token-123 ").getOrThrow()
+
+            viewModel.tokenChecks.test {
+                viewModel.checkAccount(account)
+
+                val check = expectMostRecentItem().getValue(account.id)
+                assertFalse(check.isChecking)
+                assertEquals(listOf(false, true), check.result?.permissions?.map { it.granted })
+                cancelAndIgnoreRemainingEvents()
+            }
+            assertEquals(listOf("fake-token-123"), checked)
         }
 }

@@ -5,9 +5,11 @@ import dev.dache.app.resources.Res
 import dev.dache.app.resources.status_active
 import dev.dache.app.resources.status_building
 import dev.dache.app.resources.status_cancelled
+import dev.dache.app.resources.status_degraded
 import dev.dache.app.resources.status_down
 import dev.dache.app.resources.status_expired
 import dev.dache.app.resources.status_failed
+import dev.dache.app.resources.status_healthy
 import dev.dache.app.resources.status_inactive
 import dev.dache.app.resources.status_off
 import dev.dache.app.resources.status_paused
@@ -20,6 +22,8 @@ import dev.dache.core.model.CertificateStatus
 import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.MonitorStatus
 import dev.dache.core.model.ServerStatus
+import dev.dache.core.model.ServiceStatus
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 /** Text labels for statuses, for places where a chip would be too heavy. */
@@ -68,4 +72,16 @@ internal fun certificateStatusText(status: CertificateStatus) =
         CertificateStatus.FAILED -> Res.string.status_failed
         CertificateStatus.INACTIVE -> Res.string.status_inactive
         CertificateStatus.UNKNOWN -> Res.string.status_unknown
+    }
+
+@Composable
+fun serviceStatusLabel(status: ServiceStatus): String = stringResource(serviceStatusText(status))
+
+internal fun serviceStatusText(status: ServiceStatus): StringResource =
+    when (status) {
+        ServiceStatus.HEALTHY -> Res.string.status_healthy
+        ServiceStatus.DEGRADED -> Res.string.status_degraded
+        ServiceStatus.DOWN -> Res.string.status_down
+        ServiceStatus.INACTIVE -> Res.string.status_inactive
+        ServiceStatus.UNKNOWN -> Res.string.status_unknown
     }
