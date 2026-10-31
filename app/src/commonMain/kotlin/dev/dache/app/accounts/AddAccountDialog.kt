@@ -32,7 +32,6 @@ import dev.dache.app.resources.action_cancel
 import dev.dache.app.resources.action_connect
 import dev.dache.app.resources.action_create_token
 import dev.dache.app.resources.add_account_title
-import dev.dache.app.resources.demo_token_hint
 import dev.dache.app.resources.scope_cloudflare
 import dev.dache.app.resources.scope_digitalocean
 import dev.dache.app.resources.scope_github
@@ -166,13 +165,6 @@ private fun AddAccountForm(
         }
         TokenChecklist(state.check, state.provider.displayName, state.permissions)
         if (state.isValidating) LinearProgressIndicator(Modifier.fillMaxWidth())
-        if (state.sampleData) {
-            Text(
-                stringResource(Res.string.demo_token_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 

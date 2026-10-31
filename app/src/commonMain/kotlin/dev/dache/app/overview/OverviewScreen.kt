@@ -3,7 +3,6 @@ package dev.dache.app.overview
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
@@ -17,7 +16,6 @@ import dev.dache.app.dashboard.resourceSections
 import dev.dache.app.navigation.LocalAppNavigator
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.action_connect_account
-import dev.dache.app.resources.action_try_demo
 import dev.dache.app.resources.domain_expires_in
 import dev.dache.app.resources.overview_activity
 import dev.dache.app.resources.overview_empty_body
@@ -50,8 +48,6 @@ fun OverviewScreen(
     onRefresh: () -> Unit,
     onOpenMenu: (() -> Unit)?,
     onConnectAccount: () -> Unit,
-    /** Null when no provider serves sample data, so there is nothing to demo. */
-    onTryDemo: (() -> Unit)?,
 ) {
     PageScaffold(
         title = stringResource(Res.string.overview_title),
@@ -67,7 +63,6 @@ fun OverviewScreen(
                 body = stringResource(Res.string.overview_empty_body),
             ) {
                 Button(onClick = onConnectAccount) { Text(stringResource(Res.string.action_connect_account)) }
-                onTryDemo?.let { OutlinedButton(onClick = it) { Text(stringResource(Res.string.action_try_demo)) } }
             }
             return@PageScaffold
         }

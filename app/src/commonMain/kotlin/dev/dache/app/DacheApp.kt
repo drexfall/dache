@@ -141,18 +141,13 @@ private fun DacheContent(
 ) {
     val dashboardViewModel =
         viewModel {
-            DashboardViewModel(
-                container.dashboardRepository,
-                container.accountRepository,
-                container.sampleDataProviders,
-            )
+            DashboardViewModel(container.dashboardRepository)
         }
     val accountsViewModel =
         viewModel {
             AccountsViewModel(
                 container.accountRepository,
                 container.dashboardRepository,
-                container.sampleDataProviders,
             )
         }
     val state by dashboardViewModel.state.collectAsStateWithLifecycle()
@@ -202,10 +197,6 @@ private fun DacheContent(
                                 onRefresh = dashboardViewModel::refresh,
                                 onOpenMenu = onOpenMenu,
                                 onConnectAccount = accountsViewModel::startAdding,
-                                onTryDemo =
-                                    dashboardViewModel::loadDemoAccounts.takeIf {
-                                        container.sampleDataProviders.isNotEmpty()
-                                    },
                             )
                         is Destination.Account, is Destination.Service, is Destination.AccountSettings ->
                             state.accounts.firstOrNull { it.id == target.accountId }?.let { account ->

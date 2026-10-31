@@ -6,7 +6,6 @@ import dev.dache.core.account.AccountStore
 import dev.dache.core.dashboard.DashboardRepository
 import dev.dache.core.model.ProviderId
 import dev.dache.core.provider.DevOpsProvider
-import dev.dache.core.provider.mock.MockProvider
 import dev.dache.core.security.IntegrityWarningSettings
 import dev.dache.core.security.TokenVault
 import dev.dache.core.settings.AppLockSettings
@@ -28,13 +27,8 @@ class AppContainer(
     private val scope: CoroutineScope,
     requestLogger: RequestLogger = RequestLogger.None,
 ) {
-    private val pluginProviders = BundledPlugins.providers(vault, createPluginHttpClient(), requestLogger)
-
-    /** Providers without a plugin yet. They serve sample data, which is also what the demo connects. */
-    val sampleDataProviders: Set<ProviderId> = ProviderId.entries.toSet() - pluginProviders.keys
-
     private val providers: Map<ProviderId, DevOpsProvider> =
-        sampleDataProviders.associateWith { MockProvider(it, vault) } + pluginProviders
+        BundledPlugins.providers(vault, createPluginHttpClient(), requestLogger)
 
     val accountRepository = AccountRepository(accountStore, vault, providers)
     val dashboardRepository = DashboardRepository(accountRepository, providers, scope)

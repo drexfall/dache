@@ -32,7 +32,7 @@ class DashboardViewModelTest {
         runTest(dispatcher) {
             val graph = TestGraph(CoroutineScope(backgroundScope.coroutineContext + dispatcher))
 
-            val viewModel = DashboardViewModel(graph.dashboard, graph.accounts)
+            val viewModel = DashboardViewModel(graph.dashboard)
 
             assertNotNull(viewModel.state.value.lastUpdated)
             assertTrue(
@@ -42,13 +42,14 @@ class DashboardViewModelTest {
         }
 
     @Test
-    fun demoAccountsFillEveryProvider() =
+    fun oneAccountPerProviderFillsTheDashboard() =
         runTest(dispatcher) {
             val graph = TestGraph(CoroutineScope(backgroundScope.coroutineContext + dispatcher))
-            val viewModel = DashboardViewModel(graph.dashboard, graph.accounts)
+            val viewModel = DashboardViewModel(graph.dashboard)
 
             viewModel.state.test {
-                viewModel.loadDemoAccounts()
+                ProviderId.entries.forEach { graph.accounts.connect(it, "mock-token") }
+                viewModel.refresh()
                 val loaded = expectMostRecentItem()
                 assertEquals(6, loaded.results.size)
                 assertTrue(loaded.results.all { it.error == null })
@@ -57,20 +58,5 @@ class DashboardViewModelTest {
                 cancelAndIgnoreRemainingEvents()
             }
             assertEquals(6, graph.vault.tokens.size)
-        }
-
-    @Test
-    fun demoSkipsProvidersBackedByRealPlugins() =
-        runTest(dispatcher) {
-            val graph = TestGraph(CoroutineScope(backgroundScope.coroutineContext + dispatcher))
-            val sample = ProviderId.entries.toSet() - ProviderId.NETLIFY
-            val viewModel = DashboardViewModel(graph.dashboard, graph.accounts, sample)
-
-            viewModel.state.test {
-                viewModel.loadDemoAccounts()
-                val loaded = expectMostRecentItem()
-                assertEquals(sample, loaded.accounts.map { it.providerId }.toSet())
-                cancelAndIgnoreRemainingEvents()
-            }
         }
 }

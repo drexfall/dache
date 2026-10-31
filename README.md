@@ -2,7 +2,7 @@
 
 One dashboard for the hosting, DNS, CI, server and uptime services you use. Kotlin Multiplatform: Android and Linux desktop share one Compose UI.
 
-**Status: Phase 1c.** Netlify, Vercel, Cloudflare, GitHub, DigitalOcean and UptimeRobot are real: they run as declarative plugins through the manifest engine and talk to the provider's API with your token. `MockProvider` and its fictional "acme" org (`core/.../provider/mock/MockFixtures.kt`) remain for tests and serve any provider that has no plugin.
+**Status: Phase 1c.** Netlify, Vercel, Cloudflare, GitHub, DigitalOcean and UptimeRobot are real: they run as declarative plugins through the manifest engine and talk to the provider's API with your token. `MockProvider` and its fictional "acme" org (`core/.../provider/mock/MockFixtures.kt`) are for tests only.
 
 ## Modules
 
@@ -105,7 +105,5 @@ Every chart has a **Table** toggle with the same numbers.
 
 ## Trying it
 
-- On the empty overview, **Try with demo data** connects one account per provider that still serves sample data. Every bundled provider is real now, so the button is hidden.
 - Every provider needs a real token. Add it under **Manage accounts**. For a Vercel team, also enter the team slug (the part after `vercel.com/` on the team's dashboard); leave it blank for your personal account.
-- For sample-data providers, any token with 8+ characters is accepted. A token starting with `fail-` makes that account fail every refresh with a rate-limit error, so you can see how one provider failing looks.
 - Widgets: long-press the home screen → Widgets → Dache.

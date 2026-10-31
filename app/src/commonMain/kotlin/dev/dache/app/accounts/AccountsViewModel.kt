@@ -42,8 +42,6 @@ data class AddAccountState(
     val settingValues: Map<String, String> = emptyMap(),
     val isValidating: Boolean = false,
     val error: Throwable? = null,
-    /** The selected provider serves sample data and accepts any token. */
-    val sampleData: Boolean = false,
     /** Checked while the user types, so missing permissions show before connecting. */
     val check: TokenCheckState = TokenCheckState(),
     /** What the selected provider's token check reports on, listed before there is a token. */
@@ -60,8 +58,7 @@ data class AddAccountState(
     // The generated toString would print the token into any log or crash report that dumps the state.
     override fun toString(): String =
         "AddAccountState(provider=$provider, token=${if (token.isEmpty()) "" else "***"}, " +
-            "settingValues=$settingValues, isValidating=$isValidating, error=$error, sampleData=$sampleData, " +
-            "check=$check)"
+            "settingValues=$settingValues, isValidating=$isValidating, error=$error, check=$check)"
 }
 
 data class AccountsUiState(
@@ -72,7 +69,6 @@ data class AccountsUiState(
 class AccountsViewModel(
     private val accounts: AccountRepository,
     private val dashboard: DashboardRepository,
-    private val sampleDataProviders: Set<ProviderId> = ProviderId.entries.toSet(),
 ) : ViewModel() {
     private val addAccount = MutableStateFlow<AddAccountState?>(null)
     private val connectedEvents = MutableSharedFlow<ConnectedAccount>(extraBufferCapacity = 1)
@@ -150,7 +146,6 @@ class AccountsViewModel(
         permissions = accounts.tokenPermissions(provider),
         settingValues = emptyMap(),
         error = null,
-        sampleData = provider in sampleDataProviders,
     )
 
     fun submit() {

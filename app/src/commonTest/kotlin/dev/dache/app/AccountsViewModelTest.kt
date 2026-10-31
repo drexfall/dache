@@ -39,21 +39,6 @@ class AccountsViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
-    fun sampleDataHintFollowsTheSelectedProvider() =
-        runTest(dispatcher) {
-            val graph = TestGraph(CoroutineScope(backgroundScope.coroutineContext + dispatcher))
-            val viewModel = AccountsViewModel(graph.accounts, graph.dashboard, setOf(ProviderId.VERCEL))
-
-            viewModel.state.test {
-                viewModel.startAdding()
-                assertFalse(assertNotNull(expectMostRecentItem().addAccount).sampleData)
-                viewModel.selectProvider(ProviderId.VERCEL)
-                assertTrue(assertNotNull(expectMostRecentItem().addAccount).sampleData)
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
     fun rejectedTokenKeepsDialogOpenWithError() =
         runTest(dispatcher) {
             val graph = TestGraph(CoroutineScope(backgroundScope.coroutineContext + dispatcher))
