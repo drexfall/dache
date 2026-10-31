@@ -1,16 +1,18 @@
 // Generated with a throwaway test key; the matching private key is not kept anywhere.
 package dev.dache.plugin.registry
 
+// Whole manifests, so the class is large by design.
+@Suppress("LargeClass")
 internal object RegistryFixtures {
-    const val PUBLIC_KEY = "imbjNub4deu+IhvxaX5ALyyTTROGpA5QE2pqGSWwaOw="
+    const val PUBLIC_KEY = "QW5K8VWmcQeTgWyq6fXuCE+SFlfnxYvQQDK+BrmeBK0="
 
-    val NETLIFY_1_2_0 =
+    val NETLIFY_50_0_0 =
         """{
   "${'$'}schema": "../../schema/manifest.schema.json",
   "manifestVersion": 1,
   "id": "netlify",
   "name": "Netlify",
-  "version": "1.2.0",
+  "version": "50.0.0",
   "publisher": "Dache",
   "dashboardUrl": "https://app.netlify.com",
   "tokenUrl": "https://app.netlify.com/user/applications#personal-access-tokens",
@@ -160,6 +162,52 @@ internal object RegistryFixtures {
       }
     }
   ],
+  "status": {
+    "url": "https://www.netlifystatus.com/api/v2/summary.json",
+    "pageUrl": "https://www.netlifystatus.com",
+    "indicator": "status.indicator",
+    "description": "status.description",
+    "levelMap": {
+      "none": "OPERATIONAL",
+      "minor": "DEGRADED",
+      "major": "PARTIAL_OUTAGE",
+      "critical": "MAJOR_OUTAGE",
+      "maintenance": "MAINTENANCE"
+    },
+    "components": {
+      "items": "components",
+      "fields": {
+        "id": "id",
+        "name": "name",
+        "status": "status",
+        "parent": "group_id"
+      },
+      "statusMap": {
+        "operational": "OPERATIONAL",
+        "degraded_performance": "DEGRADED",
+        "partial_outage": "PARTIAL_OUTAGE",
+        "major_outage": "MAJOR_OUTAGE",
+        "under_maintenance": "MAINTENANCE"
+      }
+    },
+    "incidents": {
+      "items": "incidents",
+      "fields": {
+        "name": "name",
+        "status": "status",
+        "impact": "impact",
+        "updatedAt": "updated_at | date",
+        "url": "shortlink"
+      },
+      "statusMap": {
+        "none": "OPERATIONAL",
+        "minor": "DEGRADED",
+        "major": "PARTIAL_OUTAGE",
+        "critical": "MAJOR_OUTAGE",
+        "maintenance": "MAINTENANCE"
+      }
+    }
+  },
   "actions": [
     {
       "id": "trigger-deploy",
@@ -210,13 +258,13 @@ internal object RegistryFixtures {
   ]
 }"""
 
-    val NETLIFY_2_0_0 =
+    val NETLIFY_60_0_0 =
         """{
   "${'$'}schema": "../../schema/manifest.schema.json",
   "manifestVersion": 1,
   "id": "netlify",
   "name": "Netlify",
-  "version": "2.0.0",
+  "version": "60.0.0",
   "publisher": "Dache",
   "dashboardUrl": "https://app.netlify.com",
   "tokenUrl": "https://app.netlify.com/user/applications#personal-access-tokens",
@@ -367,6 +415,52 @@ internal object RegistryFixtures {
       }
     }
   ],
+  "status": {
+    "url": "https://www.netlifystatus.com/api/v2/summary.json",
+    "pageUrl": "https://www.netlifystatus.com",
+    "indicator": "status.indicator",
+    "description": "status.description",
+    "levelMap": {
+      "none": "OPERATIONAL",
+      "minor": "DEGRADED",
+      "major": "PARTIAL_OUTAGE",
+      "critical": "MAJOR_OUTAGE",
+      "maintenance": "MAINTENANCE"
+    },
+    "components": {
+      "items": "components",
+      "fields": {
+        "id": "id",
+        "name": "name",
+        "status": "status",
+        "parent": "group_id"
+      },
+      "statusMap": {
+        "operational": "OPERATIONAL",
+        "degraded_performance": "DEGRADED",
+        "partial_outage": "PARTIAL_OUTAGE",
+        "major_outage": "MAJOR_OUTAGE",
+        "under_maintenance": "MAINTENANCE"
+      }
+    },
+    "incidents": {
+      "items": "incidents",
+      "fields": {
+        "name": "name",
+        "status": "status",
+        "impact": "impact",
+        "updatedAt": "updated_at | date",
+        "url": "shortlink"
+      },
+      "statusMap": {
+        "none": "OPERATIONAL",
+        "minor": "DEGRADED",
+        "major": "PARTIAL_OUTAGE",
+        "critical": "MAJOR_OUTAGE",
+        "maintenance": "MAINTENANCE"
+      }
+    }
+  },
   "actions": [
     {
       "id": "trigger-deploy",
@@ -499,10 +593,10 @@ internal object RegistryFixtures {
     {
       "id": "netlify",
       "name": "Netlify",
-      "version": "1.2.0",
+      "version": "50.0.0",
       "publisher": "Dache",
-      "path": "plugins/netlify/1.2.0.json",
-      "sha256": "49cce001ac9da18cfe3a5d9f654bd12a4697ad129e42e358dc5a99caf30a8f45",
+      "path": "plugins/netlify/50.0.0.json",
+      "sha256": "34e984b17497522bd2bb83b0155895fdee8ac96727de47b40dd7292fb0ad079c",
       "hosts": [
         "api.netlify.com"
       ],
@@ -539,7 +633,7 @@ internal object RegistryFixtures {
   ]
 }"""
 
-    const val INDEX_10_SIG = "mF12rZHUhpPOKuazv4W2HWXN5pjWLUYwN5w9nf0GrO2/0oCh0jDMCm+SK7t6FoSm3reLjZ4p2pkkL5dQnRSpDg=="
+    const val INDEX_10_SIG = "0e+VTULxa7oa1UmT1EJLNkAAELdom9SQU6uoviAuzaqiXdSQQ3x//3dSC7+RB89f2Em5s7OwBcXA5rytojckAQ=="
 
     const val INDEX_20 =
         """{
@@ -549,10 +643,10 @@ internal object RegistryFixtures {
     {
       "id": "netlify",
       "name": "Netlify",
-      "version": "2.0.0",
+      "version": "60.0.0",
       "publisher": "Dache",
-      "path": "plugins/netlify/2.0.0.json",
-      "sha256": "72905cd19deaf23f525f796248f77863f37f5e2c2a2594270cc6fa2c18f1ab85",
+      "path": "plugins/netlify/60.0.0.json",
+      "sha256": "ac57b75373da76d9dbbeefbc230db02625054a154717a183359f71d037b312cd",
       "hosts": [
         "api.netlify.com",
         "uploads.netlify.com"
@@ -571,7 +665,7 @@ internal object RegistryFixtures {
   ]
 }"""
 
-    const val INDEX_20_SIG = "5ZgWAGl72EnooEAygivTa3FFQW29pNcYXchW6YG74DE9uZI11Gc3so5Jkf7L1FFEY1Ytw0g/jw/9AAIqVidqBA=="
+    const val INDEX_20_SIG = "85ZxDpkA+3+dlIuVIQzprXmozqBXIDX4ReNkfUKHKXX+4Td4ajqUSws2uww4CCCVGdwiCcLCiK9TZLVLjb4HDQ=="
 
     const val INDEX_5 =
         """{
@@ -600,5 +694,5 @@ internal object RegistryFixtures {
   ]
 }"""
 
-    const val INDEX_5_SIG = "FUaG+pn+KA9P5mzsCCA+I/XqZNAJVwm99hQO1utW2P3ab8lhe6z6+c3Z8cMY0ACl+rCimniNxnej/DIPb1aSAA=="
+    const val INDEX_5_SIG = "CCjOthzz6joHthBc1wIvqukDdkI6SseteSccnZX3gi72ABFF0nlei6x5VeXz5zUs1GGY/FtPFKOizjIIcxYvAw=="
 }

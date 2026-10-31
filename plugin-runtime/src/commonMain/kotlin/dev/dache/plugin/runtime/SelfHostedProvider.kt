@@ -10,6 +10,7 @@ import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
+import dev.dache.core.model.ProviderStatus
 import dev.dache.core.model.ServicePage
 import dev.dache.core.model.TokenCheck
 import dev.dache.core.model.TokenPermission
@@ -49,6 +50,9 @@ class SelfHostedProvider(
     override val pages: List<ServicePage> = reference.pages
     override val tokenPermissions: List<TokenPermission> get() = reference.tokenPermissions
     override val actions: List<ActionInfo> get() = reference.actions
+    override val hasStatus: Boolean get() = reference.hasStatus
+
+    override suspend fun fetchStatus(): Result<ProviderStatus> = reference.fetchStatus()
 
     override val accountSettings: List<AccountSetting> =
         listOf(

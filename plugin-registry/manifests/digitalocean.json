@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "digitalocean",
   "name": "DigitalOcean",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "Dache",
   "dashboardUrl": "https://cloud.digitalocean.com",
   "tokenUrl": "https://cloud.digitalocean.com/account/api/tokens",
@@ -131,6 +131,52 @@
       }
     }
   ],
+  "status": {
+    "url": "https://status.digitalocean.com/api/v2/summary.json",
+    "pageUrl": "https://status.digitalocean.com",
+    "indicator": "status.indicator",
+    "description": "status.description",
+    "levelMap": {
+      "none": "OPERATIONAL",
+      "minor": "DEGRADED",
+      "major": "PARTIAL_OUTAGE",
+      "critical": "MAJOR_OUTAGE",
+      "maintenance": "MAINTENANCE"
+    },
+    "components": {
+      "items": "components",
+      "fields": {
+        "id": "id",
+        "name": "name",
+        "status": "status",
+        "parent": "group_id"
+      },
+      "statusMap": {
+        "operational": "OPERATIONAL",
+        "degraded_performance": "DEGRADED",
+        "partial_outage": "PARTIAL_OUTAGE",
+        "major_outage": "MAJOR_OUTAGE",
+        "under_maintenance": "MAINTENANCE"
+      }
+    },
+    "incidents": {
+      "items": "incidents",
+      "fields": {
+        "name": "name",
+        "status": "status",
+        "impact": "impact",
+        "updatedAt": "updated_at | date",
+        "url": "shortlink"
+      },
+      "statusMap": {
+        "none": "OPERATIONAL",
+        "minor": "DEGRADED",
+        "major": "PARTIAL_OUTAGE",
+        "critical": "MAJOR_OUTAGE",
+        "maintenance": "MAINTENANCE"
+      }
+    }
+  },
   "actions": [
     {
       "id": "reboot",

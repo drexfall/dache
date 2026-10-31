@@ -11,6 +11,7 @@ import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
+import dev.dache.core.model.ProviderStatus
 import dev.dache.core.model.ServicePage
 import dev.dache.core.model.TokenCheck
 import dev.dache.core.model.TokenPermission
@@ -55,6 +56,12 @@ class ManifestProvider(
     private val resources = manifest.resources.map(::CompiledResource)
     private val checker = TokenChecker(lists, resources, manifest.validate.permission)
     private val executor = ActionExecutor(manifest, http)
+    private val status = manifest.status?.let { StatusReader(it, id, client) }
+
+    override val hasStatus: Boolean get() = status != null
+
+    override suspend fun fetchStatus(): Result<ProviderStatus> =
+        status?.let { reader -> attempt { reader.read() } } ?: super.fetchStatus()
 
     override val actions: List<ActionInfo> get() = executor.infos
 
@@ -102,7 +109,7 @@ class ManifestProvider(
         val snapshot =
             resources.fold(ProviderSnapshot()) { snapshot, resource ->
                 val fetched =
-                    readable(resource.optional) { records(resource, items(resource, context), context) }
+                    readable(resource.optional) { records(resource, lists.items(resource, context), context) }
                         .getOrElse { Fetched.unread(it, resource.permission) }
                 targets += ActionExecutor.index(resource.kind, fetched.records, resource.service?.id)
                 add(snapshot, resource, fetched.records, binder).let {
@@ -130,14 +137,6 @@ class ManifestProvider(
         account: ConnectedAccount,
         request: ActionRequest,
     ): Result<Unit> = attempt { executor.run(account, request, vault.tokenFor(account)) }
-
-    private suspend fun items(
-        resource: CompiledResource,
-        account: AccountContext,
-    ): List<JsonElement> {
-        val parents = resource.parents?.let { lists.fetch(it, account) } ?: return lists.fetch(resource.list, account)
-        return fanOut(parents) { parent -> lists.fetch(resource.list, account, parent) }.flatten()
-    }
 
     /**
      * The records, and the permissions of optional lists that weren't read: [missing] for the ones the token was
@@ -254,3 +253,12 @@ private suspend fun TokenVault.tokenFor(account: ConnectedAccount): String =
     get(account.tokenKey()) ?: throw ProviderError.Unauthorized()
 
 private const val DEFAULT_PORT = 443
+
+/** A resource's items: its list, or with `forEach`, its list once per parent. */
+private suspend fun ListFetcher.items(
+    resource: CompiledResource,
+    account: AccountContext,
+): List<JsonElement> {
+    val parents = resource.parents?.let { fetch(it, account) } ?: return fetch(resource.list, account)
+    return fanOut(parents) { parent -> fetch(resource.list, account, parent) }.flatten()
+}

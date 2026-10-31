@@ -27,6 +27,7 @@ import dev.dache.app.resources.summary_expiring_domains
 import dev.dache.app.resources.summary_failed_ci
 import dev.dache.app.resources.summary_failing_deploys
 import dev.dache.app.resources.updated_at
+import dev.dache.app.status.StatusBanner
 import dev.dache.app.ui.components.EmptyState
 import dev.dache.app.ui.components.relativeTime
 import dev.dache.app.ui.layout.AdaptiveGrid
@@ -68,6 +69,10 @@ fun OverviewScreen(
         }
         val now = state.lastUpdated ?: Clock.System.now()
         StatTiles(problemStats(state, now))
+        val navigator = LocalAppNavigator.current
+        StatusBanner(state.statuses.values) { status ->
+            state.accounts.firstOrNull { it.providerId == status.providerId }?.let { navigator.openAccount(it.id) }
+        }
         state.results.filter { it.error != null }.forEach { ProviderErrorCard(it, onRefresh) }
 
         val charts = activityCharts(state.snapshots, now)

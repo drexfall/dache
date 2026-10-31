@@ -6,6 +6,7 @@ import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
+import dev.dache.core.model.ProviderStatus
 import dev.dache.core.model.Resource
 import dev.dache.core.model.ResourceLink
 import dev.dache.core.model.ResourceRef
@@ -43,6 +44,8 @@ data class DashboardState(
     val isRefreshing: Boolean = false,
     /** Each provider's pages beside an account's dashboard. */
     val pages: Map<ProviderId, List<ServicePage>> = emptyMap(),
+    /** The public status of each provider in use that has a status page; the last one read survives a failure. */
+    val statuses: Map<ProviderId, ProviderStatus> = emptyMap(),
 ) {
     val snapshots: List<ProviderSnapshot> get() = results.mapNotNull { it.snapshot }
 
@@ -88,7 +91,7 @@ class DashboardRepository(
                 derive(
                     results,
                     state.lastUpdated,
-                ).copy(accounts = accounts, isRefreshing = state.isRefreshing, pages = pages)
+                ).copy(accounts = accounts, isRefreshing = state.isRefreshing, pages = pages, statuses = state.statuses)
             }
         }.stateIn(scope, SharingStarted.Eagerly, DashboardState())
 
@@ -99,11 +102,14 @@ class DashboardRepository(
         refreshLock.withLock {
             fetched.update { it.copy(isRefreshing = true) }
             val accounts = accountRepository.accounts.first()
-            val results =
+            val previous = fetched.value.statuses
+            val (results, statuses) =
                 coroutineScope {
-                    accounts.map { account -> async { fetch(account) } }.awaitAll()
+                    val results = accounts.map { account -> async { fetch(account) } }
+                    val statuses = accounts.map { it.providerId }.distinct().map { async { status(it) } }
+                    results.awaitAll() to statuses.awaitAll().filterNotNull().toMap()
                 }
-            fetched.value = derive(results, clock.now())
+            fetched.value = derive(results, clock.now()).copy(statuses = previous + statuses)
         }
     }
 
@@ -112,6 +118,19 @@ class DashboardRepository(
         refresh()
         refreshLock.withLock { }
         return fetched.value
+    }
+
+    /** The provider's public status, or null when it has none or it couldn't be read this time. */
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private suspend fun status(id: ProviderId): Pair<ProviderId, ProviderStatus>? {
+        val provider = catalog[id]?.takeIf { it.hasStatus } ?: return null
+        return try {
+            provider.fetchStatus().getOrNull()?.let { id to it }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
     }
 
     // A bug in one provider must never take down the whole overview, so anything it throws is contained here.

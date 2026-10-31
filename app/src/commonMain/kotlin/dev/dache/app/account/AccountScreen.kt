@@ -26,6 +26,7 @@ import dev.dache.app.resources.open_in
 import dev.dache.app.resources.overview_activity
 import dev.dache.app.resources.updated_at
 import dev.dache.app.service.serviceCards
+import dev.dache.app.status.ProviderStatusCard
 import dev.dache.app.ui.components.ExternalLinkButton
 import dev.dache.app.ui.components.relativeTime
 import dev.dache.app.ui.layout.AdaptiveGrid
@@ -88,6 +89,7 @@ fun AccountScreen(
         }
         val now = state.lastUpdated ?: Clock.System.now()
         StatTiles(accountStats(snapshot, now))
+        state.statuses[account.providerId]?.let { ProviderStatusCard(it) }
         val pages = state.pages(account.providerId)
         if (pages.isNotEmpty()) {
             val cards = serviceCards(pages, snapshot, now) { onNavigate(Destination.Service(account.id, it.id)) }

@@ -356,4 +356,22 @@
     <string name="error_untrusted_certificate">The server’s certificate isn’t trusted by this device.</string>
     <string name="trust_certificate_body">The server presented a certificate this device doesn’t trust, usually a self-signed one. Compare its SHA-256 fingerprint with the one on the server before trusting it. Dache will then accept only this certificate from the server.</string>
     <string name="action_trust_certificate">Trust this certificate</string>
+    <string name="page_range">%1$d–%2$d of %3$d</string>
+    <string name="page_previous">Previous page</string>
+    <string name="page_next">Next page</string>
+    <string name="status_title">%1$s status</string>
+    <string name="status_open_page">Status page</string>
+    <string name="status_incidents">Incidents</string>
+    <string name="status_components">Components</string>
+    <string name="status_group_counts">%1$d of %2$d impaired</string>
+    <string name="status_all_ok">All %1$d working</string>
+    <string name="status_ungrouped">Services</string>
+    <string name="status_level_operational">Operational</string>
+    <string name="status_level_maintenance">Maintenance</string>
+    <string name="status_level_degraded">Degraded</string>
+    <string name="status_level_partial">Partial outage</string>
+    <string name="status_level_major">Major outage</string>
+    <string name="status_level_unknown">Unknown</string>
+    <string name="status_banner">%1$s: %2$s</string>
+    <string name="status_checked">Checked %1$s</string>
 </resources>

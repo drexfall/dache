@@ -31,6 +31,7 @@ class PluginManagerTest {
     private var files = mapOf<String, String>()
     private val store = InMemoryPluginStore()
     private val catalog = ProviderCatalog(ready = false)
+    private val bundledNetlifyVersion = BundledPlugins.manifests.single { it.id == "netlify" }.version
 
     private fun serve(
         index: String,
@@ -40,8 +41,8 @@ class PluginManagerTest {
             mapOf(
                 "$base/index.json" to index,
                 "$base/index.json.sig" to signature,
-                "$base/plugins/netlify/1.2.0.json" to RegistryFixtures.NETLIFY_1_2_0,
-                "$base/plugins/netlify/2.0.0.json" to RegistryFixtures.NETLIFY_2_0_0,
+                "$base/plugins/netlify/50.0.0.json" to RegistryFixtures.NETLIFY_50_0_0,
+                "$base/plugins/netlify/60.0.0.json" to RegistryFixtures.NETLIFY_60_0_0,
                 "$base/plugins/example/0.1.0.json" to RegistryFixtures.EXAMPLE_0_1_0,
             )
     }
@@ -87,7 +88,7 @@ class PluginManagerTest {
 
             assertTrue(waiting.isEmpty())
             val netlify = manager.plugins.value.single { it.id == "netlify" }
-            assertEquals("1.2.0", netlify.manifest.version)
+            assertEquals("50.0.0", netlify.manifest.version)
             assertEquals(PluginSource.REGISTRY, netlify.source)
             assertEquals(
                 listOf("example"),
@@ -107,10 +108,10 @@ class PluginManagerTest {
             val waiting = manager.autoUpdate(manager.checkRegistry().getOrThrow())
             runCurrent()
 
-            assertEquals("2.0.0", waiting.single().entry.version)
+            assertEquals("60.0.0", waiting.single().entry.version)
             assertTrue(waiting.single().needsApproval)
             assertEquals(
-                "1.1.0",
+                bundledNetlifyVersion,
                 manager.plugins.value
                     .single { it.id == "netlify" }
                     .manifest.version,
@@ -121,7 +122,7 @@ class PluginManagerTest {
             manager.install(pending)
             runCurrent()
             assertEquals(
-                "2.0.0",
+                "60.0.0",
                 manager.plugins.value
                     .single { it.id == "netlify" }
                     .manifest.version,

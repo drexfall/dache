@@ -1,5 +1,6 @@
 package dev.dache.plugin.cli
 
+import dev.dache.plugin.api.ManifestJson
 import dev.dache.plugin.api.RegistryIndex
 import java.io.File
 import java.nio.file.Files
@@ -29,7 +30,7 @@ class RegistryTest {
         val index = RegistryIndex.decode(out.resolve(INDEX_FILE).readText())
         val entry = index.plugins.single()
         assertEquals(42, index.serial)
-        assertEquals("plugins/netlify/1.1.0.json", entry.path)
+        assertEquals("plugins/netlify/${ManifestJson.decode(netlify.readText()).version}.json", entry.path)
         assertEquals(listOf("api.netlify.com"), entry.hosts)
         assertContentEquals(netlify.readBytes(), out.resolve(entry.path).readBytes())
         assertEquals(sha256Hex(netlify.readBytes()), entry.sha256)

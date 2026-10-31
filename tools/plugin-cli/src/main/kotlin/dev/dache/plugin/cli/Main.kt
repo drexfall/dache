@@ -16,6 +16,7 @@ private val USAGE =
            dache-plugin test <manifest.json> --fixtures <dir> [--setting key=value]...
            dache-plugin run <manifest.json> --token-env <VAR> [--setting key=value]...
            dache-plugin schema
+           dache-plugin status <manifest.json>
            dache-plugin index <registry-dir> --out <dir> [--serial <n>]
            dache-plugin sign <file> --key-env <VAR>
            dache-plugin keygen <private-key-file>
@@ -28,17 +29,7 @@ private val USAGE =
 private const val FIXTURE_TOKEN = "fixture-token"
 
 fun main(args: Array<String>) {
-    val outcome =
-        when (args.firstOrNull()) {
-            "validate" -> args.drop(1).takeIf { it.isNotEmpty() }?.let(::validateAll)
-            "test" -> Arguments.parse(args.drop(1), "--fixtures")?.let(::test)
-            "schema" -> Outcome(schemaText(), ok = true).takeIf { args.size == 1 }
-            "run" -> Arguments.parse(args.drop(1), "--token-env")?.let { run(it, System::getenv) }
-            "index" -> index(args.drop(1))
-            "sign" -> Arguments.parse(args.drop(1), "--key-env")?.let { sign(it, System::getenv) }
-            "keygen" -> args.getOrNull(1)?.takeIf { args.size == 2 }?.let { generateKey(File(it)) }
-            else -> null
-        }
+    val outcome = command(args.firstOrNull(), args.drop(1))
     if (outcome == null) {
         System.err.println(USAGE)
         exitProcess(2)
@@ -46,6 +37,32 @@ fun main(args: Array<String>) {
     println(outcome.text)
     exitProcess(if (outcome.ok) 0 else 1)
 }
+
+/** The command [name] run with [rest], or null when they don't make a command. */
+private fun command(
+    name: String?,
+    rest: List<String>,
+): Outcome? =
+    when (name) {
+        "validate" -> rest.takeIf { it.isNotEmpty() }?.let(::validateAll)
+        "test" -> Arguments.parse(rest, "--fixtures")?.let(::test)
+        "schema" -> Outcome(schemaText(), ok = true).takeIf { rest.isEmpty() }
+        "run" -> Arguments.parse(rest, "--token-env")?.let { run(it, System::getenv) }
+        "index" -> index(rest)
+        "sign" -> Arguments.parse(rest, "--key-env")?.let { sign(it, System::getenv) }
+        else -> singleFileCommand(name, rest.singleOrNull())
+    }
+
+private fun singleFileCommand(
+    name: String?,
+    path: String?,
+): Outcome? =
+    when {
+        path == null -> null
+        name == "status" -> status(File(path), createPluginHttpClient())
+        name == "keygen" -> generateKey(File(path))
+        else -> null
+    }
 
 /** The schema as committed under `schema/`: two-space indent, so diffs stay readable. */
 @OptIn(ExperimentalSerializationApi::class)

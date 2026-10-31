@@ -45,7 +45,7 @@ suspend fun refresh(
 private fun Throwable.describe(): String =
     listOfNotNull(this::class.simpleName, cause?.let { "${it::class.simpleName}: ${it.message}" }).joinToString(" ")
 
-private class SingleTokenVault(
+internal class SingleTokenVault(
     private val key: TokenKey,
     private val token: String,
 ) : TokenVault {
@@ -57,4 +57,9 @@ private class SingleTokenVault(
     override suspend fun get(key: TokenKey): String? = token.takeIf { key == this.key }
 
     override suspend fun delete(key: TokenKey) = Unit
+
+    companion object {
+        /** Holds nothing, for reads that need no token. */
+        fun none() = SingleTokenVault(TokenKey("", ""), "")
+    }
 }

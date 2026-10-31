@@ -28,6 +28,8 @@ data class PluginManifest(
     val resources: List<ResourceSpec>,
     /** How the account's resources are split into pages. Without any, each kind and service gets its own. */
     val pages: List<PageSpec> = emptyList(),
+    /** The provider's public status page, read without the token. */
+    val status: StatusSpec? = null,
     /** For software people run themselves: each account names its own server. */
     val selfHosted: SelfHostedSpec? = null,
     /** Writes the plugin offers. Without any, the plugin only reads. */

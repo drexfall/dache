@@ -128,6 +128,7 @@ object ManifestValidator {
             }
             problems += limitProblems(manifest.limits)
             problems += selfHostedProblems(manifest)
+            problems += statusProblems(manifest.status)
             if (manifest.capabilities.isEmpty()) problem("capabilities", "declare at least one capability")
             manifest.capabilities.forEachIndexed { index, name ->
                 if (Capability.entries.none { it.name == name }) {

@@ -113,6 +113,14 @@ Once a day the app checks the registry and installs updates that keep a plugin's
 
 With the app lock's "hide names" option on, notifications say what kind of thing broke but not which.
 
+## Provider status
+
+Providers with a public status page (Cloudflare, GitHub, Netlify, Vercel, DigitalOcean) show it on each account's page: the overall level, active incidents, and every component by group, such as Cloudflare's 400-odd data centres by region, worst groups first. The overview shows a banner while any of them is impaired. Status pages are read without your token, from their own host only, on every refresh.
+
+## Pagination
+
+Every list (resources, chart tables, monitors, status components, plugins, accounts, recent changes) shows 10 rows at a time with previous/next controls.
+
 ## Actions
 
 Expanding a resource (or opening its page) shows the writes its plugin offers: trigger a Netlify deploy, redeploy or roll back a Vercel deployment, retry or roll back a Cloudflare Pages deployment, re-run a GitHub workflow, reboot or power-cycle a droplet, pause or resume an UptimeRobot monitor, and edit or delete DNS records on Cloudflare and DigitalOcean (delete only on Netlify). Every action goes through a review screen that shows each value before and after and the exact request, with the token redacted; nothing is sent before you confirm, and the dashboard refreshes afterwards. Destructive ones (deletes, power cycles, production rollbacks) are marked in red.

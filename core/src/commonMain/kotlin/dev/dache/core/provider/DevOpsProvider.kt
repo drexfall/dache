@@ -9,6 +9,7 @@ import dev.dache.core.model.Capability
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
+import dev.dache.core.model.ProviderStatus
 import dev.dache.core.model.ServicePage
 import dev.dache.core.model.TokenCheck
 import dev.dache.core.model.TokenPermission
@@ -50,6 +51,12 @@ interface DevOpsProvider {
     ): Result<TokenCheck> = validateCredentials(token, settings).map { TokenCheck(it.displayName, emptyList()) }
 
     suspend fun fetchSnapshot(account: ConnectedAccount): Result<ProviderSnapshot>
+
+    /** Whether [fetchStatus] has a public status page to read. */
+    val hasStatus: Boolean get() = false
+
+    /** The provider's public status, read without any account's token. */
+    suspend fun fetchStatus(): Result<ProviderStatus> = Result.failure(UnsupportedOperationException("no status page"))
 
     /** Writes this provider offers. Most offer none. */
     val actions: List<ActionInfo> get() = emptyList()

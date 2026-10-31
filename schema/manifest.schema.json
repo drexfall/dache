@@ -385,6 +385,9 @@
             "$ref": "#/$defs/PageSpec"
           }
         },
+        "status": {
+          "$ref": "#/$defs/StatusSpec"
+        },
         "selfHosted": {
           "$ref": "#/$defs/SelfHostedSpec"
         },
@@ -1082,6 +1085,66 @@
       "required": [
         "key",
         "label"
+      ],
+      "additionalProperties": false
+    },
+    "StatusListSpec": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "statusMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "items",
+        "fields"
+      ],
+      "additionalProperties": false
+    },
+    "StatusSpec": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "pageUrl": {
+          "type": "string"
+        },
+        "indicator": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "levelMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "components": {
+          "$ref": "#/$defs/StatusListSpec"
+        },
+        "incidents": {
+          "$ref": "#/$defs/StatusListSpec"
+        }
+      },
+      "required": [
+        "url",
+        "indicator",
+        "levelMap"
       ],
       "additionalProperties": false
     },

@@ -103,6 +103,24 @@ A plugin reads with GET only. Anything else is an action, declared under `action
 
 For software people run themselves, add `"selfHosted": { "label": "Coolify server", "hint": "coolify.example.com" }`, list only `"hosts": ["self.hosted"]`, and write every URL against `https://self.hosted`. Each account enters its own server (a hostname or IPv4 address, `:port` if it isn't 443); the engine swaps it in for that account only, so its token goes to that server and nowhere else. A server whose certificate the device trusts just works. A self-signed one fails with its SHA-256 fingerprint; the user can compare it with the server's and trust it, after which only that certificate is accepted from that server. Plain HTTP isn't supported. See `coolify.json` and `proxmox.json`.
 
+## Status page
+
+If the provider publishes a public status page, describe its API under `status`, and the app shows it on the account page, with a banner on the overview when something is impaired. The status URL is fetched without the token, from its own host only. For Atlassian Statuspage (Cloudflare, GitHub, Netlify, Vercel, DigitalOcean):
+
+```json
+"status": {
+  "url": "https://www.cloudflarestatus.com/api/v2/summary.json",
+  "pageUrl": "https://www.cloudflarestatus.com",
+  "indicator": "status.indicator", "description": "status.description",
+  "levelMap": { "none": "OPERATIONAL", "minor": "DEGRADED", "major": "PARTIAL_OUTAGE", "critical": "MAJOR_OUTAGE", "maintenance": "MAINTENANCE" },
+  "components": { "items": "components", "fields": { "id": "id", "name": "name", "status": "status", "parent": "group_id" },
+                  "statusMap": { "operational": "OPERATIONAL", "degraded_performance": "DEGRADED", "partial_outage": "PARTIAL_OUTAGE", "major_outage": "MAJOR_OUTAGE", "under_maintenance": "MAINTENANCE" } },
+  "incidents": { "items": "incidents", "fields": { "name": "name", "status": "status", "impact": "impact", "updatedAt": "updated_at | date", "url": "shortlink" }, "statusMap": { "none": "OPERATIONAL", "minor": "DEGRADED", "major": "PARTIAL_OUTAGE", "critical": "MAJOR_OUTAGE" } }
+}
+```
+
+`parent` names the group a component belongs to; components that are another's parent become groups, such as Cloudflare's regions holding its data centres. Check it with `dache-plugin status <manifest>`.
+
 ## Rate limits
 
 If the provider documents a request limit, declare it: `"limits": { "requestsPerMinute": 10 }`. The engine paces each account to it, and honours `Retry-After` and `X-RateLimit-Remaining`/`X-RateLimit-Reset` (or the IETF `RateLimit-*` names) on its own. `maxRequestsPerRefresh` (default 300, at most 2000) caps one refresh; a refresh that would need more fails instead of hammering the API.
