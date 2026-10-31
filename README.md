@@ -42,6 +42,8 @@ Debug request logging: debuggable Android builds log every plugin request to Log
 
 ## Plugins
 
+To write one, start with [docs/writing-a-plugin.md](docs/writing-a-plugin.md) and the template in `docs/plugin-template/`.
+
 A plugin is a JSON manifest, not code. It declares the exact hosts it may call (HTTPS only, checked on every request and redirect), where the token goes (`bearer`, a named `header`, or a `query` parameter), a request that validates the token, and for each resource the list endpoint, paging, and how fields map onto Dache's models:
 
 ```json

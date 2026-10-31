@@ -1,0 +1,6 @@
+{
+  "deployments": [
+    { "id": "d2", "state": "error", "branch": "main", "created_at": "2026-10-30T09:00:00Z" },
+    { "id": "d1", "state": "ready", "branch": "main", "created_at": "2026-10-29T09:00:00Z" }
+  ]
+}

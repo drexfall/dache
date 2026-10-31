@@ -1,0 +1,68 @@
+{
+  "$schema": "../../schema/manifest.schema.json",
+  "manifestVersion": 1,
+  "id": "example",
+  "name": "Example",
+  "version": "0.1.0",
+  "hosts": ["api.example.com"],
+  "auth": { "type": "bearer" },
+  "settings": [
+    { "key": "team", "label": "Team", "hint": "Leave blank for your personal account." }
+  ],
+  "capabilities": ["SITES", "DEPLOYMENTS", "SERVICES"],
+  "validate": {
+    "request": { "url": "https://api.example.com/v1/me" },
+    "displayName": "email | default:Example",
+    "permission": "Account read"
+  },
+  "resources": [
+    {
+      "kind": "site",
+      "permission": "Projects read",
+      "request": {
+        "url": "https://api.example.com/v1/projects",
+        "query": { "team": "{@team}" },
+        "paging": { "type": "page", "sizeParam": "per_page", "size": 50, "maxPages": 4 }
+      },
+      "items": "projects",
+      "fields": {
+        "nativeId": "id",
+        "name": "name",
+        "webUrl": "https://example.com/dashboard/{id}",
+        "primaryUrl": "url",
+        "customDomains": "domains.name",
+        "repoUrl": "repository.url",
+        "deployments": {
+          "request": { "url": "https://api.example.com/v1/projects/{id}/deployments", "query": { "limit": "5" } },
+          "from": "deployments",
+          "fields": {
+            "nativeId": "id",
+            "webUrl": "https://example.com/dashboard/{^.id}/deployments/{id}",
+            "status": "state",
+            "branch": "branch",
+            "createdAt": "created_at | date"
+          },
+          "statusMap": { "ready": "SUCCESS", "error": "FAILED", "building": "BUILDING", "canceled": "CANCELLED" }
+        }
+      }
+    },
+    {
+      "kind": "service",
+      "service": { "id": "bucket", "label": "Buckets" },
+      "permission": "Storage read",
+      "optional": true,
+      "request": { "url": "https://api.example.com/v1/buckets" },
+      "items": "buckets",
+      "fields": {
+        "nativeId": "id",
+        "name": "name",
+        "detail": "region",
+        "createdAt": "created_at | date"
+      }
+    }
+  ],
+  "pages": [
+    { "id": "projects", "title": "Projects", "resources": ["site"] },
+    { "id": "storage", "title": "Storage", "resources": ["bucket"] }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "projects": [
+    {
+      "id": "p1",
+      "name": "docs",
+      "url": "https://docs.example.com",
+      "domains": [{ "name": "docs.example.com" }],
+      "repository": { "url": "https://github.com/example/docs" }
+    },
+    { "id": "p2", "name": "shop", "url": "https://shop.example.com", "domains": [] }
+  ]
+}
