@@ -47,11 +47,25 @@ internal class ActionExecutor(
     val infos: List<ActionInfo> =
         manifest.actions.map { spec ->
             val onDeployments = spec.target == ActionRules.DEPLOYMENT
+            val service =
+                spec.target
+                    .takeIf {
+                        it.startsWith(
+                            ActionRules.SERVICE_PREFIX,
+                        )
+                    }?.removePrefix(ActionRules.SERVICE_PREFIX)
+            val kindName =
+                when {
+                    onDeployments -> ManifestKind.SITE.kindName
+                    service != null -> ManifestKind.SERVICE.kindName
+                    else -> spec.target
+                }
             ActionInfo(
                 id = spec.id,
                 label = spec.label,
-                kind = checkNotNull(ManifestKind.named(if (onDeployments) "site" else spec.target)?.resourceKind),
+                kind = checkNotNull(ManifestKind.named(kindName)?.resourceKind),
                 onDeployments = onDeployments,
+                service = service,
                 destructive = spec.destructive,
                 description = spec.description,
                 inputs =
@@ -213,15 +227,20 @@ internal class ActionExecutor(
                 "$target:${at.ref.nativeId}"
             }
 
-        /** Index entries for [records] of [kind]: each item, and for sites each deployment with its site as `^`. */
+        /**
+         * Index entries for [records] of [kind]: each item, and for sites each deployment with its site as `^`.
+         * A service's items are keyed by [service], the service's id, as actions target them.
+         */
         fun index(
             kind: ManifestKind,
             records: List<Mapping.Record>,
+            service: String? = null,
         ): Map<String, JsonElement> =
             records
                 .flatMap { record ->
                     val id = record.text("nativeId") ?: return@flatMap emptyList()
-                    val own = listOf("${kind.kindName}:$id" to record.item)
+                    val prefix = service?.let { ActionRules.SERVICE_PREFIX + it } ?: kind.kindName
+                    val own = listOf("$prefix:$id" to record.item)
                     val deployments =
                         if (kind == ManifestKind.SITE) {
                             record.records("deployments").mapNotNull { deploy ->

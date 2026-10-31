@@ -72,6 +72,7 @@ import dev.dache.core.model.ActionTarget
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.Resource
 import dev.dache.core.model.ResourceRef
+import dev.dache.core.model.ServiceResource
 import dev.dache.core.model.TokenPermission
 import dev.dache.core.security.IntegrityChecker
 import dev.dache.core.security.IntegritySignal
@@ -394,7 +395,13 @@ private class DashboardActionHost(
     override fun actionsFor(
         resource: Resource,
         onDeployments: Boolean,
-    ): List<ActionInfo> = container.actionService.actionsFor(resource.providerId, resource.kind, onDeployments)
+    ): List<ActionInfo> =
+        container.actionService.actionsFor(
+            resource.providerId,
+            resource.kind,
+            onDeployments,
+            (resource as? ServiceResource)?.service,
+        )
 
     override fun start(
         resource: Resource,

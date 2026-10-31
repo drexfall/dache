@@ -15,15 +15,17 @@ class ActionService(
     private val accounts: AccountRepository,
     private val dashboard: DashboardRepository,
 ) {
+    /** [service] narrows a service resource's actions to its own service. */
     fun actionsFor(
         providerId: ProviderId,
         kind: ResourceKind,
         onDeployments: Boolean,
+        service: String? = null,
     ): List<ActionInfo> =
         accounts.catalog[providerId]
             ?.actions
             .orEmpty()
-            .filter { it.kind == kind && it.onDeployments == onDeployments }
+            .filter { it.kind == kind && it.onDeployments == onDeployments && it.service == service }
 
     suspend fun defaults(
         account: ConnectedAccount,

@@ -17,6 +17,7 @@ internal class ActionRules(
     private val placeholders: PlaceholderRules,
 ) {
     private val producedKinds = manifest.resources.map { it.kind }.toSet()
+    private val serviceIds = manifest.resources.mapNotNull { it.service?.id }.toSet()
 
     fun check(): List<ManifestProblem> =
         manifest.actions.flatMapIndexed { index, action -> check("actions[$index]", action) }
@@ -54,14 +55,15 @@ internal class ActionRules(
     }
 
     private fun targetProduced(target: String): Boolean =
-        if (target == DEPLOYMENT) {
-            ManifestKind.SITE.kindName in producedKinds
-        } else {
-            ManifestKind.named(target)?.resourceKind != null && target in producedKinds
+        when {
+            target == DEPLOYMENT -> ManifestKind.SITE.kindName in producedKinds
+            target.startsWith(SERVICE_PREFIX) -> target.removePrefix(SERVICE_PREFIX) in serviceIds
+            target == ManifestKind.SERVICE.kindName -> false
+            else -> ManifestKind.named(target)?.resourceKind != null && target in producedKinds
         }
 
     private fun targetMessage(target: String): String =
-        "\"$target\" isn't a kind this plugin lists; use one of its resource kinds, or deployment for a site's"
+        "\"$target\" isn't a kind this plugin lists; use one of its kinds, deployment, or service:<id>"
 
     private fun inputProblems(
         path: String,
@@ -134,6 +136,7 @@ internal class ActionRules(
     companion object {
         const val DEPLOYMENT = "deployment"
         const val INPUT_PREFIX = "input."
+        const val SERVICE_PREFIX = "service:"
         val writeMethods = listOf("POST", "PUT", "PATCH", "DELETE")
         private val idPattern = Regex("[a-z][a-z0-9-]{0,39}")
         private val inputKey = Regex("[a-z][A-Za-z0-9_]{0,39}")

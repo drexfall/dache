@@ -1,14 +1,15 @@
 package dev.dache.core.model
 
 /**
- * A write a provider offers on resources of [kind] (or, with [onDeployments], on a site's deployments).
- * [destructive] ones need the device lock on top of the confirmation screen.
+ * A write a provider offers on resources of [kind] (or, with [onDeployments], on a site's deployments; with
+ * [service], on that service's items only). [destructive] ones need the device lock on top of the confirmation.
  */
 data class ActionInfo(
     val id: String,
     val label: String,
     val kind: ResourceKind,
     val onDeployments: Boolean,
+    val service: String? = null,
     val destructive: Boolean,
     val description: String?,
     val inputs: List<ActionInput>,

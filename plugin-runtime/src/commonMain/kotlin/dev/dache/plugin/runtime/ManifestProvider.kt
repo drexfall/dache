@@ -102,7 +102,7 @@ class ManifestProvider(
                 val fetched =
                     readable(resource.optional) { records(resource, items(resource, context), context) }
                         .getOrElse { Fetched.unread(it, resource.permission) }
-                targets += ActionExecutor.index(resource.kind, fetched.records)
+                targets += ActionExecutor.index(resource.kind, fetched.records, resource.service?.id)
                 add(snapshot, resource, fetched.records, binder).let {
                     it.copy(
                         missingPermissions = it.missingPermissions + fetched.missing,

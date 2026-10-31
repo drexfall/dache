@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "vercel",
   "name": "Vercel",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "Dache",
   "dashboardUrl": "https://vercel.com/dashboard",
   "tokenUrl": "https://vercel.com/account/tokens",
@@ -149,6 +149,38 @@
         "createdAt": "createdAt | millis",
         "updatedAt": "updatedAt | millis"
       }
+    },
+    {
+      "kind": "service",
+      "service": {
+        "id": "env",
+        "label": "Environment variables"
+      },
+      "forEach": {
+        "request": {
+          "url": "https://api.vercel.com/v10/projects",
+          "query": {
+            "slug": "{@team}"
+          },
+          "paging": { "type": "cursor", "param": "until", "next": "pagination.next", "sizeParam": "limit", "size": 100, "maxPages": 10 }
+        },
+        "items": "projects"
+      },
+      "request": {
+        "url": "https://api.vercel.com/v10/projects/{id}/env",
+        "query": {
+          "slug": "{@team}"
+        }
+      },
+      "items": "envs",
+      "permission": "Environment Variables Read",
+      "optional": true,
+      "fields": {
+        "nativeId": "id",
+        "name": "key",
+        "detail": "{^.name} · {type}",
+        "updatedAt": "updatedAt | millis"
+      }
     }
   ],
   "actions": [
@@ -183,10 +215,47 @@
           "slug": "{@team}"
         }
       }
+    },
+    {
+      "id": "edit-env",
+      "label": "Change value",
+      "target": "service:env",
+      "permission": "Environment Variables Write",
+      "description": "Sets a new value. Deployments pick it up when they next build.",
+      "inputs": [
+        {
+          "key": "value",
+          "label": "New value"
+        }
+      ],
+      "request": {
+        "url": "https://api.vercel.com/v9/projects/{^.id}/env/{id}",
+        "method": "PATCH",
+        "query": {
+          "slug": "{@team}"
+        }
+      },
+      "body": {
+        "value": "{input.value}"
+      }
+    },
+    {
+      "id": "delete-env",
+      "label": "Delete",
+      "target": "service:env",
+      "destructive": true,
+      "permission": "Environment Variables Write",
+      "request": {
+        "url": "https://api.vercel.com/v9/projects/{^.id}/env/{id}",
+        "method": "DELETE",
+        "query": {
+          "slug": "{@team}"
+        }
+      }
     }
   ],
   "pages": [
-    { "id": "projects", "title": "Projects", "resources": ["site"] },
+    { "id": "projects", "title": "Projects", "resources": ["site", "env"] },
     { "id": "domains", "title": "Domains", "resources": ["domain", "dnsRecord"] },
     { "id": "edge-config", "title": "Edge Config", "resources": ["edgeConfig"] }
   ]
