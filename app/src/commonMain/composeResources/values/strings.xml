@@ -335,4 +335,6 @@
     <string name="alerts_deploys">Failed deploys</string>
     <string name="alerts_monitors">Monitors going down</string>
     <string name="alerts_ci">Failed CI runs</string>
+    <string name="alerts_timer">Runs as the systemd user timer %1$s, also while Dache is closed.</string>
+    <string name="alerts_timer_failed">The systemd timer couldn’t be set up: %1$s</string>
 </resources>

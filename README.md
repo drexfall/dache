@@ -94,6 +94,15 @@ Once a day the app checks the registry and installs updates that keep a plugin's
 
 **Plugins** in the sidebar lists the plugins in use (built in, from the registry, or from a link or file), updates, and registry plugins not installed yet. Installing shows a consent screen first: the hosts the plugin contacts (an update marks new ones), how it sends the token, what it asks for and shows, its publisher, and whether the registry verified it. Plugins from a link or file need **Install from outside the registry** switched on, are marked unverified, and need an extra confirmation.
 
+## Background checks
+
+**Manage accounts → Background checks** refreshes every account on a schedule while Dache is closed and notifies about failed deploys, monitors going down and failed CI runs. The first check only records what is already wrong; after that each problem notifies once, and again only if it clears and comes back.
+
+- **Android:** WorkManager, every 15 minutes to 3 hours while online. Turning it on asks for the notification permission (Android 13+).
+- **Linux:** a systemd user timer, `~/.config/systemd/user/dache-check.timer`, runs `dache --check` (the same check, no window) and alerts through `notify-send`. Turning checks off disables and deletes the units. The check keeps what it already reported in `~/.local/share/dache/reported-alerts`, so it never writes the app's own settings file.
+
+With the app lock's "hide names" option on, notifications say what kind of thing broke but not which.
+
 ## Layouts
 
 The layout follows window width, not platform, so a narrow desktop window gets the phone UI.

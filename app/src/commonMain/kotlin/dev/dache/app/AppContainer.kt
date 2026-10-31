@@ -32,7 +32,7 @@ class AppContainer(
     val settingsStore: SettingsStore,
     val alertStore: AlertStore,
     pluginStore: PluginStore,
-    private val scope: CoroutineScope,
+    val scope: CoroutineScope,
     requestLogger: RequestLogger = RequestLogger.None,
 ) {
     private val httpClient = createPluginHttpClient()
