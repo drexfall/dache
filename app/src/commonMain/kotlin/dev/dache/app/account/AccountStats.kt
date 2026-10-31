@@ -38,6 +38,7 @@ import dev.dache.core.model.MonitorStatus
 import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.ServerStatus
 import dev.dache.core.model.ServiceStatus
+import dev.dache.core.model.TimedValue
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Instant
 
@@ -54,17 +55,7 @@ fun accountStats(
         if (snapshot.servers.isNotEmpty()) add(serverStat(snapshot))
         snapshot.billing?.let { billing ->
             val money = { value: Double -> formats.money(value, billing.currency) }
-            val total = billing.dailyCost.sumOf { it.value }
-            val spend =
-                listOf(
-                    StatDetail(stringResource(Res.string.stat_last_14_days_total), money(total)),
-                    StatDetail(
-                        stringResource(Res.string.stat_avg_per_day),
-                        money(
-                            total / billing.dailyCost.size.coerceAtLeast(1),
-                        ),
-                    ),
-                )
+            val spend = spendDetails(billing.dailyCost, money)
             add(Stat(stringResource(Res.string.stat_month_to_date), money(billing.monthToDateUsage), details = spend))
             add(Stat(stringResource(Res.string.stat_account_balance), money(billing.accountBalance), details = spend))
         }
@@ -226,6 +217,20 @@ private fun serverStat(snapshot: ProviderSnapshot): Stat =
         caption = stringResource(Res.string.stat_of_total, snapshot.servers.size),
         details = snapshot.servers.map { StatDetail(it.name, serverStatusLabel(it.status)) },
     )
+
+/** The last days' total and daily average, when the provider gives daily costs at all. */
+@Composable
+private fun spendDetails(
+    dailyCost: List<TimedValue>,
+    money: (Double) -> String,
+): List<StatDetail> {
+    if (dailyCost.isEmpty()) return emptyList()
+    val total = dailyCost.sumOf { it.value }
+    return listOf(
+        StatDetail(stringResource(Res.string.stat_last_14_days_total), money(total)),
+        StatDetail(stringResource(Res.string.stat_avg_per_day), money(total / dailyCost.size)),
+    )
+}
 
 /** One count per plugin-described service, named as the plugin names it. */
 @Composable

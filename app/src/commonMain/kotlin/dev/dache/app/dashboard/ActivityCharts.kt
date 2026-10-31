@@ -66,7 +66,8 @@ fun activityCharts(
         }
         if (monitors.any { it.dailyUptime.isNotEmpty() }) add { UptimeCard(monitors) }
         if (monitors.any { it.responseTimes.isNotEmpty() }) add { ResponseTimeCard(monitors) }
-        snapshots.mapNotNull { it.billing }.forEach { billing -> add { CostCard(billing) } }
+        // Some providers give spend as totals only; with no daily history there is nothing to chart.
+        snapshots.mapNotNull { it.billing }.filter { it.dailyCost.isNotEmpty() }.forEach { add { CostCard(it) } }
     }
 }
 
