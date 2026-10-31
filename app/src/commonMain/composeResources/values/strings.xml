@@ -277,7 +277,6 @@
     <string name="integrity_root_manager">A root manager app is installed</string>
     <string name="integrity_bootloader_unlocked">The bootloader is unlocked</string>
     <string name="integrity_unverified_boot">The boot chain isn’t verified</string>
-    <string name="action_continue">Continue</string>
     <string name="action_dont_show_again">Don’t show again</string>
     <string name="nav_plugins">Plugins</string>
     <string name="plugins_title">Plugins</string>
@@ -337,4 +336,16 @@
     <string name="alerts_ci">Failed CI runs</string>
     <string name="alerts_timer">Runs as the systemd user timer %1$s, also while Dache is closed.</string>
     <string name="alerts_timer_failed">The systemd timer couldn’t be set up: %1$s</string>
+    <string name="action_back">Back</string>
+    <string name="action_close">Close</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_run">%1$s</string>
+    <string name="action_review_title">Review: %1$s</string>
+    <string name="action_review_changes">Changes</string>
+    <string name="action_review_request">Request Dache will send</string>
+    <string name="action_permission">Needs the token permission %1$s.</string>
+    <string name="action_destructive_warning">This can’t be undone from Dache. You’ll confirm with your device lock.</string>
+    <string name="action_done_body">Done. The dashboard is refreshing to show the change.</string>
+    <string name="actions_heading">Actions</string>
+    <string name="actions_deployment">%1$s · %2$s</string>
 </resources>

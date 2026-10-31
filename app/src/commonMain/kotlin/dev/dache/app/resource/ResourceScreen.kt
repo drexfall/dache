@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dev.dache.app.actions.ResourceActions
 import dev.dache.app.dashboard.CiRunDetails
 import dev.dache.app.dashboard.CollapsibleSection
 import dev.dache.app.dashboard.DnsRecordDetails
@@ -147,6 +148,7 @@ private fun DetailsCard(
                 is Monitor -> MonitorDetails(resource)
                 is ServiceResource -> ServiceResourceDetails(resource)
             }
+            ResourceActions(resource)
         }
     }
 }

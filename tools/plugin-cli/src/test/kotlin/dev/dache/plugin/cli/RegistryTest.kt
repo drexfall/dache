@@ -29,7 +29,7 @@ class RegistryTest {
         val index = RegistryIndex.decode(out.resolve(INDEX_FILE).readText())
         val entry = index.plugins.single()
         assertEquals(42, index.serial)
-        assertEquals("plugins/netlify/1.0.0.json", entry.path)
+        assertEquals("plugins/netlify/1.1.0.json", entry.path)
         assertEquals(listOf("api.netlify.com"), entry.hosts)
         assertContentEquals(netlify.readBytes(), out.resolve(entry.path).readBytes())
         assertEquals(sha256Hex(netlify.readBytes()), entry.sha256)

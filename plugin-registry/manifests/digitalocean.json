@@ -3,11 +3,11 @@
   "manifestVersion": 1,
   "id": "digitalocean",
   "name": "DigitalOcean",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "Dache",
   "dashboardUrl": "https://cloud.digitalocean.com",
   "tokenUrl": "https://cloud.digitalocean.com/account/api/tokens",
-  "tokenHelp": "Use custom scopes for account, droplet, app, domain and billing. Without one of the last four, only that part stays empty.",
+  "tokenHelp": "Use custom scopes for account, droplet, app, domain and billing. Without one of the last four, only that part stays empty. Rebooting droplets and editing DNS need droplet:update, domain:update and domain:delete.",
   "hosts": ["api.digitalocean.com"],
   "auth": { "type": "bearer" },
   "capabilities": ["SERVERS", "SITES", "DEPLOYMENTS", "DOMAINS", "DNS", "BILLING"],
@@ -128,6 +128,77 @@
         "currency": "currency | default:USD",
         "monthToDateUsage": "month_to_date_usage",
         "accountBalance": "account_balance"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "reboot",
+      "label": "Reboot",
+      "target": "server",
+      "destructive": true,
+      "permission": "droplet:update",
+      "description": "Gracefully reboots the droplet.",
+      "request": {
+        "url": "https://api.digitalocean.com/v2/droplets/{id}/actions",
+        "method": "POST"
+      },
+      "body": {
+        "type": "reboot"
+      }
+    },
+    {
+      "id": "power-cycle",
+      "label": "Power cycle",
+      "target": "server",
+      "destructive": true,
+      "permission": "droplet:update",
+      "description": "Turns the droplet off and on again, like pulling the plug.",
+      "request": {
+        "url": "https://api.digitalocean.com/v2/droplets/{id}/actions",
+        "method": "POST"
+      },
+      "body": {
+        "type": "power_cycle"
+      }
+    },
+    {
+      "id": "edit-record",
+      "label": "Edit record",
+      "target": "dnsRecord",
+      "permission": "domain:update",
+      "inputs": [
+        {
+          "key": "data",
+          "label": "Value",
+          "default": "data"
+        },
+        {
+          "key": "ttl",
+          "label": "TTL (seconds)",
+          "type": "number",
+          "default": "ttl"
+        }
+      ],
+      "request": {
+        "url": "https://api.digitalocean.com/v2/domains/{^.name}/records/{id}",
+        "method": "PATCH"
+      },
+      "body": {
+        "type": "{type}",
+        "data": "{input.data}",
+        "ttl": "{input.ttl}"
+      }
+    },
+    {
+      "id": "delete-record",
+      "label": "Delete record",
+      "target": "dnsRecord",
+      "destructive": true,
+      "permission": "domain:delete",
+      "request": {
+        "url": "https://api.digitalocean.com/v2/domains/{^.name}/records/{id}",
+        "method": "DELETE"
       }
     }
   ],

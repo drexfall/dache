@@ -30,6 +30,10 @@ import dev.dache.app.accounts.AccountsScreen
 import dev.dache.app.accounts.AccountsViewModel
 import dev.dache.app.accounts.AddAccountFlow
 import dev.dache.app.accounts.TokenCheckState
+import dev.dache.app.actions.ActionDialog
+import dev.dache.app.actions.ActionHost
+import dev.dache.app.actions.ActionsViewModel
+import dev.dache.app.actions.LocalActionHost
 import dev.dache.app.alerts.BackgroundChecksCard
 import dev.dache.app.alerts.BackgroundChecksPlatform
 import dev.dache.app.dashboard.DashboardViewModel
@@ -63,7 +67,10 @@ import dev.dache.app.ui.theme.DacheTheme
 import dev.dache.core.alerts.AlertSettings
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.model.AccountSetting
+import dev.dache.core.model.ActionInfo
+import dev.dache.core.model.ActionTarget
 import dev.dache.core.model.ConnectedAccount
+import dev.dache.core.model.Resource
 import dev.dache.core.model.ResourceRef
 import dev.dache.core.model.TokenPermission
 import dev.dache.core.security.IntegrityChecker
@@ -102,6 +109,12 @@ fun DacheApp(
             }
         }
     }
+}
+
+@Composable
+private fun ActionDialogHost(viewModel: ActionsViewModel) {
+    val step by viewModel.state.collectAsStateWithLifecycle()
+    step?.let { ActionDialog(it, viewModel) }
 }
 
 @Composable
@@ -184,6 +197,7 @@ private fun DacheContent(
                 container.dashboardRepository,
             )
         }
+    val actionsViewModel = viewModel { ActionsViewModel(container.actionService) }
     val state by dashboardViewModel.state.collectAsStateWithLifecycle()
     val accountsState by accountsViewModel.state.collectAsStateWithLifecycle()
     val tokenChecks by accountsViewModel.tokenChecks.collectAsStateWithLifecycle()
@@ -208,7 +222,12 @@ private fun DacheContent(
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val formFactor = if (maxWidth >= EXPANDED_MIN_WIDTH) FormFactor.EXPANDED else FormFactor.COMPACT
-        CompositionLocalProvider(LocalFormFactor provides formFactor, LocalAppNavigator provides navigator) {
+        val actionHost = remember(state.accounts) { DashboardActionHost(container, state.accounts, actionsViewModel) }
+        CompositionLocalProvider(
+            LocalFormFactor provides formFactor,
+            LocalAppNavigator provides navigator,
+            LocalActionHost provides actionHost,
+        ) {
             ExternalLinkHost(confirm = confirmLinks, onStopAsking = { container.setConfirmExternalLinks(false) }) {
                 val sidebar: @Composable (onPicked: () -> Unit) -> Unit = { onPicked ->
                     Sidebar(
@@ -299,6 +318,7 @@ private fun DacheContent(
                     settingsStore = container.settingsStore,
                     onSave = container::setIntegrityWarning,
                 )
+                ActionDialogHost(actionsViewModel)
                 accountsState.addAccount?.let { addState ->
                     AddAccountFlow(
                         state = addState,
@@ -362,5 +382,26 @@ private class StateNavigator(
 
     override fun openManageAccounts() {
         destination.value = Destination.ManageAccounts
+    }
+}
+
+/** Offers each account's provider actions on its resources, and starts them in the shared dialog. */
+private class DashboardActionHost(
+    private val container: AppContainer,
+    private val accounts: List<ConnectedAccount>,
+    private val viewModel: ActionsViewModel,
+) : ActionHost {
+    override fun actionsFor(
+        resource: Resource,
+        onDeployments: Boolean,
+    ): List<ActionInfo> = container.actionService.actionsFor(resource.providerId, resource.kind, onDeployments)
+
+    override fun start(
+        resource: Resource,
+        action: ActionInfo,
+        target: ActionTarget,
+        targetName: String,
+    ) {
+        accounts.firstOrNull { it.id == resource.accountId }?.let { viewModel.start(it, action, target, targetName) }
     }
 }

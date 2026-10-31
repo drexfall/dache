@@ -40,7 +40,7 @@ class PluginManagerTest {
             mapOf(
                 "$base/index.json" to index,
                 "$base/index.json.sig" to signature,
-                "$base/plugins/netlify/1.1.0.json" to RegistryFixtures.NETLIFY_1_1_0,
+                "$base/plugins/netlify/1.2.0.json" to RegistryFixtures.NETLIFY_1_2_0,
                 "$base/plugins/netlify/2.0.0.json" to RegistryFixtures.NETLIFY_2_0_0,
                 "$base/plugins/example/0.1.0.json" to RegistryFixtures.EXAMPLE_0_1_0,
             )
@@ -87,7 +87,7 @@ class PluginManagerTest {
 
             assertTrue(waiting.isEmpty())
             val netlify = manager.plugins.value.single { it.id == "netlify" }
-            assertEquals("1.1.0", netlify.manifest.version)
+            assertEquals("1.2.0", netlify.manifest.version)
             assertEquals(PluginSource.REGISTRY, netlify.source)
             assertEquals(
                 listOf("example"),
@@ -110,7 +110,7 @@ class PluginManagerTest {
             assertEquals("2.0.0", waiting.single().entry.version)
             assertTrue(waiting.single().needsApproval)
             assertEquals(
-                "1.0.0",
+                "1.1.0",
                 manager.plugins.value
                     .single { it.id == "netlify" }
                     .manifest.version,

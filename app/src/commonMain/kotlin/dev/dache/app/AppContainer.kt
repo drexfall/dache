@@ -3,6 +3,7 @@ package dev.dache.app
 import dev.dache.app.security.AppLockController
 import dev.dache.core.account.AccountRepository
 import dev.dache.core.account.AccountStore
+import dev.dache.core.actions.ActionService
 import dev.dache.core.alerts.AlertSettings
 import dev.dache.core.alerts.AlertStore
 import dev.dache.core.alerts.BackgroundCheck
@@ -56,6 +57,7 @@ class AppContainer(
     val dashboardRepository = DashboardRepository(accountRepository, scope)
 
     val backgroundCheck = BackgroundCheck(dashboardRepository, alertStore)
+    val actionService = ActionService(accountRepository, dashboardRepository)
 
     /** Process-wide, so the lock outlives the activity and covers every way back into the app. */
     val appLock = AppLockController(settingsStore.appLock, scope)

@@ -3,11 +3,11 @@
   "manifestVersion": 1,
   "id": "github",
   "name": "GitHub",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "Dache",
   "dashboardUrl": "https://github.com",
   "tokenUrl": "https://github.com/settings/personal-access-tokens/new",
-  "tokenHelp": "Use a fine-grained token with Metadata, Actions and Deployments on the repos you pick. Without Actions or Deployments, only those pages stay empty.",
+  "tokenHelp": "Use a fine-grained token with Metadata, Actions and Deployments on the repos you pick. Without Actions or Deployments, only those pages stay empty. To re-run workflows, give Actions read and write.",
   "hosts": ["api.github.com"],
   "auth": { "type": "bearer" },
   "capabilities": ["CI", "SERVICES"],
@@ -101,6 +101,28 @@
         "detail": "ref",
         "createdAt": "created_at | date",
         "updatedAt": "updated_at | date"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "rerun",
+      "label": "Re-run",
+      "target": "ciRun",
+      "permission": "Actions (read and write)",
+      "request": {
+        "url": "https://api.github.com/repos/{^.owner.login}/{^.name}/actions/runs/{id}/rerun",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "rerun-failed",
+      "label": "Re-run failed jobs",
+      "target": "ciRun",
+      "permission": "Actions (read and write)",
+      "request": {
+        "url": "https://api.github.com/repos/{^.owner.login}/{^.name}/actions/runs/{id}/rerun-failed-jobs",
+        "method": "POST"
       }
     }
   ],

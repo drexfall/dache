@@ -113,6 +113,10 @@ Once a day the app checks the registry and installs updates that keep a plugin's
 
 With the app lock's "hide names" option on, notifications say what kind of thing broke but not which.
 
+## Actions
+
+Expanding a resource (or opening its page) shows the writes its plugin offers: trigger a Netlify deploy, redeploy or roll back a Vercel deployment, retry or roll back a Cloudflare Pages deployment, re-run a GitHub workflow, reboot or power-cycle a droplet, pause or resume an UptimeRobot monitor, and edit or delete DNS records on Cloudflare and DigitalOcean (delete only on Netlify). Every action goes through a review screen that shows each value before and after and the exact request, with the token redacted; nothing is sent before you confirm, and the dashboard refreshes afterwards. Destructive ones (deletes, power cycles, production rollbacks) are marked in red.
+
 ## Layouts
 
 The layout follows window width, not platform, so a narrow desktop window gets the phone UI.

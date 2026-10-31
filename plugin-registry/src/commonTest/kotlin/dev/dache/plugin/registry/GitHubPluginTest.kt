@@ -1,6 +1,8 @@
 package dev.dache.plugin.registry
 
 import dev.dache.core.account.tokenKey
+import dev.dache.core.model.ActionRequest
+import dev.dache.core.model.ActionTarget
 import dev.dache.core.model.Capability
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.DeployStatus
@@ -12,6 +14,7 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
@@ -40,6 +43,7 @@ class GitHubPluginTest {
                 val (status, body) =
                     when {
                         !authorized -> HttpStatusCode.Unauthorized to """{"message":"Bad credentials"}"""
+                        request.method == HttpMethod.Post -> HttpStatusCode.Created to "{}"
                         path in denied -> HttpStatusCode.Forbidden to FORBIDDEN
                         path == "/user" -> HttpStatusCode.OK to """{"login": "acme-dev", "id": 1}"""
                         path == "/user/repos" -> HttpStatusCode.OK to REPOS
@@ -55,6 +59,23 @@ class GitHubPluginTest {
             }
         return checkNotNull(BundledPlugins.providers(vault, createPluginHttpClient(engine))[ProviderId.GITHUB])
     }
+
+    @Test
+    fun aRunIsReRunInItsOwnRepository() =
+        runTest {
+            val github = github()
+            val run =
+                github
+                    .fetchSnapshot(account)
+                    .getOrThrow()
+                    .ciRuns
+                    .first()
+
+            github.runAction(account, ActionRequest("rerun", ActionTarget(run.ref))).getOrThrow()
+
+            val write = requests.single { it.method == HttpMethod.Post }
+            assertEquals("/repos/acme/app/actions/runs/${run.nativeId}/rerun", write.url.encodedPath)
+        }
 
     @Test
     fun bundledManifestLoads() {

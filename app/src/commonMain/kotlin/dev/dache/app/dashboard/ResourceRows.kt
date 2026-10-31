@@ -22,6 +22,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.dache.app.actions.ResourceActions
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.action_collapse
 import dev.dache.app.resources.action_expand
@@ -251,6 +252,7 @@ internal fun ResourceRow(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 details()
+                ResourceActions(resource)
                 LinkedResources(resource, state)
                 OpenInProviderButton(resource)
             }

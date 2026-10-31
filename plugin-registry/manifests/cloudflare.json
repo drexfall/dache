@@ -3,11 +3,11 @@
   "manifestVersion": 1,
   "id": "cloudflare",
   "name": "Cloudflare",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "Dache",
   "dashboardUrl": "https://dash.cloudflare.com",
   "tokenUrl": "https://dash.cloudflare.com/profile/api-tokens",
-  "tokenHelp": "Create a custom token with Account Settings, Zone, DNS, Cloudflare Pages and Workers Scripts. Add SSL and Certificates, R2, KV, D1, Queues and Cloudflare Tunnel to fill those pages too. The checklist below shows what the token can read.",
+  "tokenHelp": "Create a custom token with Account Settings, Zone, DNS, Cloudflare Pages and Workers Scripts. Add SSL and Certificates, R2, KV, D1, Queues and Cloudflare Tunnel to fill those pages too. The checklist below shows what the token can read. To edit DNS records and retry or roll back Pages deployments, add DNS Edit and Cloudflare Pages Edit.",
   "hosts": ["api.cloudflare.com"],
   "auth": { "type": "bearer" },
   "capabilities": ["DOMAINS", "DNS", "SITES", "DEPLOYMENTS", "WORKERS", "SERVICES"],
@@ -283,6 +283,75 @@
         "updatedAt": "conns_active_at | date"
       },
       "statusMap": { "healthy": "HEALTHY", "degraded": "DEGRADED", "down": "DOWN", "inactive": "INACTIVE" }
+    }
+  ],
+  "actions": [
+    {
+      "id": "edit-record",
+      "label": "Edit record",
+      "target": "dnsRecord",
+      "permission": "DNS Edit",
+      "inputs": [
+        {
+          "key": "content",
+          "label": "Content",
+          "default": "content"
+        },
+        {
+          "key": "ttl",
+          "label": "TTL (seconds, 1 = automatic)",
+          "type": "number",
+          "default": "ttl"
+        },
+        {
+          "key": "proxied",
+          "label": "Proxied through Cloudflare",
+          "type": "boolean",
+          "default": "proxied | default:false"
+        }
+      ],
+      "request": {
+        "url": "https://api.cloudflare.com/client/v4/zones/{^.id}/dns_records/{id}",
+        "method": "PATCH"
+      },
+      "body": {
+        "content": "{input.content}",
+        "ttl": "{input.ttl}",
+        "proxied": "{input.proxied}"
+      }
+    },
+    {
+      "id": "delete-record",
+      "label": "Delete record",
+      "target": "dnsRecord",
+      "destructive": true,
+      "permission": "DNS Edit",
+      "request": {
+        "url": "https://api.cloudflare.com/client/v4/zones/{^.id}/dns_records/{id}",
+        "method": "DELETE"
+      }
+    },
+    {
+      "id": "retry-deployment",
+      "label": "Retry",
+      "target": "deployment",
+      "permission": "Cloudflare Pages Edit",
+      "request": {
+        "url": "https://api.cloudflare.com/client/v4/accounts/{^.^.id}/pages/projects/{^.name}/deployments/{id}/retry",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "rollback-deployment",
+      "label": "Roll back to this",
+      "target": "deployment",
+      "destructive": true,
+      "permission": "Cloudflare Pages Edit",
+      "description": "Makes this deployment the project's production deployment again.",
+      "request": {
+        "url": "https://api.cloudflare.com/client/v4/accounts/{^.^.id}/pages/projects/{^.name}/deployments/{id}/rollback",
+        "method": "POST"
+      }
     }
   ],
   "pages": [

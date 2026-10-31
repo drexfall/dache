@@ -2,19 +2,19 @@
 package dev.dache.plugin.registry
 
 internal object RegistryFixtures {
-    const val PUBLIC_KEY = "q/1oC7fmpf5kH148zMC0OWfZ5RFLrSqsbNl1yqFB1Ds="
+    const val PUBLIC_KEY = "imbjNub4deu+IhvxaX5ALyyTTROGpA5QE2pqGSWwaOw="
 
-    val NETLIFY_1_1_0 =
+    val NETLIFY_1_2_0 =
         """{
   "${'$'}schema": "../../schema/manifest.schema.json",
   "manifestVersion": 1,
   "id": "netlify",
   "name": "Netlify",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "Dache",
   "dashboardUrl": "https://app.netlify.com",
   "tokenUrl": "https://app.netlify.com/user/applications#personal-access-tokens",
-  "tokenHelp": "Netlify personal access tokens can’t be scoped. Give it an expiry date and use it only for Dache.",
+  "tokenHelp": "Netlify personal access tokens can’t be scoped. Give it an expiry date and use it only for Dache. Actions (deploys, deleting DNS records) use the same token.",
   "hosts": [
     "api.netlify.com"
   ],
@@ -160,6 +160,30 @@ internal object RegistryFixtures {
       }
     }
   ],
+  "actions": [
+    {
+      "id": "trigger-deploy",
+      "label": "Trigger deploy",
+      "target": "site",
+      "description": "Starts a new build of the site from its linked repository.",
+      "request": {
+        "url": "https://api.netlify.com/api/v1/sites/{id}/builds",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "delete-record",
+      "label": "Delete record",
+      "target": "dnsRecord",
+      "destructive": true,
+      "permission": "Personal access token",
+      "description": "Removes this DNS record from the zone.",
+      "request": {
+        "url": "https://api.netlify.com/api/v1/dns_zones/{^.id}/dns_records/{id}",
+        "method": "DELETE"
+      }
+    }
+  ],
   "pages": [
     {
       "id": "sites",
@@ -196,7 +220,7 @@ internal object RegistryFixtures {
   "publisher": "Dache",
   "dashboardUrl": "https://app.netlify.com",
   "tokenUrl": "https://app.netlify.com/user/applications#personal-access-tokens",
-  "tokenHelp": "Netlify personal access tokens can’t be scoped. Give it an expiry date and use it only for Dache.",
+  "tokenHelp": "Netlify personal access tokens can’t be scoped. Give it an expiry date and use it only for Dache. Actions (deploys, deleting DNS records) use the same token.",
   "hosts": [
     "api.netlify.com",
     "uploads.netlify.com"
@@ -343,6 +367,30 @@ internal object RegistryFixtures {
       }
     }
   ],
+  "actions": [
+    {
+      "id": "trigger-deploy",
+      "label": "Trigger deploy",
+      "target": "site",
+      "description": "Starts a new build of the site from its linked repository.",
+      "request": {
+        "url": "https://api.netlify.com/api/v1/sites/{id}/builds",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "delete-record",
+      "label": "Delete record",
+      "target": "dnsRecord",
+      "destructive": true,
+      "permission": "Personal access token",
+      "description": "Removes this DNS record from the zone.",
+      "request": {
+        "url": "https://api.netlify.com/api/v1/dns_zones/{^.id}/dns_records/{id}",
+        "method": "DELETE"
+      }
+    }
+  ],
   "pages": [
     {
       "id": "sites",
@@ -451,10 +499,10 @@ internal object RegistryFixtures {
     {
       "id": "netlify",
       "name": "Netlify",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "publisher": "Dache",
-      "path": "plugins/netlify/1.1.0.json",
-      "sha256": "5fca1442c22150a555cbdb3a8257f5e3dc1fcee349c696679c48e4e3319e2d07",
+      "path": "plugins/netlify/1.2.0.json",
+      "sha256": "49cce001ac9da18cfe3a5d9f654bd12a4697ad129e42e358dc5a99caf30a8f45",
       "hosts": [
         "api.netlify.com"
       ],
@@ -491,7 +539,7 @@ internal object RegistryFixtures {
   ]
 }"""
 
-    const val INDEX_10_SIG = "DdnpHEwEDcgIX3aCeJx6R8UfkP4w/M7DoB0Znmem7Wf4/wvLGOIFHRw/mVChWnDH8Um2d49oKp+DqpGGFOzmAQ=="
+    const val INDEX_10_SIG = "mF12rZHUhpPOKuazv4W2HWXN5pjWLUYwN5w9nf0GrO2/0oCh0jDMCm+SK7t6FoSm3reLjZ4p2pkkL5dQnRSpDg=="
 
     const val INDEX_20 =
         """{
@@ -504,7 +552,7 @@ internal object RegistryFixtures {
       "version": "2.0.0",
       "publisher": "Dache",
       "path": "plugins/netlify/2.0.0.json",
-      "sha256": "23c667566db901f8292582890d4effef257ea91d6d189ec0babf836d0a096272",
+      "sha256": "72905cd19deaf23f525f796248f77863f37f5e2c2a2594270cc6fa2c18f1ab85",
       "hosts": [
         "api.netlify.com",
         "uploads.netlify.com"
@@ -523,7 +571,7 @@ internal object RegistryFixtures {
   ]
 }"""
 
-    const val INDEX_20_SIG = "F1t5bmvMVdi25OOovqRdJVZLoPzLsQ4N2xB10Pqh2UarhPm217oFYuWskmKKUVVH3P8czomnNHWlvuDzpQINDQ=="
+    const val INDEX_20_SIG = "5ZgWAGl72EnooEAygivTa3FFQW29pNcYXchW6YG74DE9uZI11Gc3so5Jkf7L1FFEY1Ytw0g/jw/9AAIqVidqBA=="
 
     const val INDEX_5 =
         """{
@@ -552,5 +600,5 @@ internal object RegistryFixtures {
   ]
 }"""
 
-    const val INDEX_5_SIG = "zC6X+wplCiGLyK4/9/1bPLskHmoOjTPK82SycNIuQo2tswFSCZZyWaaQzJsFNtRtSH33jo+ydIL542GshIpPCg=="
+    const val INDEX_5_SIG = "FUaG+pn+KA9P5mzsCCA+I/XqZNAJVwm99hQO1utW2P3ab8lhe6z6+c3Z8cMY0ACl+rCimniNxnej/DIPb1aSAA=="
 }

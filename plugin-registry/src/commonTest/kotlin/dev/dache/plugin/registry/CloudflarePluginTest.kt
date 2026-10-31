@@ -1,6 +1,8 @@
 package dev.dache.plugin.registry
 
 import dev.dache.core.account.tokenKey
+import dev.dache.core.model.ActionRequest
+import dev.dache.core.model.ActionTarget
 import dev.dache.core.model.Capability
 import dev.dache.core.model.CertificateStatus
 import dev.dache.core.model.ConnectedAccount
@@ -17,10 +19,13 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLProtocol
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -46,8 +51,22 @@ class CloudflarePluginTest {
         )
 
     /** Paths in [failing] answer with that status, as a product the account doesn't use might. */
+    private val json = headersOf(HttpHeaders.ContentType, "application/json")
+
+    /** Lists the fixtures answer, by path under /client/v4. */
+    private val fixed =
+        mapOf(
+            "/accounts" to CloudflareFixtures.accounts,
+            "/zones" to CloudflareFixtures.zones,
+            "/zones/$ZONE_ID/ssl/certificate_packs" to CloudflareFixtures.certificatePacks,
+            "/zones/$ZONE_ID/dns_records" to CloudflareFixtures.dnsRecords,
+            "/accounts/$ACCOUNT_ID/pages/projects" to CloudflareFixtures.pagesProjects,
+            "/accounts/$ACCOUNT_ID/pages/projects/acme-blog/deployments" to CloudflareFixtures.blogDeployments,
+            "/accounts/$ACCOUNT_ID/workers/scripts" to CloudflareFixtures.workers,
+        ).mapValues { (_, body) -> HttpStatusCode.OK to body }
+
     private fun cloudflare(failing: Map<String, HttpStatusCode> = emptyMap()): DevOpsProvider {
-        val routes = services + failing.mapValues { (_, status) -> status to FAILED }
+        val routes = fixed + services + failing.mapValues { (_, status) -> status to FAILED }
         val engine =
             MockEngine { request ->
                 requests += request
@@ -56,30 +75,53 @@ class CloudflarePluginTest {
                 val (status, body) =
                     when {
                         !authorized -> HttpStatusCode.Forbidden to CloudflareFixtures.UNAUTHORIZED
+                        request.method != HttpMethod.Get -> HttpStatusCode.OK to """{"success": true, "result": {}}"""
                         // Second pages of every list are empty.
                         (request.url.parameters["page"] ?: "1") != "1" -> HttpStatusCode.OK to "{\"result\": []}"
-                        path == "/accounts" -> HttpStatusCode.OK to CloudflareFixtures.accounts
-                        path == "/zones" -> HttpStatusCode.OK to CloudflareFixtures.zones
-                        path == "/zones/$ZONE_ID/ssl/certificate_packs" ->
-                            HttpStatusCode.OK to CloudflareFixtures.certificatePacks
-                        path == "/zones/$ZONE_ID/dns_records" -> HttpStatusCode.OK to CloudflareFixtures.dnsRecords
-                        path == "/accounts/$ACCOUNT_ID/pages/projects" ->
-                            HttpStatusCode.OK to CloudflareFixtures.pagesProjects
-                        path == "/accounts/$ACCOUNT_ID/pages/projects/acme-blog/deployments" ->
-                            HttpStatusCode.OK to CloudflareFixtures.blogDeployments
-                        path.endsWith("/deployments") -> HttpStatusCode.OK to CloudflareFixtures.noDeployments
-                        path == "/accounts/$ACCOUNT_ID/workers/scripts" ->
-                            HttpStatusCode.OK to
-                                CloudflareFixtures.workers
                         path in routes -> routes.getValue(path)
+                        path.endsWith("/deployments") -> HttpStatusCode.OK to CloudflareFixtures.noDeployments
                         else -> HttpStatusCode.NotFound to """{"success":false,"errors":[{"code":7003}]}"""
                     }
-                respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
+                respond(body, status, json)
             }
         return checkNotNull(BundledPlugins.providers(vault, createPluginHttpClient(engine))[ProviderId.CLOUDFLARE])
     }
 
     private suspend fun snapshot(): ProviderSnapshot = cloudflare().fetchSnapshot(account).getOrThrow()
+
+    @Test
+    fun editingADnsRecordPatchesItInItsZone() =
+        runTest {
+            val provider = cloudflare()
+            val record =
+                provider
+                    .fetchSnapshot(account)
+                    .getOrThrow()
+                    .dnsRecords
+                    .first { it.nativeId == "rec-apex" }
+            val target = ActionTarget(record.ref)
+            val defaults = provider.actionDefaults(account, ActionRequest("edit-record", target)).getOrThrow()
+            assertEquals(mapOf("content" to "203.0.113.10", "ttl" to "300", "proxied" to "false"), defaults)
+
+            val inputs = defaults + ("content" to "203.0.113.20")
+            val preview = provider.previewAction(account, ActionRequest("edit-record", target, inputs)).getOrThrow()
+            provider.runAction(account, ActionRequest("edit-record", target, inputs)).getOrThrow()
+
+            assertEquals(
+                listOf("203.0.113.10" to "203.0.113.20"),
+                preview.changes.filter { it.before != it.after }.map {
+                    it.before to
+                        it.after
+                },
+            )
+            val write = requests.single { it.method == HttpMethod.Patch }
+            assertEquals("/client/v4/zones/$ZONE_ID/dns_records/rec-apex", write.url.encodedPath)
+            assertEquals(
+                """{"content":"203.0.113.20","ttl":300,"proxied":false}""",
+                (write.body as TextContent).text.let { Json.parseToJsonElement(it).toString() },
+            )
+            assertTrue(provider.actions.single { it.id == "delete-record" }.destructive)
+        }
 
     @Test
     fun bundledManifestLoads() {

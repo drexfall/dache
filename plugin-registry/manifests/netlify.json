@@ -3,11 +3,11 @@
   "manifestVersion": 1,
   "id": "netlify",
   "name": "Netlify",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "Dache",
   "dashboardUrl": "https://app.netlify.com",
   "tokenUrl": "https://app.netlify.com/user/applications#personal-access-tokens",
-  "tokenHelp": "Netlify personal access tokens can’t be scoped. Give it an expiry date and use it only for Dache.",
+  "tokenHelp": "Netlify personal access tokens can’t be scoped. Give it an expiry date and use it only for Dache. Actions (deploys, deleting DNS records) use the same token.",
   "hosts": ["api.netlify.com"],
   "auth": { "type": "bearer" },
   "capabilities": ["SITES", "DEPLOYMENTS", "DOMAINS", "DNS", "SERVICES"],
@@ -106,6 +106,30 @@
         "webUrl": "https://app.netlify.com/sites/{^.name}/forms/{id}",
         "detail": "{submission_count} submissions",
         "createdAt": "created_at | date"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "trigger-deploy",
+      "label": "Trigger deploy",
+      "target": "site",
+      "description": "Starts a new build of the site from its linked repository.",
+      "request": {
+        "url": "https://api.netlify.com/api/v1/sites/{id}/builds",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "delete-record",
+      "label": "Delete record",
+      "target": "dnsRecord",
+      "destructive": true,
+      "permission": "Personal access token",
+      "description": "Removes this DNS record from the zone.",
+      "request": {
+        "url": "https://api.netlify.com/api/v1/dns_zones/{^.id}/dns_records/{id}",
+        "method": "DELETE"
       }
     }
   ],

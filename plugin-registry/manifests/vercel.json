@@ -3,11 +3,11 @@
   "manifestVersion": 1,
   "id": "vercel",
   "name": "Vercel",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "Dache",
   "dashboardUrl": "https://vercel.com/dashboard",
   "tokenUrl": "https://vercel.com/account/tokens",
-  "tokenHelp": "Scope the token to the one team you want to see and give it an expiry date. Enter that team’s slug below.",
+  "tokenHelp": "Scope the token to the one team you want to see and give it an expiry date. Enter that team’s slug below. Redeploy and roll back need the token's scope to include the team.",
   "hosts": ["api.vercel.com"],
   "auth": { "type": "bearer" },
   "settings": [
@@ -148,6 +148,40 @@
         "detail": "{itemCount} items",
         "createdAt": "createdAt | millis",
         "updatedAt": "updatedAt | millis"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "redeploy",
+      "label": "Redeploy",
+      "target": "deployment",
+      "description": "Builds this deployment again with its settings.",
+      "request": {
+        "url": "https://api.vercel.com/v13/deployments",
+        "method": "POST",
+        "query": {
+          "slug": "{@team}"
+        }
+      },
+      "body": {
+        "name": "{^.name}",
+        "deploymentId": "{uid}"
+      }
+    },
+    {
+      "id": "rollback",
+      "label": "Roll back to this",
+      "target": "deployment",
+      "destructive": true,
+      "permission": "Full account",
+      "description": "Points the project's production domains at this deployment.",
+      "request": {
+        "url": "https://api.vercel.com/v1/projects/{^.id}/rollback/{uid}",
+        "method": "POST",
+        "query": {
+          "slug": "{@team}"
+        }
       }
     }
   ],
