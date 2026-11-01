@@ -35,12 +35,12 @@ class SystemdTimer(
     private val unitDir: File = File(System.getProperty("user.home"), ".config/systemd/user"),
     private val launcher: List<String>,
     private val runner: CommandRunner = CommandRunner.System,
-) {
+) : BackgroundScheduler {
     private val service = File(unitDir, "$NAME.service")
     private val timer = File(unitDir, "$NAME.timer")
 
     /** Null when the system agrees, else what went wrong, to show under the setting. */
-    fun apply(settings: AlertSettings): String? =
+    override fun apply(settings: AlertSettings): String? =
         if (settings.enabled) install(settings.intervalMinutes) else uninstall()
 
     private fun install(minutes: Int): String? {
@@ -91,6 +91,8 @@ class SystemdTimer(
         |WantedBy=timers.target
         |
         """.trimMargin()
+
+    override val name: String = "$NAME.timer"
 
     companion object {
         const val NAME = "dache-check"

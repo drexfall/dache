@@ -73,7 +73,8 @@ compose.desktop {
         // jpackage isn't in every JDK (Android Studio's JBR lacks it); PACKAGING_JDK names one that has it.
         providers.environmentVariable("PACKAGING_JDK").orNull?.let { javaHome = it }
         nativeDistributions {
-            targetFormats(TargetFormat.Deb, TargetFormat.Rpm)
+            // MSI builds only on Windows (jpackage needs WiX there); the release workflow builds it on a Windows runner.
+            targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.Msi)
             packageName = "dache"
             packageVersion = "0.1.0"
             description = "One dashboard for your hosting, DNS, CI, servers and uptime"
@@ -83,6 +84,14 @@ compose.desktop {
             providers.gradleProperty("dache.distDir").orNull?.let { outputBaseDir.set(file(it)) }
             linux {
                 iconFile.set(rootProject.file("packaging/linux/dache.png"))
+            }
+            windows {
+                iconFile.set(rootProject.file("packaging/windows/dache.ico"))
+                menuGroup = "Dache"
+                perUserInstall = true
+                shortcut = true
+                // Fixed for good: Windows uses it to recognise newer installers as upgrades of this app.
+                upgradeUuid = "a476e80c-6deb-4294-980e-4300303417f6"
             }
         }
     }

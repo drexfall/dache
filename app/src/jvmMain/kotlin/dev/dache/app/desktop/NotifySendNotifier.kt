@@ -1,13 +1,11 @@
 package dev.dache.app.desktop
 
-import dev.dache.app.alerts.NotificationAccess
 import dev.dache.core.alerts.Alert
-import dev.dache.core.alerts.AlertKind
 
-/** Desktop notifications through `notify-send`, which every freedesktop.org notification server understands. */
-class DesktopNotifications(
+/** Linux notifications through `notify-send`, which every freedesktop.org notification server understands. */
+class NotifySendNotifier(
     private val runner: CommandRunner = CommandRunner.System,
-) : NotificationAccess {
+) : DesktopNotifier {
     override fun isGranted(): Boolean = runner.run(listOf("notify-send", "--version")).first == 0
 
     override suspend fun request(): Boolean = isGranted()
@@ -15,8 +13,7 @@ class DesktopNotifications(
     // There is no per-app switch to send people to; without notify-send the card says so.
     override fun openSettings() = Unit
 
-    /** With [hideDetails] (the app lock's "hide names"), says what kind of thing broke but not which. */
-    fun show(
+    override fun show(
         alerts: List<Alert>,
         hideDetails: Boolean,
     ) {
@@ -26,11 +23,4 @@ class DesktopNotifications(
             runner.run(listOf("notify-send", "--app-name=Dache", "--icon=dialog-warning", title, body))
         }
     }
-
-    private fun genericTitle(kind: AlertKind): String =
-        when (kind) {
-            AlertKind.DEPLOY_FAILED -> "A deploy failed"
-            AlertKind.MONITOR_DOWN -> "A monitor is down"
-            AlertKind.CI_FAILED -> "A CI run failed"
-        }
 }

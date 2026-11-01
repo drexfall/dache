@@ -37,6 +37,10 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
         }
+        jvmMain.dependencies {
+            // Windows Credential Manager; the classes load only when the Windows vault is used.
+            implementation(libs.jna.platform)
+        }
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.tink.android)

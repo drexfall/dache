@@ -47,6 +47,10 @@ PACKAGING_JDK=/path/to/jdk-21 ./gradlew :app:packageAppImage   # → app/build/c
 
 `PACKAGING_JDK` must be a JDK with `jpackage` (Temurin has it; Android Studio's JBR doesn't). The task builds the jpackage app image and wraps it with `packaging/linux/build-appimage.sh`, which downloads appimagetool 1.9.1 once (pinned by SHA-256) into `~/.cache/dache`. Add `-Pdache.distDir=<dir>` to build somewhere else. Pushing a `v*` tag runs `.github/workflows/release.yml`, which attaches the AppImage to a GitHub release. The AppImage still needs `secret-tool` and a Secret Service from the host; background checks use the host's `systemd` and `notify-send`.
 
+### Windows
+
+The desktop build runs on Windows too. Tokens are encrypted with DPAPI for the signed-in user (`%LOCALAPPDATA%\Dache\tokens`, one file per account under a hashed name), background checks run as the scheduled task "Dache\Background check", and alerts show as tray notifications. `./gradlew :app:packageMsi` builds a per-user MSI on Windows (jpackage needs WiX there); the release workflow builds and tests it on a Windows runner. None of this has been run on Windows yet, only unit-tested on Linux.
+
 On Linux, connecting an account stores the token in your keyring via `secret-tool` (package `libsecret` / `libsecret-tools`). A running Secret Service (GNOME Keyring or KWallet) is required; without one, connecting fails with an explanation.
 
 Debug request logging: debuggable Android builds log every plugin request to Logcat; on desktop set `DACHE_LOG_HTTP=1`. Tokens are redacted from URLs, headers and bodies before anything is logged. Release builds log nothing.
