@@ -2,7 +2,7 @@
 
 A Dache plugin is one JSON file, a manifest. It names the hosts the plugin may call, says where the token goes, and maps list endpoints onto Dache's models: sites, domains, DNS records, CI runs, servers, workers, monitors, billing, and `service` resources for anything else. Manifests hold no code, so installing one can't run anything on the device. The engine sends only GET requests.
 
-The README's Plugins section is the reference for every key. This page is the workflow.
+[The manifest reference](manifest-reference.md) covers every key. This page is the workflow.
 
 ## 1. Start from the template
 
@@ -72,11 +72,10 @@ The token is read from the environment variable only, so it stays out of shell h
 
 ## Bundling a plugin with the app
 
-Bundled plugins live in `plugin-registry/manifests/` and need, in the same change:
+Bundled plugins live in `plugin-registry/manifests/`. The manifest is the whole provider: its id, display name, dashboard URL, token page and token help all come from the file, so nothing in the app's code names it. A bundled plugin needs, in the same change:
 
-- a `ProviderId` entry with the display name, dashboard URL and token page;
-- a `scope_<id>` string telling users which permissions to give the token, and its entry in `AddAccountDialog`;
-- a test in `plugin-registry/src/commonTest` with recorded responses, like `GitHubPluginTest`.
+- the manifest in `plugin-registry/manifests/<id>.json`;
+- a test in `plugin-registry/src/commonTest` with recorded responses, like `GitHubPluginTest`, so a provider API change shows up as a failing test rather than an empty page.
 
 `./gradlew test` loads every bundled manifest, and fails if one doesn't validate.
 

@@ -197,6 +197,19 @@ class PluginManagerTest {
         }
 
     @Test
+    fun anOversizedIndexIsRefusedBeforeItIsParsed() =
+        runTest {
+            serve("x".repeat(RegistryClient.MAX_MANIFEST_BYTES + 1), RegistryFixtures.INDEX_10_SIG)
+            val manager = manager()
+
+            val failure = manager.checkRegistry().exceptionOrNull()
+
+            assertIs<RegistryException>(failure)
+            assertEquals("That file is too large to be a plugin.", failure.message)
+            assertIs<RegistryStatus.Failed>(manager.registryStatus.value)
+        }
+
+    @Test
     fun versionsCompareNumerically() {
         assertTrue(isNewer("1.10.0", "1.9.9"))
         assertFalse(isNewer("1.0.0", "1.0.0"))

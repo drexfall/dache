@@ -29,7 +29,9 @@ fun interface CommandRunner {
 /**
  * Background checks on Linux: a systemd user timer that runs `dache --check` every [AlertSettings.intervalMinutes].
  * [apply] writes and enables the units while checks are on, and disables and deletes them when they're off.
- * [launcher] is the command that starts Dache, from [currentLauncher].
+ * [launcher] is the command that starts Dache, from [currentLauncher]. The service has no network ordering:
+ * `network-online.target` isn't reachable from a user unit, so a check that runs before the network is up simply
+ * fails that account and the next run, [AlertSettings.intervalMinutes] later, reports what it finds.
  */
 class SystemdTimer(
     private val unitDir: File = File(System.getProperty("user.home"), ".config/systemd/user"),
@@ -69,7 +71,6 @@ class SystemdTimer(
         """
         |[Unit]
         |Description=Dache background check
-        |After=network-online.target
         |
         |[Service]
         |Type=oneshot

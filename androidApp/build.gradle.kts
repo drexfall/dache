@@ -3,6 +3,13 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+/** major * 10000 + minor * 100 + patch, so every release's code is above the one before it. */
+fun versionCodeOf(version: String): Int {
+    val (major, minor, patch) = version.substringBefore('-').split('.').map(String::toInt)
+    require(minor < 100 && patch < 100) { "dache.version $version doesn't fit the versionCode scheme" }
+    return major * 10_000 + minor * 100 + patch
+}
+
 android {
     namespace = "dev.dache.android"
     compileSdk =
@@ -20,8 +27,9 @@ android {
             libs.versions.android.targetSdk
                 .get()
                 .toInt()
-        versionCode = 1
-        versionName = "0.1.0"
+        // One version source: dache.version in gradle.properties. 0.1.0 -> code 100, 1.2.3 -> 10203.
+        versionName = providers.gradleProperty("dache.version").get()
+        versionCode = versionCodeOf(versionName!!)
     }
 
     buildTypes {

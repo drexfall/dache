@@ -76,7 +76,7 @@ compose.desktop {
             // MSI builds only on Windows (jpackage needs WiX there); the release workflow builds it on a Windows runner.
             targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.Msi)
             packageName = "dache"
-            packageVersion = "0.1.0"
+            packageVersion = providers.gradleProperty("dache.version").get()
             description = "One dashboard for your hosting, DNS, CI, servers and uptime"
             vendor = "Dache"
             // TLS needs jdk.crypto.ec on JDK 17-21; the rest come from Ktor, OkHttp and DataStore.
