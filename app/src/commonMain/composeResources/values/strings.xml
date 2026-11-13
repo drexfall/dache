@@ -283,6 +283,7 @@
     <string name="plugins_title">Plugins</string>
     <string name="plugins_registry">Plugin registry</string>
     <string name="plugins_registry_unchecked">Not checked yet</string>
+    <string name="plugins_registry_unreachable">Registry unreachable. Built-in plugins keep working; try again later.</string>
     <string name="plugins_registry_checking">Checking…</string>
     <string name="plugins_registry_checked">Signature verified · %1$d plugins</string>
     <string name="plugins_updates">Updates</string>

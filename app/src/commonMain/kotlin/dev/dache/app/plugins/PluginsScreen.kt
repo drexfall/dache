@@ -69,6 +69,7 @@ import dev.dache.app.resources.plugins_registry
 import dev.dache.app.resources.plugins_registry_checked
 import dev.dache.app.resources.plugins_registry_checking
 import dev.dache.app.resources.plugins_registry_unchecked
+import dev.dache.app.resources.plugins_registry_unreachable
 import dev.dache.app.resources.plugins_sideload
 import dev.dache.app.resources.plugins_sideload_body
 import dev.dache.app.resources.plugins_title
@@ -182,7 +183,12 @@ private fun RegistryCard(
                     RegistryStatus.Checking -> Text(stringResource(Res.string.plugins_registry_checking))
                     is RegistryStatus.Ready ->
                         Text(stringResource(Res.string.plugins_registry_checked, status.index.plugins.size))
-                    is RegistryStatus.Failed -> ErrorText(status.error.message ?: status.error.toString())
+                    // One plain line, whatever failed: the cause is in the log, not in the user's face.
+                    is RegistryStatus.Failed ->
+                        Text(
+                            stringResource(Res.string.plugins_registry_unreachable),
+                            color = MaterialTheme.colorScheme.error,
+                        )
                 }
             },
             trailingContent = {
