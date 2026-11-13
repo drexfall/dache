@@ -26,4 +26,52 @@ jobs:
           name: test-reports
           path: '**/build/reports/tests/'
       - name: Build Android, desktop and plugin-cli
-        run: ./gradlew :androidApp:assembleDebug :app:jvmJar :tools:plugin-cli:installDist
+        run: ./gradlew :androidApp:assembleDebug :androidApp:assembleRelease :app:jvmJar :tools:plugin-cli:installDist
+      - name: Upload the release APK (debug-signed on branches)
+        uses: actions/upload-artifact@v4
+        with:
+          name: androidApp-release
+          path: androidApp/build/outputs/apk/release/*.apk
+
+  # Every screen, light and dark, phone and desktop, from mock data, so a PR review can look at the UI.
+  screenshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Render every screen
+        env:
+          DACHE_RENDER_DIR: ${{ github.workspace }}/screenshots
+        run: ./gradlew :app:jvmTest --tests '*RenderScreens*'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/*.png
+
+  # The release APK through R8, installed and launched on an emulator. A crash on start fails the job.
+  android-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: androidApp-release
+          path: apk
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: .github/scripts/android-smoke-test.sh apk/androidApp-release.apk

@@ -32,10 +32,28 @@ android {
         versionCode = versionCodeOf(versionName!!)
     }
 
+    signingConfigs {
+        // The release key comes from the environment: CI decodes it from a secret on tags. Without it the release
+        // build is signed with the debug key so CI can still install it on an emulator; that APK is not for users.
+        create("release") {
+            val keystore = providers.environmentVariable("DACHE_KEYSTORE_FILE").orNull
+            if (keystore != null) {
+                storeFile = file(keystore)
+                storePassword = providers.environmentVariable("DACHE_KEYSTORE_PASSWORD").orNull
+                keyAlias = providers.environmentVariable("DACHE_KEY_ALIAS").orNull
+                keyPassword = providers.environmentVariable("DACHE_KEY_PASSWORD").orNull
+            } else {
+                initWith(getByName("debug"))
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

@@ -28,6 +28,36 @@ jobs:
           gh release create "$GITHUB_REF_NAME" --title "Dache $GITHUB_REF_NAME" --generate-notes \
             app/build/compose/binaries/main/appimage/*.AppImage
 
+  apk:
+    needs: appimage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build the signed release APK
+        env:
+          DACHE_KEYSTORE_BASE64: ${{ secrets.DACHE_KEYSTORE_BASE64 }}
+          DACHE_KEYSTORE_PASSWORD: ${{ secrets.DACHE_KEYSTORE_PASSWORD }}
+          DACHE_KEY_ALIAS: ${{ secrets.DACHE_KEY_ALIAS }}
+          DACHE_KEY_PASSWORD: ${{ secrets.DACHE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$DACHE_KEYSTORE_BASE64" ]; then
+            echo "::error::DACHE_KEYSTORE_BASE64 is not set; a release needs the signing key"
+            exit 1
+          fi
+          echo "$DACHE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          export DACHE_KEYSTORE_FILE="$RUNNER_TEMP/release.jks"
+          ./gradlew :androidApp:assembleRelease
+          cp androidApp/build/outputs/apk/release/androidApp-release.apk "Dache-${GITHUB_REF_NAME#v}.apk"
+      - name: Attach it to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" Dache-*.apk
+
   msi:
     needs: appimage
     runs-on: windows-latest
