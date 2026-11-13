@@ -13,6 +13,8 @@ import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,6 +25,7 @@ import kotlin.test.assertTrue
 class AccountSettingsTest {
     private val vault = MapTokenVault()
     private val requests = mutableListOf<HttpRequestData>()
+    private val recording = Mutex()
 
     private val manifest =
         ManifestJson
@@ -69,7 +72,8 @@ class AccountSettingsTest {
             client =
                 createPluginHttpClient(
                     MockEngine { request ->
-                        requests += request
+                        // Recording must not race: fan-outs send four requests at a time.
+                        recording.withLock { requests += request }
                         val body =
                             if (request.url.encodedPath.endsWith("/user")) {
                                 """{"email": "dev@example.com"}"""

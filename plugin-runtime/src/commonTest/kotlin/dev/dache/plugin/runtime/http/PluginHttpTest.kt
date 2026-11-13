@@ -14,6 +14,8 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
 import io.ktor.http.headersOf
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
 import kotlinx.io.IOException
 import kotlinx.serialization.json.JsonPrimitive
@@ -28,6 +30,7 @@ import kotlin.time.Duration.Companion.seconds
 class PluginHttpTest {
     private val secret = "fake-token-123"
     private val requests = mutableListOf<HttpRequestData>()
+    private val recording = Mutex()
     private val logged = mutableListOf<RedactedExchange>()
 
     private fun http(
@@ -37,7 +40,8 @@ class PluginHttpTest {
         client =
             createPluginHttpClient(
                 MockEngine { request ->
-                    requests += request
+                    // Recording must not race: fan-outs send four requests at a time.
+                    recording.withLock { requests += request }
                     handler(request)
                 },
             ),

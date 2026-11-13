@@ -15,6 +15,8 @@ import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,6 +29,7 @@ class ManifestProviderTest {
     private val account = ConnectedAccount(id = "acc-1", providerId = ProviderId.NETLIFY, displayName = "dev")
     private val vault = MapTokenVault().apply { tokens[account.tokenKey()] = "fake-token-123" }
     private val requests = mutableListOf<HttpRequestData>()
+    private val recording = Mutex()
 
     private fun provider(
         manifest: PluginManifest = TestManifests.sites,
@@ -39,7 +42,8 @@ class ManifestProviderTest {
         client =
             createPluginHttpClient(
                 MockEngine { request ->
-                    requests += request
+                    // Recording must not race: fan-outs send four requests at a time.
+                    recording.withLock { requests += request }
                     val body =
                         when (request.url.encodedPath) {
                             "/user" -> user

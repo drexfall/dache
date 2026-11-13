@@ -24,6 +24,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLProtocol
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
@@ -36,6 +38,7 @@ import kotlin.time.Instant
 class CloudflarePluginTest {
     private val vault = MapTokenVault()
     private val requests = mutableListOf<HttpRequestData>()
+    private val recording = Mutex()
 
     private val account =
         ConnectedAccount(id = "acc-1", providerId = ProviderId.CLOUDFLARE, displayName = "Acme Inc").also {
@@ -69,7 +72,8 @@ class CloudflarePluginTest {
         val routes = fixed + services + failing.mapValues { (_, status) -> status to FAILED }
         val engine =
             MockEngine { request ->
-                requests += request
+                // Recording must not race: fan-outs send four requests at a time.
+                recording.withLock { requests += request }
                 val authorized = request.headers[HttpHeaders.Authorization] == "Bearer ${CloudflareFixtures.TOKEN}"
                 val path = request.url.encodedPath.removePrefix("/client/v4")
                 val (status, body) =

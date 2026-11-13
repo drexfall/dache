@@ -15,6 +15,8 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLProtocol
 import io.ktor.http.headersOf
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,6 +29,7 @@ import kotlin.time.Instant
 class VercelPluginTest {
     private val vault = MapTokenVault()
     private val requests = mutableListOf<HttpRequestData>()
+    private val recording = Mutex()
 
     private fun account(settings: Map<String, String> = emptyMap()) =
         ConnectedAccount(id = "acc-1", providerId = ProviderId.VERCEL, displayName = "dev", settings = settings).also {
@@ -36,7 +39,8 @@ class VercelPluginTest {
     private fun vercel(): DevOpsProvider {
         val engine =
             MockEngine { request ->
-                requests += request
+                // Recording must not race: fan-outs send four requests at a time.
+                recording.withLock { requests += request }
                 val authorized = request.headers[HttpHeaders.Authorization] == "Bearer ${VercelFixtures.TOKEN}"
                 val params = request.url.parameters
                 val (status, body) =

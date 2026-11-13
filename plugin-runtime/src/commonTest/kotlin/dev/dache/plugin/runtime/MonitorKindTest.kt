@@ -12,6 +12,8 @@ import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,6 +24,7 @@ class MonitorKindTest {
     private val account = ConnectedAccount(id = "acc-1", providerId = ProviderId.UPTIMEROBOT, displayName = "dev")
     private val vault = MapTokenVault().apply { tokens[account.tokenKey()] = "fake-token-123" }
     private val requests = mutableListOf<HttpRequestData>()
+    private val recording = Mutex()
 
     private val manifest =
         ManifestJson.decode(
@@ -65,7 +68,8 @@ class MonitorKindTest {
             vault,
             createPluginHttpClient(
                 MockEngine { request ->
-                    requests += request
+                    // Recording must not race: fan-outs send four requests at a time.
+                    recording.withLock { requests += request }
                     val body =
                         if (request.url.parameters["cursor"] == null) {
                             """{"nextLink": "https://api.example.com/monitors?limit=2&cursor=2", "data": [

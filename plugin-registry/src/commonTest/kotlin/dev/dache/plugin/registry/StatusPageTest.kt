@@ -9,6 +9,8 @@ import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -17,6 +19,7 @@ import kotlin.test.assertTrue
 
 class StatusPageTest {
     private val requests = mutableListOf<HttpRequestData>()
+    private val recording = Mutex()
 
     // The shape of Statuspage's /api/v2/summary.json, trimmed.
     private val summary =
@@ -42,7 +45,8 @@ class StatusPageTest {
         runTest {
             val engine =
                 MockEngine { request ->
-                    requests += request
+                    // Recording must not race: fan-outs send four requests at a time.
+                    recording.withLock { requests += request }
                     respond(summary, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
                 }
             val cloudflare =

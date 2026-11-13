@@ -18,6 +18,8 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -31,6 +33,7 @@ class ActionsTest {
     private val account = ConnectedAccount(id = "acc-1", providerId = ProviderId.NETLIFY, displayName = "dev")
     private val vault = MapTokenVault().apply { tokens[account.tokenKey()] = "fake-token-123" }
     private val writes = mutableListOf<HttpRequestData>()
+    private val recording = Mutex()
     private val site = ActionTarget(ResourceRef(ProviderId.NETLIFY, "acc-1", "s1", ResourceKind.SITE))
 
     private val actions =
@@ -66,7 +69,8 @@ class ActionsTest {
                         val body =
                             when {
                                 request.method != HttpMethod.Get -> {
-                                    writes += request
+                                    // Recording must not race: fan-outs send four requests at a time.
+                                    recording.withLock { writes += request }
                                     "{}"
                                 }
                                 request.url.parameters["page"] == "1" ->
