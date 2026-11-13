@@ -1,6 +1,9 @@
 package dev.dache.core.model
 
+import kotlinx.serialization.Serializable
+
 /** Everything one account returned in a single refresh. */
+@Serializable
 data class ProviderSnapshot(
     val sites: List<Site> = emptyList(),
     val domains: List<Domain> = emptyList(),
@@ -18,6 +21,22 @@ data class ProviderSnapshot(
 ) {
     val resources: List<Resource>
         get() = sites + domains + dnsRecords + ciRuns + servers + workers + monitors + services
+
+    /**
+     * The same snapshot naming [provider] on every resource. A snapshot read back from disk knows its provider by
+     * id alone; this gives it the installed plugin's display name and links again.
+     */
+    fun withProvider(provider: ProviderId): ProviderSnapshot =
+        copy(
+            sites = sites.map { it.copy(providerId = provider) },
+            domains = domains.map { it.copy(providerId = provider) },
+            dnsRecords = dnsRecords.map { it.copy(providerId = provider) },
+            ciRuns = ciRuns.map { it.copy(providerId = provider) },
+            servers = servers.map { it.copy(providerId = provider) },
+            workers = workers.map { it.copy(providerId = provider) },
+            monitors = monitors.map { it.copy(providerId = provider) },
+            services = services.map { it.copy(providerId = provider) },
+        )
 
     /** Only what [page] shows. Billing belongs to the whole account, so it is left out. */
     fun only(page: ServicePage): ProviderSnapshot =

@@ -1,5 +1,6 @@
 package dev.dache.core.model
 
+import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
 /** How a provider's own service is doing, worst last. */
@@ -17,12 +18,14 @@ enum class StatusLevel {
 }
 
 /** One part of the provider's service. [group] names the group it sits in, such as a region. */
+@Serializable
 data class StatusComponent(
     val name: String,
     val level: StatusLevel,
     val group: String?,
 )
 
+@Serializable
 data class StatusIncident(
     val name: String,
     val status: String?,
@@ -32,6 +35,7 @@ data class StatusIncident(
 )
 
 /** The provider's public status page, as of [fetchedAt]. */
+@Serializable
 data class ProviderStatus(
     val providerId: ProviderId,
     val level: StatusLevel,

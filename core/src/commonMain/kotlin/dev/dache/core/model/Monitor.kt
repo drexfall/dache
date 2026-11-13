@@ -1,5 +1,8 @@
 package dev.dache.core.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Monitor(
     override val providerId: ProviderId,
     override val accountId: String,

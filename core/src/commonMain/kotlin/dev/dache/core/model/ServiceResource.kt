@@ -1,5 +1,6 @@
 package dev.dache.core.model
 
+import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
 /**
@@ -7,6 +8,7 @@ import kotlin.time.Instant
  * [service] is the plugin's id for what it is, unique within the plugin; [serviceLabel] is its plural name for
  * them, e.g. "R2 buckets". [nativeId] is prefixed with [service], so ids from different services can't collide.
  */
+@Serializable
 data class ServiceResource(
     override val providerId: ProviderId,
     override val accountId: String,

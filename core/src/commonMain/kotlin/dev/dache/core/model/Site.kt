@@ -1,8 +1,10 @@
 package dev.dache.core.model
 
+import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
 /** A deployable site or project (Netlify site, Vercel project, Cloudflare Pages project, DO app). */
+@Serializable
 data class Site(
     override val providerId: ProviderId,
     override val accountId: String,
@@ -21,6 +23,7 @@ data class Site(
     val latestDeployment: Deployment? get() = deployments.maxByOrNull { it.createdAt }
 }
 
+@Serializable
 data class Deployment(
     val nativeId: String,
     val webUrl: String,

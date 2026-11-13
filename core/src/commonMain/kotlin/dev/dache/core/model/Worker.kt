@@ -1,8 +1,10 @@
 package dev.dache.core.model
 
+import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
 /** A serverless script, such as a Cloudflare Worker. */
+@Serializable
 data class Worker(
     override val providerId: ProviderId,
     override val accountId: String,

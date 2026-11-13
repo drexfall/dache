@@ -23,16 +23,22 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Instant
 
-/** Result of fetching one account. Exactly one of [snapshot] or [error] is set. */
+/**
+ * Result of fetching one account. [snapshot] is the last successful fetch, taken at [fetchedAt]; [error] is set
+ * when the latest refresh failed, in which case the snapshot is older than the refresh and shown as such.
+ */
 data class AccountResult(
     val account: ConnectedAccount,
     val snapshot: ProviderSnapshot?,
     val error: ProviderError?,
+    val fetchedAt: Instant? = null,
 )
 
 data class DashboardState(
@@ -50,6 +56,12 @@ data class DashboardState(
     val accountsLoaded: Boolean = false,
 ) {
     val snapshots: List<ProviderSnapshot> get() = results.mapNotNull { it.snapshot }
+
+    /** Whether what is shown is older than [threshold], the point past which pages say so plainly. */
+    fun isStale(
+        now: Instant,
+        threshold: Duration,
+    ): Boolean = lastUpdated?.let { now - it > threshold } ?: false
 
     /** Looks a resource up by reference across every loaded account. */
     fun resource(ref: ResourceRef): Resource? =
@@ -70,31 +82,49 @@ data class DashboardState(
 }
 
 /**
- * Fetches every connected account in parallel. One account failing only marks that account as errored;
- * the rest of the dashboard still updates. Data for removed accounts is dropped immediately.
+ * Fetches every connected account in parallel. One account failing only marks that account as errored and keeps
+ * its last snapshot; the rest of the dashboard still updates. Data for removed accounts is dropped immediately.
+ * Starts from whatever [store] kept from the last refresh, so there is something to show before any request.
  */
 class DashboardRepository(
     private val accountRepository: AccountRepository,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
     private val clock: Clock = Clock.System,
+    private val store: SnapshotStore = SnapshotStore.None,
 ) {
     private val catalog = accountRepository.catalog
-    private val fetched = MutableStateFlow(DashboardState())
+    private val fetched = MutableStateFlow(restore(store.load()))
     private val refreshLock = Mutex()
+
+    init {
+        scope.launch {
+            accountRepository.accounts.collect { accounts -> store.keepOnly(accounts.map { it.id }) }
+        }
+    }
 
     val state: StateFlow<DashboardState> =
         combine(fetched, accountRepository.accounts, catalog.providers) { state, accounts, providers ->
             val ids = accounts.map { it.id }.toSet()
-            val results = state.results.filter { it.account.id in ids }
+            val results = state.results.filter { it.account.id in ids }.map(::resolveProvider)
             val pages = providers.mapValues { (_, provider) -> provider.pages }
+            val statuses =
+                state.statuses.values
+                    .map(::resolveProvider)
+                    .associateBy { it.providerId }
             if (results.size == state.results.size) {
-                state.copy(accounts = accounts, pages = pages, accountsLoaded = true)
+                state.copy(
+                    accounts = accounts,
+                    results = results,
+                    pages = pages,
+                    statuses = statuses,
+                    accountsLoaded = true,
+                )
             } else {
                 derive(results, state.lastUpdated).copy(
                     accounts = accounts,
                     isRefreshing = state.isRefreshing,
                     pages = pages,
-                    statuses = state.statuses,
+                    statuses = statuses,
                     accountsLoaded = true,
                 )
             }
@@ -107,14 +137,20 @@ class DashboardRepository(
         refreshLock.withLock {
             fetched.update { it.copy(isRefreshing = true) }
             val accounts = accountRepository.accounts.first()
-            val previous = fetched.value.statuses
+            val previous = fetched.value
+            val now = clock.now()
             val (results, statuses) =
                 coroutineScope {
-                    val results = accounts.map { account -> async { fetch(account) } }
+                    val results = accounts.map { account -> async { fetch(account, now, previous) } }
                     val statuses = accounts.map { it.providerId }.distinct().map { async { status(it) } }
                     results.awaitAll() to statuses.awaitAll().filterNotNull().toMap()
                 }
-            fetched.value = derive(results, clock.now()).copy(statuses = previous + statuses)
+            val merged = previous.statuses + statuses
+            fetched.value = derive(results, now).copy(statuses = merged)
+            results.filter { it.error == null && it.snapshot != null }.forEach { result ->
+                store.save(CachedSnapshot(result.account.id, now, result.snapshot!!))
+            }
+            store.saveStatuses(merged.values)
         }
     }
 
@@ -140,10 +176,15 @@ class DashboardRepository(
 
     // A bug in one provider must never take down the whole overview, so anything it throws is contained here.
     @Suppress("TooGenericExceptionCaught")
-    private suspend fun fetch(account: ConnectedAccount): AccountResult {
-        val provider =
-            catalog[account.providerId]
-                ?: return AccountResult(account, null, ProviderError.NotFound())
+    private suspend fun fetch(
+        account: ConnectedAccount,
+        now: Instant,
+        previous: DashboardState,
+    ): AccountResult {
+        val last = previous.results.firstOrNull { it.account.id == account.id }
+
+        fun failed(error: ProviderError) = AccountResult(account, last?.snapshot, error, last?.fetchedAt)
+        val provider = catalog[account.providerId] ?: return failed(ProviderError.NotFound())
         val result =
             try {
                 provider.fetchSnapshot(account)
@@ -153,8 +194,8 @@ class DashboardRepository(
                 Result.failure(ProviderError.Unknown(e))
             }
         return result.fold(
-            onSuccess = { AccountResult(account, it, null) },
-            onFailure = { AccountResult(account, null, it as? ProviderError ?: ProviderError.Unknown(it)) },
+            onSuccess = { AccountResult(account, it, null, now) },
+            onFailure = { failed(it as? ProviderError ?: ProviderError.Unknown(it)) },
         )
     }
 
@@ -169,5 +210,37 @@ class DashboardRepository(
             summary = DashboardSummary.from(snapshots, clock.now()),
             lastUpdated = lastUpdated,
         )
+    }
+
+    /** The state a cold start begins with: the cache as results, dated by its newest fetch. */
+    private fun restore(cached: CachedDashboard): DashboardState {
+        val results =
+            cached.snapshots.map { entry ->
+                // The account's name and settings come back with the account list; only its id matters here.
+                val account = ConnectedAccount(entry.accountId, providerOf(entry.snapshot), "")
+                AccountResult(account, entry.snapshot, null, entry.fetchedAt)
+            }
+        return derive(results, cached.lastUpdated()).copy(statuses = cached.statusesByProvider())
+    }
+
+    private fun providerOf(snapshot: ProviderSnapshot): ProviderId =
+        snapshot.resources.firstOrNull()?.providerId ?: ProviderId("")
+
+    /**
+     * A result read from the cache knows its provider by id alone; once the plugin is installed its resources get
+     * the plugin's name and links. Same-instance ids are already resolved, so live results cost nothing here.
+     */
+    private fun resolveProvider(result: AccountResult): AccountResult {
+        val provider = catalog.resolve(result.account.providerId)
+        if (provider === result.account.providerId) return result
+        return result.copy(
+            account = result.account.copy(providerId = provider),
+            snapshot = result.snapshot?.withProvider(provider),
+        )
+    }
+
+    private fun resolveProvider(status: ProviderStatus): ProviderStatus {
+        val provider = catalog.resolve(status.providerId)
+        return if (provider === status.providerId) status else status.copy(providerId = provider)
     }
 }

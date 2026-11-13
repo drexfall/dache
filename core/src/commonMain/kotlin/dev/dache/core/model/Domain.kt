@@ -1,8 +1,10 @@
 package dev.dache.core.model
 
+import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
 /** A domain or DNS zone. [expiresAt] is null when the provider is not the registrar. */
+@Serializable
 data class Domain(
     override val providerId: ProviderId,
     override val accountId: String,
@@ -18,6 +20,7 @@ data class Domain(
 }
 
 /** A TLS certificate covering [hosts]. [expiresAt] is null until one is issued. */
+@Serializable
 data class Certificate(
     val nativeId: String,
     val status: CertificateStatus,
@@ -36,6 +39,7 @@ enum class CertificateStatus {
     UNKNOWN,
 }
 
+@Serializable
 data class DnsRecord(
     override val providerId: ProviderId,
     override val accountId: String,

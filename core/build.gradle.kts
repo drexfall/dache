@@ -31,11 +31,13 @@ kotlin {
             api(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.androidx.datastore.preferences.core)
+            api(libs.okio)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
+            implementation(libs.okio.fakefilesystem)
         }
         jvmMain.dependencies {
             // Windows Credential Manager; the classes load only when the Windows vault is used.

@@ -11,6 +11,7 @@ import dev.dache.android.widget.DacheWidgets
 import dev.dache.app.AppContainer
 import dev.dache.app.AppStores
 import dev.dache.core.account.DataStoreAccountStore
+import dev.dache.core.dashboard.FileSnapshotStore
 import dev.dache.core.security.TinkTokenVault
 import dev.dache.core.settings.DataStoreSettingsStore
 import dev.dache.plugin.registry.DataStorePluginStore
@@ -22,6 +23,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import okio.FileSystem
+import okio.Path.Companion.toOkioPath
 import java.io.File
 
 class DacheApplication : Application() {
@@ -38,6 +41,7 @@ class DacheApplication : Application() {
                     alerts = settings,
                     writeLog = settings,
                     plugins = DataStorePluginStore.create(File(filesDir, "plugins.preferences_pb").absolutePath),
+                    snapshots = FileSnapshotStore(FileSystem.SYSTEM, File(filesDir, "snapshots").toOkioPath()),
                 ),
             scope = appScope,
             // Request logging is debug-only; release builds never log requests.

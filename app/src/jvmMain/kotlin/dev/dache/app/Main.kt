@@ -25,6 +25,7 @@ import dev.dache.app.resources.Res
 import dev.dache.app.resources.alerts_timer_failed
 import dev.dache.app.resources.app_name
 import dev.dache.core.account.DataStoreAccountStore
+import dev.dache.core.dashboard.FileSnapshotStore
 import dev.dache.core.settings.DataStoreSettingsStore
 import dev.dache.plugin.registry.DataStorePluginStore
 import dev.dache.plugin.runtime.RequestLogger
@@ -36,6 +37,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import okio.FileSystem
+import okio.Path.Companion.toOkioPath
 import org.jetbrains.compose.resources.stringResource
 import java.awt.Dimension
 import java.io.File
@@ -58,6 +61,7 @@ fun main(args: Array<String>) {
                     alerts = if (headless) HeadlessAlertStore(settings, File(dataDir, "reported-alerts")) else settings,
                     writeLog = settings,
                     plugins = DataStorePluginStore.create(File(dataDir, "plugins.preferences_pb").absolutePath),
+                    snapshots = FileSnapshotStore(FileSystem.SYSTEM, File(dataDir, "snapshots").toOkioPath()),
                 ),
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
             // Off unless a developer opts in; requests are redacted either way.

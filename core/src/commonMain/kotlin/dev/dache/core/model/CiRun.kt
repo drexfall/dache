@@ -1,7 +1,9 @@
 package dev.dache.core.model
 
+import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
+@Serializable
 data class CiRun(
     override val providerId: ProviderId,
     override val accountId: String,

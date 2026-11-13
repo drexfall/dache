@@ -9,6 +9,7 @@ import dev.dache.core.alerts.AlertSettings
 import dev.dache.core.alerts.AlertStore
 import dev.dache.core.alerts.BackgroundCheck
 import dev.dache.core.dashboard.DashboardRepository
+import dev.dache.core.dashboard.SnapshotStore
 import dev.dache.core.provider.ProviderCatalog
 import dev.dache.core.security.IntegrityWarningSettings
 import dev.dache.core.security.TokenVault
@@ -31,6 +32,8 @@ class AppStores(
     val alerts: AlertStore,
     val writeLog: WriteLog,
     val plugins: PluginStore,
+    /** The last refresh, shown until the first one of this process finishes. */
+    val snapshots: SnapshotStore = SnapshotStore.None,
 )
 
 /**
@@ -67,7 +70,7 @@ class AppContainer(
         ).apply { start(scope) }
 
     val accountRepository = AccountRepository(accountStore, vault, catalog)
-    val dashboardRepository = DashboardRepository(accountRepository, scope)
+    val dashboardRepository = DashboardRepository(accountRepository, scope, store = stores.snapshots)
 
     val backgroundCheck = BackgroundCheck(dashboardRepository, alertStore)
     val actionService = ActionService(accountRepository, dashboardRepository, writeLog)
