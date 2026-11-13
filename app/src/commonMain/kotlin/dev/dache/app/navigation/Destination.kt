@@ -29,22 +29,46 @@ sealed interface Destination {
         val accountId: String,
     ) : Destination
 
-    /** One resource, reached through a linked-resource chip. [from] is the page the chip was on. */
+    /** One resource, reached through a linked-resource chip or a row. */
     data class Resource(
         val ref: ResourceRef,
-        val from: Destination,
     ) : Destination
 }
 
-/** Every page from where the user started to this one, for the breadcrumb. An account's own pages sit under it. */
-val Destination.trail: List<Destination>
-    get() =
-        when (this) {
-            is Destination.Resource -> from.trail + this
-            is Destination.Service -> listOf(Destination.Account(accountId), this)
-            is Destination.AccountSettings -> listOf(Destination.Account(accountId), this)
-            else -> listOf(this)
-        }
+/**
+ * The pages open, oldest first; the last one is shown. Never empty: the first entry is where the app started.
+ * Going back pops the last entry, so the Android back button and Esc on desktop retrace the user's steps, and
+ * the breadcrumb is the stack itself.
+ */
+typealias BackStack = List<Destination>
+
+val BackStack.current: Destination get() = last()
+
+/**
+ * Opens [destination]. A page already open is gone back to instead of opened again, so loops through linked
+ * resources don't pile up; one of an account's pages replaces a sibling page of the same account on top, so
+ * moving between DNS and Workers doesn't bury the account under its own pages.
+ */
+fun BackStack.push(destination: Destination): BackStack {
+    val existing = indexOf(destination)
+    if (existing >= 0) return subList(0, existing + 1)
+    val top = last()
+    return if (destination.isSiblingOf(top)) dropLast(1) + destination else this + destination
+}
+
+/** Back to the previous page; the first page stays. */
+fun BackStack.pop(): BackStack = if (size > 1) dropLast(1) else this
+
+/** Drops every page about an account that is gone, so removing an account can't leave its pages open. */
+fun BackStack.keepingAccounts(accountIds: Collection<String>): BackStack =
+    filter { it.accountId == null || it.accountId in accountIds }.ifEmpty { listOf(Destination.Overview) }
+
+private fun Destination.isSiblingOf(other: Destination): Boolean =
+    isAccountPage && other.isAccountPage && accountId == other.accountId
+
+/** Service pages and settings sit under their account rather than beside it. */
+private val Destination.isAccountPage: Boolean
+    get() = this is Destination.Service || this is Destination.AccountSettings
 
 /** The sidebar entry to highlight: a resource page and the settings belong to their account. */
 val Destination.sidebarEntry: Destination
@@ -66,14 +90,11 @@ val Destination.accountId: String?
             Destination.Overview, Destination.ManageAccounts, Destination.Plugins -> null
         }
 
-/** Opens [ref] from this page. A resource already on the trail is gone back to, so linked loops don't pile up. */
-fun Destination.openResource(ref: ResourceRef): Destination =
-    trail.firstOrNull { it is Destination.Resource && it.ref == ref } ?: Destination.Resource(ref, this)
-
-val DestinationSaver: Saver<Destination, List<String>> =
+/** Saves the whole stack as a flat token list, so rotation and process death restore every page. */
+val BackStackSaver: Saver<BackStack, List<String>> =
     Saver(
-        save = { destination -> ArrayList(destination.trail.flatMap { it.tokens() }) },
-        restore = { tokens -> runCatching { decode(tokens) }.getOrDefault(Destination.Overview) },
+        save = { stack -> ArrayList(stack.flatMap { it.tokens() }) },
+        restore = { tokens -> runCatching { decode(tokens) }.getOrDefault(listOf(Destination.Overview)) },
     )
 
 private fun Destination.tokens(): List<String> =
@@ -87,13 +108,13 @@ private fun Destination.tokens(): List<String> =
         is Destination.Resource -> listOf("resource", ref.providerId.id, ref.accountId, ref.kind.name, ref.nativeId)
     }
 
-/** Rebuilds the last page of a saved trail. Each resource page goes back to the page before it. */
-private fun decode(tokens: List<String>): Destination {
+private fun decode(tokens: List<String>): BackStack {
     val rest = ArrayDeque(tokens)
-    var destination: Destination = Destination.Overview
+    val stack = mutableListOf<Destination>()
     while (rest.isNotEmpty()) {
-        destination =
+        stack +=
             when (rest.removeFirst()) {
+                "overview" -> Destination.Overview
                 "accounts" -> Destination.ManageAccounts
                 "plugins" -> Destination.Plugins
                 "account" -> Destination.Account(rest.removeFirst())
@@ -103,10 +124,10 @@ private fun decode(tokens: List<String>): Destination {
                     val provider = ProviderId(rest.removeFirst())
                     val accountId = rest.removeFirst()
                     val kind = ResourceKind.valueOf(rest.removeFirst())
-                    Destination.Resource(ResourceRef(provider, accountId, rest.removeFirst(), kind), destination)
+                    Destination.Resource(ResourceRef(provider, accountId, rest.removeFirst(), kind))
                 }
-                else -> Destination.Overview
+                else -> error("unknown page")
             }
     }
-    return destination
+    return stack.ifEmpty { listOf(Destination.Overview) }
 }

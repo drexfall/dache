@@ -37,13 +37,18 @@ import dev.dache.app.actions.LocalActionHost
 import dev.dache.app.alerts.BackgroundChecksCard
 import dev.dache.app.alerts.BackgroundChecksPlatform
 import dev.dache.app.dashboard.DashboardViewModel
-import dev.dache.app.navigation.AppNavigator
+import dev.dache.app.navigation.BackNavigation
+import dev.dache.app.navigation.BackRequests
+import dev.dache.app.navigation.BackStack
+import dev.dache.app.navigation.BackStackSaver
 import dev.dache.app.navigation.Destination
-import dev.dache.app.navigation.DestinationSaver
 import dev.dache.app.navigation.LocalAppNavigator
 import dev.dache.app.navigation.Sidebar
+import dev.dache.app.navigation.StateNavigator
 import dev.dache.app.navigation.accountId
-import dev.dache.app.navigation.openResource
+import dev.dache.app.navigation.current
+import dev.dache.app.navigation.keepingAccounts
+import dev.dache.app.navigation.push
 import dev.dache.app.navigation.sidebarEntry
 import dev.dache.app.overview.OverviewScreen
 import dev.dache.app.plugins.PluginsScreen
@@ -71,7 +76,6 @@ import dev.dache.core.model.ActionInfo
 import dev.dache.core.model.ActionTarget
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.Resource
-import dev.dache.core.model.ResourceRef
 import dev.dache.core.model.ServiceResource
 import dev.dache.core.model.TokenPermission
 import dev.dache.core.security.IntegrityChecker
@@ -83,6 +87,7 @@ import kotlinx.coroutines.launch
  * Pass [lockAuthenticator] on platforms with a screen lock; without one the app lock isn't offered. Pass
  * [integrityChecker] where the device can be checked for root; without one no warning is shown. Pass
  * [backgroundChecks] where the platform can check in the background and notify; without it they aren't offered.
+ * [backRequests] carries back requests from outside the UI tree, such as desktop keyboard shortcuts.
  */
 @Composable
 fun DacheApp(
@@ -90,27 +95,34 @@ fun DacheApp(
     lockAuthenticator: LockAuthenticator? = null,
     integrityChecker: IntegrityChecker? = null,
     backgroundChecks: BackgroundChecksPlatform? = null,
+    backRequests: BackRequests? = null,
 ) {
     DacheTheme {
         val signals = rememberIntegritySignals(integrityChecker)
-        // Above the lock, so the open page is still there after unlocking.
-        val destinationState =
-            rememberSaveable(stateSaver = DestinationSaver) { mutableStateOf<Destination>(Destination.Overview) }
+        // Above the lock, so the open pages are still there after unlocking.
+        val stackState = rememberSaveable(stateSaver = BackStackSaver) { mutableStateOf(listOf(Destination.Overview)) }
+        val platform = Platform(signals, backgroundChecks, lockAuthenticator, backRequests)
         if (lockAuthenticator == null) {
-            DacheContent(container, destinationState, signals, backgroundChecks, null, securityCard = null)
+            DacheContent(container, stackState, platform, securityCard = null)
         } else {
             val lockState by container.appLock.state.collectAsStateWithLifecycle()
             when (lockState) {
                 LockState.LOADING -> LockLoading()
                 LockState.LOCKED -> LockGate(container.appLock, lockAuthenticator)
                 LockState.UNLOCKED ->
-                    DacheContent(container, destinationState, signals, backgroundChecks, lockAuthenticator) {
-                        AppLockSection(container, lockAuthenticator)
-                    }
+                    DacheContent(container, stackState, platform) { AppLockSection(container, lockAuthenticator) }
             }
         }
     }
 }
+
+/** What the platform the app runs on provides, bundled so the content doesn't take six optional parameters. */
+private class Platform(
+    val signals: Set<IntegritySignal>,
+    val backgroundChecks: BackgroundChecksPlatform?,
+    val lockAuthenticator: LockAuthenticator?,
+    val backRequests: BackRequests?,
+)
 
 /** Destructive actions ask for the device lock where there is one, and for the target's name otherwise. */
 private fun actionsViewModel(
@@ -191,10 +203,8 @@ private fun AppLockSection(
 @Composable
 private fun DacheContent(
     container: AppContainer,
-    destinationState: MutableState<Destination>,
-    signals: Set<IntegritySignal>,
-    backgroundChecks: BackgroundChecksPlatform?,
-    lockAuthenticator: LockAuthenticator?,
+    stackState: MutableState<BackStack>,
+    platform: Platform,
     securityCard: (@Composable () -> Unit)?,
 ) {
     val dashboardViewModel =
@@ -208,7 +218,7 @@ private fun DacheContent(
                 container.dashboardRepository,
             )
         }
-    val actionsViewModel = viewModel { actionsViewModel(container, lockAuthenticator) }
+    val actionsViewModel = viewModel { actionsViewModel(container, platform.lockAuthenticator) }
     val state by dashboardViewModel.state.collectAsStateWithLifecycle()
     val accountsState by accountsViewModel.state.collectAsStateWithLifecycle()
     val tokenChecks by accountsViewModel.tokenChecks.collectAsStateWithLifecycle()
@@ -216,20 +226,18 @@ private fun DacheContent(
     val confirmLinks by container.settingsStore.confirmExternalLinks.collectAsStateWithLifecycle(
         initialValue = true,
     )
-    var destination by destinationState
-    val navigator = remember(destinationState) { StateNavigator(destinationState) }
+    var stack by stackState
+    val destination = stack.current
+    val navigator = remember(stackState) { StateNavigator(stackState) }
+    val open: (Destination) -> Unit = { stack = stack.push(it) }
 
     LaunchedEffect(accountsViewModel) {
-        accountsViewModel.connected.collect { destination = Destination.Account(it.id) }
+        accountsViewModel.connected.collect { open(Destination.Account(it.id)) }
     }
     LaunchedEffect(Unit) { container.updatePluginsInBackground() }
     // A removed account's pages have nothing left to show.
-    val currentAccountId = destination.accountId
-    if (currentAccountId != null &&
-        state.lastUpdated != null &&
-        state.accounts.none { it.id == currentAccountId }
-    ) {
-        destination = Destination.Overview
+    LaunchedEffect(state.accounts, state.accountsLoaded) {
+        if (state.accountsLoaded) stack = stack.keepingAccounts(state.accounts.map { it.id })
     }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -246,7 +254,7 @@ private fun DacheContent(
                         state = state,
                         current = destination.sidebarEntry,
                         onSelect = {
-                            destination = it
+                            open(it)
                             onPicked()
                         },
                         onAddAccount = {
@@ -268,6 +276,7 @@ private fun DacheContent(
                             state.accounts.firstOrNull { it.id == target.accountId }?.let { account ->
                                 AccountPage(
                                     target = target,
+                                    trail = stack,
                                     account = account,
                                     state = state,
                                     check = tokenChecks[account.id] ?: TokenCheckState(),
@@ -276,7 +285,7 @@ private fun DacheContent(
                                     onCheck = { accountsViewModel.checkAccount(account) },
                                     onRefresh = dashboardViewModel::refresh,
                                     onOpenMenu = onOpenMenu,
-                                    onNavigate = { destination = it },
+                                    onNavigate = open,
                                 )
                             }
                         is Destination.Resource ->
@@ -284,10 +293,11 @@ private fun DacheContent(
                             key(target) {
                                 ResourceScreen(
                                     destination = target,
+                                    trail = stack,
                                     state = state,
                                     onRefresh = dashboardViewModel::refresh,
                                     onOpenMenu = onOpenMenu,
-                                    onNavigate = { destination = it },
+                                    onNavigate = open,
                                 )
                             }
                         Destination.Plugins -> PluginsPage(container, onOpenMenu)
@@ -299,26 +309,31 @@ private fun DacheContent(
                                 onOpenMenu = onOpenMenu,
                                 onAddAccount = accountsViewModel::startAdding,
                                 onRemove = accountsViewModel::remove,
-                                onOpenSettings = { destination = Destination.AccountSettings(it.id) },
+                                onOpenSettings = { open(Destination.AccountSettings(it.id)) },
                                 confirmExternalLinks = confirmLinks,
                                 onConfirmExternalLinksChange = container::setConfirmExternalLinks,
                                 securityCard = {
-                                    IntegrityNote(signals)
+                                    IntegrityNote(platform.signals)
                                     securityCard?.invoke()
                                 },
-                                backgroundCard = backgroundCard(container, backgroundChecks),
+                                backgroundCard = backgroundCard(container, platform.backgroundChecks),
                                 writeLog = writeLog,
                             )
                     }
                 }
 
                 if (formFactor == FormFactor.EXPANDED) {
+                    BackNavigation(stackState, platform.backRequests, closeDrawer = null)
                     PermanentNavigationDrawer(
                         drawerContent = { PermanentDrawerSheet(Modifier.width(280.dp)) { sidebar {} } },
                     ) { page(null) }
                 } else {
                     val drawerState = rememberDrawerState(DrawerValue.Closed)
                     val scope = rememberCoroutineScope()
+                    // Back closes an open drawer before it leaves the page.
+                    val closeDrawer: (() -> Unit)? =
+                        if (drawerState.isOpen) ({ scope.launch { drawerState.close() } }) else null
+                    BackNavigation(stackState, platform.backRequests, closeDrawer)
                     ModalNavigationDrawer(
                         drawerState = drawerState,
                         drawerContent = { ModalDrawerSheet { sidebar { scope.launch { drawerState.close() } } } },
@@ -326,7 +341,7 @@ private fun DacheContent(
                 }
 
                 IntegrityWarning(
-                    signals = signals,
+                    signals = platform.signals,
                     hasAccounts = state.accounts.isNotEmpty(),
                     settingsStore = container.settingsStore,
                     onSave = container::setIntegrityWarning,
@@ -351,6 +366,7 @@ private fun DacheContent(
 @Composable
 private fun AccountPage(
     target: Destination,
+    trail: BackStack,
     account: ConnectedAccount,
     state: DashboardState,
     check: TokenCheckState,
@@ -364,10 +380,10 @@ private fun AccountPage(
     when (target) {
         is Destination.Service ->
             // Keyed so each page starts scrolled to the top.
-            key(target) { ServiceScreen(target, account, state, onRefresh, onOpenMenu, onNavigate) }
+            key(target) { ServiceScreen(target, trail, account, state, onRefresh, onOpenMenu, onNavigate) }
         is Destination.AccountSettings ->
             AccountSettingsScreen(
-                destination = target,
+                trail = trail,
                 account = account,
                 settings = settings,
                 permissions = permissions,
@@ -379,22 +395,6 @@ private fun AccountPage(
                 onNavigate = onNavigate,
             )
         else -> AccountScreen(account, state, onRefresh, onOpenMenu, onNavigate)
-    }
-}
-
-private class StateNavigator(
-    private val destination: MutableState<Destination>,
-) : AppNavigator {
-    override fun openAccount(accountId: String) {
-        destination.value = Destination.Account(accountId)
-    }
-
-    override fun openResource(ref: ResourceRef) {
-        destination.value = destination.value.openResource(ref)
-    }
-
-    override fun openManageAccounts() {
-        destination.value = Destination.ManageAccounts
     }
 }
 

@@ -46,6 +46,8 @@ data class DashboardState(
     val pages: Map<ProviderId, List<ServicePage>> = emptyMap(),
     /** The public status of each provider in use that has a status page; the last one read survives a failure. */
     val statuses: Map<ProviderId, ProviderStatus> = emptyMap(),
+    /** False until the stored accounts have been read; until then an empty [accounts] means nothing. */
+    val accountsLoaded: Boolean = false,
 ) {
     val snapshots: List<ProviderSnapshot> get() = results.mapNotNull { it.snapshot }
 
@@ -86,12 +88,15 @@ class DashboardRepository(
             val results = state.results.filter { it.account.id in ids }
             val pages = providers.mapValues { (_, provider) -> provider.pages }
             if (results.size == state.results.size) {
-                state.copy(accounts = accounts, pages = pages)
+                state.copy(accounts = accounts, pages = pages, accountsLoaded = true)
             } else {
-                derive(
-                    results,
-                    state.lastUpdated,
-                ).copy(accounts = accounts, isRefreshing = state.isRefreshing, pages = pages, statuses = state.statuses)
+                derive(results, state.lastUpdated).copy(
+                    accounts = accounts,
+                    isRefreshing = state.isRefreshing,
+                    pages = pages,
+                    statuses = state.statuses,
+                    accountsLoaded = true,
+                )
             }
         }.stateIn(scope, SharingStarted.Eagerly, DashboardState())
 

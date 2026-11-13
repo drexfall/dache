@@ -28,9 +28,9 @@ import dev.dache.app.dashboard.SiteDetails
 import dev.dache.app.dashboard.WorkerDetails
 import dev.dache.app.dashboard.domainExpiry
 import dev.dache.app.dashboard.resourceSections
+import dev.dache.app.navigation.BackStack
 import dev.dache.app.navigation.Breadcrumbs
 import dev.dache.app.navigation.Destination
-import dev.dache.app.navigation.trail
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.detail_linked
 import dev.dache.app.resources.kind_ci_run
@@ -69,6 +69,8 @@ import kotlin.time.Clock
 @Composable
 fun ResourceScreen(
     destination: Destination.Resource,
+    /** The pages that led here, this one last, for the breadcrumb. */
+    trail: BackStack,
     state: DashboardState,
     onRefresh: () -> Unit,
     onOpenMenu: (() -> Unit)?,
@@ -90,7 +92,7 @@ fun ResourceScreen(
         isRefreshing = state.isRefreshing,
         onRefresh = onRefresh,
         onOpenMenu = onOpenMenu,
-        header = { Breadcrumbs(destination.trail, state, onNavigate) },
+        header = { Breadcrumbs(trail, state, onNavigate) },
         // Same placement as the account page: toolbar on desktop, its own row on phones.
         actions = {
             if (!compact && resource != null) ExternalLinkButton(openLabel, resource.webUrl)

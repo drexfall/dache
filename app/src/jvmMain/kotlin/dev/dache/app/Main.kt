@@ -7,6 +7,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
@@ -19,6 +20,7 @@ import dev.dache.app.alerts.BackgroundChecksPlatform
 import dev.dache.app.desktop.DesktopNotifier
 import dev.dache.app.desktop.DesktopPlatform
 import dev.dache.app.desktop.HeadlessAlertStore
+import dev.dache.app.navigation.BackRequests
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.alerts_timer_failed
 import dev.dache.app.resources.app_name
@@ -74,6 +76,7 @@ fun main(args: Array<String>) {
             val problem by timerProblem.collectAsState()
             TimerNote(problem, platform)
         }
+    val backRequests = BackRequests()
     application {
         Window(
             onCloseRequest = ::exitApplication,
@@ -87,9 +90,17 @@ fun main(args: Array<String>) {
                 if (refresh) container.refreshInBackground()
                 refresh
             },
+            // Esc or Alt+Left goes back a page. After the content had its turn, so an open dialog takes Esc first.
+            onKeyEvent = { event ->
+                val back =
+                    event.type == KeyEventType.KeyDown &&
+                        (event.key == Key.Escape || (event.key == Key.DirectionLeft && event.isAltPressed))
+                if (back) backRequests.request()
+                back
+            },
         ) {
             window.minimumSize = Dimension(MIN_WIDTH, MIN_HEIGHT)
-            DacheApp(container, backgroundChecks = backgroundChecks)
+            DacheApp(container, backgroundChecks = backgroundChecks, backRequests = backRequests)
         }
     }
 }

@@ -21,9 +21,9 @@ import dev.dache.app.dashboard.ProviderErrorCard
 import dev.dache.app.dashboard.StatTiles
 import dev.dache.app.dashboard.activityCharts
 import dev.dache.app.dashboard.resourceSections
+import dev.dache.app.navigation.BackStack
 import dev.dache.app.navigation.Breadcrumbs
 import dev.dache.app.navigation.Destination
-import dev.dache.app.navigation.trail
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.action_account_settings
 import dev.dache.app.resources.overview_activity
@@ -43,6 +43,8 @@ import kotlin.time.Clock
 @Composable
 fun ServiceScreen(
     destination: Destination.Service,
+    /** The pages that led here, this one last, for the breadcrumb. */
+    trail: BackStack,
     account: ConnectedAccount,
     state: DashboardState,
     onRefresh: () -> Unit,
@@ -57,7 +59,7 @@ fun ServiceScreen(
         isRefreshing = state.isRefreshing,
         onRefresh = onRefresh,
         onOpenMenu = onOpenMenu,
-        header = { Breadcrumbs(destination.trail, state, onNavigate) },
+        header = { Breadcrumbs(trail, state, onNavigate) },
     ) {
         if (page == null) {
             Text(

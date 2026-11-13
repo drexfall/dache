@@ -20,9 +20,9 @@ import androidx.compose.ui.unit.dp
 import dev.dache.app.accounts.TokenCheckState
 import dev.dache.app.accounts.TokenChecklist
 import dev.dache.app.dashboard.DetailLine
+import dev.dache.app.navigation.BackStack
 import dev.dache.app.navigation.Breadcrumbs
 import dev.dache.app.navigation.Destination
-import dev.dache.app.navigation.trail
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.action_check_again
 import dev.dache.app.resources.action_create_token
@@ -46,7 +46,8 @@ import org.jetbrains.compose.resources.stringResource
  */
 @Composable
 fun AccountSettingsScreen(
-    destination: Destination.AccountSettings,
+    /** The pages that led here, this one last, for the breadcrumb. */
+    trail: BackStack,
     account: ConnectedAccount,
     settings: List<AccountSetting>,
     permissions: List<TokenPermission>,
@@ -65,7 +66,7 @@ fun AccountSettingsScreen(
         isRefreshing = state.isRefreshing,
         onRefresh = onRefresh,
         onOpenMenu = onOpenMenu,
-        header = { Breadcrumbs(destination.trail, state, onNavigate) },
+        header = { Breadcrumbs(trail, state, onNavigate) },
     ) {
         SettingsCard(Res.string.settings_connection) {
             DetailLine(stringResource(Res.string.detail_provider), provider)
