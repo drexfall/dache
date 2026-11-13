@@ -65,6 +65,8 @@ import dev.dache.app.security.LockState
 import dev.dache.app.security.rememberIntegritySignals
 import dev.dache.app.service.ServiceScreen
 import dev.dache.app.ui.components.ExternalLinkHost
+import dev.dache.app.ui.components.LocalStaleAfter
+import dev.dache.app.ui.components.staleAfter
 import dev.dache.app.ui.layout.EXPANDED_MIN_WIDTH
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
@@ -226,6 +228,7 @@ private fun DacheContent(
     val confirmLinks by container.settingsStore.confirmExternalLinks.collectAsStateWithLifecycle(
         initialValue = true,
     )
+    val alertSettings by container.alertStore.alertSettings.collectAsStateWithLifecycle(AlertSettings())
     var stack by stackState
     val destination = stack.current
     val navigator = remember(stackState) { StateNavigator(stackState) }
@@ -247,6 +250,7 @@ private fun DacheContent(
             LocalFormFactor provides formFactor,
             LocalAppNavigator provides navigator,
             LocalActionHost provides actionHost,
+            LocalStaleAfter provides staleAfter(alertSettings),
         ) {
             ExternalLinkHost(confirm = confirmLinks, onStopAsking = { container.setConfirmExternalLinks(false) }) {
                 val sidebar: @Composable (onPicked: () -> Unit) -> Unit = { onPicked ->

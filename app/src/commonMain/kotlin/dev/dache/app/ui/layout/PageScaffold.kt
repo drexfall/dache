@@ -30,12 +30,15 @@ import androidx.compose.ui.unit.dp
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.action_open_navigation
 import dev.dache.app.resources.action_refresh
+import dev.dache.app.ui.components.UpdatedChip
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Instant
 
 /**
  * Shared page frame. Compact: menu button for the modal sidebar and pull to refresh. Expanded: the sidebar is
  * always visible, so no menu button, and a thin progress bar replaces the pull indicator. [header] sits under
- * the app bar and stays put while the body scrolls.
+ * the app bar and stays put while the body scrolls. [lastUpdated] shows as "Updated 3 h ago" beside the refresh
+ * control, in the warning tone once the data is older than the page's staleness threshold.
  */
 @Composable
 fun PageScaffold(
@@ -45,6 +48,7 @@ fun PageScaffold(
     onOpenMenu: (() -> Unit)?,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    lastUpdated: Instant? = null,
     header: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
@@ -83,6 +87,7 @@ fun PageScaffold(
                     },
                     actions = {
                         actions()
+                        UpdatedChip(lastUpdated)
                         IconButton(onClick = onRefresh) {
                             Icon(Icons.Filled.Refresh, contentDescription = stringResource(Res.string.action_refresh))
                         }

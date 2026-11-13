@@ -27,6 +27,7 @@ import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.model.Monitor
 import dev.dache.core.model.MonitorStatus
 import kotlinx.coroutines.flow.first
+import kotlin.time.Duration
 
 /** Uptime monitors with up/down counts, down monitors first. */
 class MonitorsWidget : GlanceAppWidget() {
@@ -35,13 +36,14 @@ class MonitorsWidget : GlanceAppWidget() {
         id: GlanceId,
     ) {
         val dashboard = context.loadedDashboard()
+        val staleAfter = context.staleAfter()
         val detailsHidden = context.widgetDetailsHidden()
         // Read before the first frame, so a hidden widget never shows names even briefly.
         val hiddenAtStart = detailsHidden.first()
         provideContent {
             val state by dashboard.state.collectAsState()
             val hidden by detailsHidden.collectAsState(hiddenAtStart)
-            GlanceTheme { MonitorsContent(state, hidden) }
+            GlanceTheme { MonitorsContent(state, hidden, staleAfter) }
         }
     }
 }
@@ -54,6 +56,7 @@ class MonitorsWidgetReceiver : GlanceAppWidgetReceiver() {
 private fun MonitorsContent(
     state: DashboardState,
     detailsHidden: Boolean,
+    staleAfter: Duration,
 ) {
     val context = LocalContext.current
     WidgetFrame {
@@ -73,7 +76,7 @@ private fun MonitorsContent(
                 }
             }
         }
-        UpdatedCaption(state.lastUpdated)
+        UpdatedCaption(state.lastUpdated, staleAfter)
     }
 }
 

@@ -24,11 +24,10 @@ import dev.dache.app.resources.account_services
 import dev.dache.app.resources.action_account_settings
 import dev.dache.app.resources.open_in
 import dev.dache.app.resources.overview_activity
-import dev.dache.app.resources.updated_at
 import dev.dache.app.service.serviceCards
 import dev.dache.app.status.ProviderStatusCard
+import dev.dache.app.ui.components.Dimmed
 import dev.dache.app.ui.components.ExternalLinkButton
-import dev.dache.app.ui.components.relativeTime
 import dev.dache.app.ui.layout.AdaptiveGrid
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
@@ -57,11 +56,9 @@ fun AccountScreen(
     val dashboardUrl = account.providerId.dashboardUrl
     PageScaffold(
         title = account.providerId.displayName,
-        subtitle =
-            listOfNotNull(
-                account.displayName,
-                state.lastUpdated?.let { stringResource(Res.string.updated_at, relativeTime(it)) },
-            ).joinToString(" · "),
+        subtitle = account.displayName,
+        // The account's own fetch, which is older than the dashboard's when its last refresh failed.
+        lastUpdated = result?.fetchedAt,
         isRefreshing = state.isRefreshing,
         onRefresh = onRefresh,
         onOpenMenu = onOpenMenu,
@@ -88,18 +85,21 @@ fun AccountScreen(
             return@PageScaffold
         }
         val now = state.lastUpdated ?: Clock.System.now()
-        StatTiles(accountStats(snapshot, now))
-        state.statuses[account.providerId]?.let { ProviderStatusCard(it) }
-        val pages = state.pages(account.providerId)
-        if (pages.isNotEmpty()) {
-            val cards = serviceCards(pages, snapshot, now) { onNavigate(Destination.Service(account.id, it.id)) }
-            CollapsibleSection(Res.string.account_services) {
-                AdaptiveGrid(cards, minCellWidth = 240.dp, maxColumns = 4, spacing = 12.dp)
+        // After a failed refresh the cached resources stay, greyed, under the error card.
+        Dimmed(dim = result.error != null) {
+            StatTiles(accountStats(snapshot, now))
+            state.statuses[account.providerId]?.let { ProviderStatusCard(it) }
+            val pages = state.pages(account.providerId)
+            if (pages.isNotEmpty()) {
+                val cards = serviceCards(pages, snapshot, now) { onNavigate(Destination.Service(account.id, it.id)) }
+                CollapsibleSection(Res.string.account_services) {
+                    AdaptiveGrid(cards, minCellWidth = 240.dp, maxColumns = 4, spacing = 12.dp)
+                }
             }
-        }
-        val charts = activityCharts(listOf(snapshot), now)
-        if (charts.isNotEmpty()) {
-            CollapsibleSection(Res.string.overview_activity) { AdaptiveGrid(charts, minCellWidth = 420.dp) }
+            val charts = activityCharts(listOf(snapshot), now)
+            if (charts.isNotEmpty()) {
+                CollapsibleSection(Res.string.overview_activity) { AdaptiveGrid(charts, minCellWidth = 420.dp) }
+            }
         }
     }
 }

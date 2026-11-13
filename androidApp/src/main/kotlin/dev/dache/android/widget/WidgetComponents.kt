@@ -26,6 +26,7 @@ import dev.dache.android.MainActivity
 import dev.dache.android.R
 import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.MonitorStatus
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 /** Widget status colors, matching the app's chips. Labels always carry a symbol too. */
@@ -89,15 +90,21 @@ internal fun WidgetCaption(text: String) {
     Text(text, style = TextStyle(fontSize = 12.sp, color = GlanceTheme.colors.onSurfaceVariant), maxLines = 2)
 }
 
+/** "Updated 3 h ago"; in the failed tone once the data is older than [staleAfter], like the app's pages. */
 @Composable
-internal fun UpdatedCaption(lastUpdated: Instant?) {
+internal fun UpdatedCaption(
+    lastUpdated: Instant?,
+    staleAfter: Duration,
+) {
     val updated = lastUpdated ?: return
     val context = LocalContext.current
-    val relative =
-        DateUtils.getRelativeTimeSpanString(
-            updated.toEpochMilliseconds(),
-            System.currentTimeMillis(),
-            DateUtils.MINUTE_IN_MILLIS,
-        )
-    WidgetCaption(context.getString(R.string.widget_updated, relative))
+    val now = System.currentTimeMillis()
+    val relative = DateUtils.getRelativeTimeSpanString(updated.toEpochMilliseconds(), now, DateUtils.MINUTE_IN_MILLIS)
+    val stale = Instant.fromEpochMilliseconds(now) - updated > staleAfter
+    val color = if (stale) WidgetStatusColors.failed else GlanceTheme.colors.onSurfaceVariant
+    Text(
+        context.getString(R.string.widget_updated, relative),
+        style = TextStyle(fontSize = 12.sp, color = color),
+        maxLines = 2,
+    )
 }

@@ -22,6 +22,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import dev.dache.android.R
 import dev.dache.core.dashboard.DashboardState
+import kotlin.time.Duration
 
 /** Four problem counters, the same ones at the top of the overview screen. */
 class SummaryWidget : GlanceAppWidget() {
@@ -30,9 +31,10 @@ class SummaryWidget : GlanceAppWidget() {
         id: GlanceId,
     ) {
         val dashboard = context.loadedDashboard()
+        val staleAfter = context.staleAfter()
         provideContent {
             val state by dashboard.state.collectAsState()
-            GlanceTheme { SummaryContent(state) }
+            GlanceTheme { SummaryContent(state, staleAfter) }
         }
     }
 }
@@ -42,7 +44,10 @@ class SummaryWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 @Composable
-private fun SummaryContent(state: DashboardState) {
+private fun SummaryContent(
+    state: DashboardState,
+    staleAfter: Duration,
+) {
     val context = LocalContext.current
     WidgetFrame {
         WidgetTitle(R.string.widget_title_status)
@@ -61,7 +66,7 @@ private fun SummaryContent(state: DashboardState) {
         }
         val errors = state.results.count { it.error != null }
         if (errors > 0) WidgetCaption(context.getString(R.string.widget_account_errors, errors))
-        UpdatedCaption(state.lastUpdated)
+        UpdatedCaption(state.lastUpdated, staleAfter)
     }
 }
 

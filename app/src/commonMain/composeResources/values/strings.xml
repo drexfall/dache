@@ -75,6 +75,7 @@
     <string name="overview_empty_title">No accounts connected</string>
     <string name="overview_empty_body">Connect Netlify, Vercel, Cloudflare, GitHub, DigitalOcean or UptimeRobot with a token to see everything in one place.</string>
     <string name="updated_at">Updated %1$s</string>
+    <string name="updated_stale">Out of date</string>
 
     <string name="summary_failing_deploys">Failing deploys</string>
     <string name="summary_down_monitors">Down monitors</string>

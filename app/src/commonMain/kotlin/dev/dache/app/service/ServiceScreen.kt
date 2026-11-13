@@ -32,6 +32,7 @@ import dev.dache.app.resources.service_empty
 import dev.dache.app.resources.service_missing
 import dev.dache.app.resources.service_missing_permissions
 import dev.dache.app.resources.service_unavailable
+import dev.dache.app.ui.components.Dimmed
 import dev.dache.app.ui.layout.AdaptiveGrid
 import dev.dache.app.ui.layout.PageScaffold
 import dev.dache.core.dashboard.DashboardState
@@ -59,6 +60,7 @@ fun ServiceScreen(
         isRefreshing = state.isRefreshing,
         onRefresh = onRefresh,
         onOpenMenu = onOpenMenu,
+        lastUpdated = result?.fetchedAt,
         header = { Breadcrumbs(trail, state, onNavigate) },
     ) {
         if (page == null) {
@@ -85,17 +87,19 @@ fun ServiceScreen(
             shown.unavailable,
         ) { onNavigate(Destination.AccountSettings(account.id)) }
         val now = state.lastUpdated ?: Clock.System.now()
-        val stats = accountStats(shown, now)
-        if (stats.isNotEmpty()) StatTiles(stats)
-        val charts = activityCharts(listOf(shown), now)
-        if (charts.isNotEmpty()) {
-            CollapsibleSection(Res.string.overview_activity) { AdaptiveGrid(charts, minCellWidth = 420.dp) }
-        }
-        val sections = resourceSections(listOf(shown), state)
-        if (sections.isNotEmpty()) {
-            CollapsibleSection(Res.string.overview_resources) { AdaptiveGrid(sections, minCellWidth = 420.dp) }
-        } else if (partly.isEmpty()) {
-            Text(stringResource(Res.string.service_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Dimmed(dim = result.error != null) {
+            val stats = accountStats(shown, now)
+            if (stats.isNotEmpty()) StatTiles(stats)
+            val charts = activityCharts(listOf(shown), now)
+            if (charts.isNotEmpty()) {
+                CollapsibleSection(Res.string.overview_activity) { AdaptiveGrid(charts, minCellWidth = 420.dp) }
+            }
+            val sections = resourceSections(listOf(shown), state)
+            if (sections.isNotEmpty()) {
+                CollapsibleSection(Res.string.overview_resources) { AdaptiveGrid(sections, minCellWidth = 420.dp) }
+            } else if (partly.isEmpty()) {
+                Text(stringResource(Res.string.service_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

@@ -3,12 +3,15 @@ package dev.dache.android.widget
 import android.content.Context
 import androidx.glance.appwidget.updateAll
 import dev.dache.android.DacheApplication
+import dev.dache.app.ui.components.staleAfter
 import dev.dache.core.alerts.AlertSettings
 import dev.dache.core.dashboard.DashboardRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
 object DacheWidgets {
@@ -34,6 +37,14 @@ internal suspend fun Context.loadedDashboard(): DashboardRepository {
     }
     return dashboard
 }
+
+/** How old a widget's data may be before its footer says so; the same rule as the app's pages. */
+internal suspend fun Context.staleAfter(): Duration =
+    staleAfter(
+        (applicationContext as DacheApplication)
+            .container.alertStore.alertSettings
+            .first(),
+    )
 
 /** Whether widgets leave names out: the app lock is on and its widget setting asks for it. */
 internal fun Context.widgetDetailsHidden(): Flow<Boolean> =
