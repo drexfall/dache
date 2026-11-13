@@ -54,7 +54,11 @@ data class DashboardState(
     val statuses: Map<ProviderId, ProviderStatus> = emptyMap(),
     /** False until the stored accounts have been read; until then an empty [accounts] means nothing. */
     val accountsLoaded: Boolean = false,
+    /** What each account's refreshes have shown over time, by account id; charts reach back through it. */
+    val histories: Map<String, AccountHistory> = emptyMap(),
 ) {
+    fun history(accountId: String): AccountHistory? = histories[accountId]
+
     val snapshots: List<ProviderSnapshot> get() = results.mapNotNull { it.snapshot }
 
     /** Whether what is shown is older than [threshold], the point past which pages say so plainly. */
@@ -91,14 +95,19 @@ class DashboardRepository(
     private val scope: CoroutineScope,
     private val clock: Clock = Clock.System,
     private val store: SnapshotStore = SnapshotStore.None,
+    private val historyStore: HistoryStore = HistoryStore.None,
 ) {
     private val catalog = accountRepository.catalog
-    private val fetched = MutableStateFlow(restore(store.load()))
+    private val fetched = MutableStateFlow(restore(store.load(), historyStore.load()))
     private val refreshLock = Mutex()
 
     init {
         scope.launch {
-            accountRepository.accounts.collect { accounts -> store.keepOnly(accounts.map { it.id }) }
+            accountRepository.accounts.collect { accounts ->
+                val ids = accounts.map { it.id }
+                store.keepOnly(ids)
+                historyStore.keepOnly(ids)
+            }
         }
     }
 
@@ -111,6 +120,7 @@ class DashboardRepository(
                 state.statuses.values
                     .map(::resolveProvider)
                     .associateBy { it.providerId }
+            val histories = state.histories.filterKeys { it in ids }
             if (results.size == state.results.size) {
                 state.copy(
                     accounts = accounts,
@@ -118,6 +128,7 @@ class DashboardRepository(
                     pages = pages,
                     statuses = statuses,
                     accountsLoaded = true,
+                    histories = histories,
                 )
             } else {
                 derive(results, state.lastUpdated).copy(
@@ -126,6 +137,7 @@ class DashboardRepository(
                     pages = pages,
                     statuses = statuses,
                     accountsLoaded = true,
+                    histories = histories,
                 )
             }
         }.stateIn(scope, SharingStarted.Eagerly, DashboardState())
@@ -146,9 +158,17 @@ class DashboardRepository(
                     results.awaitAll() to statuses.awaitAll().filterNotNull().toMap()
                 }
             val merged = previous.statuses + statuses
-            fetched.value = derive(results, now).copy(statuses = merged)
-            results.filter { it.error == null && it.snapshot != null }.forEach { result ->
+            val fresh = results.filter { it.error == null && it.snapshot != null }
+            val histories =
+                previous.histories.filterKeys { id -> accounts.any { it.id == id } } +
+                    fresh.associate { result ->
+                        val id = result.account.id
+                        id to (previous.histories[id] ?: AccountHistory(id)).absorb(result.snapshot!!, now)
+                    }
+            fetched.value = derive(results, now).copy(statuses = merged, histories = histories)
+            fresh.forEach { result ->
                 store.save(CachedSnapshot(result.account.id, now, result.snapshot!!))
+                historyStore.save(histories.getValue(result.account.id))
             }
             store.saveStatuses(merged.values)
         }
@@ -212,15 +232,18 @@ class DashboardRepository(
         )
     }
 
-    /** The state a cold start begins with: the cache as results, dated by its newest fetch. */
-    private fun restore(cached: CachedDashboard): DashboardState {
+    /** The state a cold start begins with: the cache as results, dated by its newest fetch, plus the history. */
+    private fun restore(
+        cached: CachedDashboard,
+        histories: Map<String, AccountHistory>,
+    ): DashboardState {
         val results =
             cached.snapshots.map { entry ->
                 // The account's name and settings come back with the account list; only its id matters here.
                 val account = ConnectedAccount(entry.accountId, providerOf(entry.snapshot), "")
                 AccountResult(account, entry.snapshot, null, entry.fetchedAt)
             }
-        return derive(results, cached.lastUpdated()).copy(statuses = cached.statusesByProvider())
+        return derive(results, cached.lastUpdated()).copy(statuses = cached.statusesByProvider(), histories = histories)
     }
 
     private fun providerOf(snapshot: ProviderSnapshot): ProviderId =

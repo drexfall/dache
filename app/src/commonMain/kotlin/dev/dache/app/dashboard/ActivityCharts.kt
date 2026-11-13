@@ -16,9 +16,12 @@ import dev.dache.app.resources.chart_deploys_description
 import dev.dache.app.resources.chart_deploys_title
 import dev.dache.app.resources.chart_run_time_subtitle
 import dev.dache.app.resources.chart_run_time_title
+import dev.dache.core.dashboard.AccountHistory
 import dev.dache.core.dashboard.StatusEvent
 import dev.dache.core.dashboard.ciEvents
 import dev.dache.core.dashboard.deployEvents
+import dev.dache.core.dashboard.mergedWith
+import dev.dache.core.dashboard.withHistory
 import dev.dache.core.model.ProviderSnapshot
 import kotlin.time.Instant
 
@@ -26,15 +29,22 @@ const val HISTORY_DAYS = 14
 
 /**
  * Every chart card the given data supports, in a stable order. Pages pass in one account's snapshot or all of
- * them; nothing here knows which provider the data came from.
+ * them, with the matching [histories], so the outcome and monitor charts reach back past what the provider lists
+ * right now; nothing here knows which provider the data came from.
  */
 fun activityCharts(
     snapshots: List<ProviderSnapshot>,
+    histories: List<AccountHistory>,
     now: Instant,
 ): List<@Composable () -> Unit> {
-    val deployEvents = snapshots.flatMap { it.deployEvents() }
-    val ciEvents = snapshots.flatMap { it.ciEvents() }
-    val monitors = snapshots.flatMap { it.monitors }
+    val deployEvents = histories.flatMap { it.deploys }.mergedWith(snapshots.flatMap { it.deployEvents() })
+    val ciEvents = histories.flatMap { it.ciRuns }.mergedWith(snapshots.flatMap { it.ciEvents() })
+    val monitors =
+        snapshots.flatMap { snapshot ->
+            snapshot.monitors.map { monitor ->
+                monitor.withHistory(histories.firstNotNullOfOrNull { it.monitor(monitor.nativeId) })
+            }
+        }
     val buildGroups = buildGroups(snapshots)
     val runGroups = runGroups(snapshots)
 

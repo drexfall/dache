@@ -73,7 +73,7 @@ fun OverviewScreen(
         }
         state.results.filter { it.error != null }.forEach { ProviderErrorCard(it, onRefresh) }
 
-        val charts = activityCharts(state.snapshots, now)
+        val charts = activityCharts(state.snapshots, state.histories.values.toList(), now)
         if (charts.isNotEmpty()) {
             CollapsibleSection(Res.string.overview_activity) { AdaptiveGrid(charts, minCellWidth = 420.dp) }
         }

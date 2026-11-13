@@ -3,10 +3,15 @@ package dev.dache.core.dashboard
 import dev.dache.core.model.CiRun
 import dev.dache.core.model.DeployStatus
 import dev.dache.core.model.ProviderSnapshot
+import kotlinx.serialization.Serializable
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
-/** A finished (or running) build at a point in time; deploys and CI runs both reduce to this. */
+/**
+ * A finished (or running) build at a point in time; deploys and CI runs both reduce to this. [key] is the
+ * provider's id for the build, so the same build seen on two refreshes (building, then finished) is one event.
+ */
+@Serializable
 data class StatusEvent(
     val at: Instant,
     val status: DeployStatus,
@@ -14,6 +19,7 @@ data class StatusEvent(
     val title: String = "",
     /** Where the build lives in the provider's dashboard. */
     val webUrl: String? = null,
+    val key: String = "",
 )
 
 /** Completed outcomes for one UTC day. */
@@ -60,10 +66,26 @@ fun dailyStatusCounts(
 }
 
 fun ProviderSnapshot.deployEvents(): List<StatusEvent> =
-    sites.flatMap { site -> site.deployments.map { StatusEvent(it.createdAt, it.status, site.name, it.webUrl) } }
+    sites.flatMap { site ->
+        site.deployments.map {
+            StatusEvent(it.createdAt, it.status, site.name, it.webUrl, key = "${site.nativeId}/${it.nativeId}")
+        }
+    }
 
 fun ProviderSnapshot.ciEvents(): List<StatusEvent> =
-    ciRuns.map { StatusEvent(it.createdAt, it.status, it.displayName, it.webUrl) }
+    ciRuns.map { StatusEvent(it.createdAt, it.status, it.displayName, it.webUrl, key = it.nativeId) }
+
+/**
+ * [live] plus every stored event it doesn't already have. The live build wins for a key both know, since it is
+ * the newer word on that build; keyless events are kept apart by time and title.
+ */
+fun List<StatusEvent>.mergedWith(live: List<StatusEvent>): List<StatusEvent> {
+    val byKey = LinkedHashMap<Any, StatusEvent>()
+    (this + live).forEach { byKey[it.identity()] = it }
+    return byKey.values.sortedBy { it.at }
+}
+
+internal fun StatusEvent.identity(): Any = key.ifEmpty { at to title }
 
 /** Events that happened during the UTC day starting at [day], newest first. */
 fun List<StatusEvent>.onUtcDay(day: Instant): List<StatusEvent> =

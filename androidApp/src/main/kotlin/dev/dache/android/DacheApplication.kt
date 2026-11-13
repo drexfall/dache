@@ -11,6 +11,7 @@ import dev.dache.android.widget.DacheWidgets
 import dev.dache.app.AppContainer
 import dev.dache.app.AppStores
 import dev.dache.core.account.DataStoreAccountStore
+import dev.dache.core.dashboard.FileHistoryStore
 import dev.dache.core.dashboard.FileSnapshotStore
 import dev.dache.core.security.TinkTokenVault
 import dev.dache.core.settings.DataStoreSettingsStore
@@ -42,6 +43,7 @@ class DacheApplication : Application() {
                     writeLog = settings,
                     plugins = DataStorePluginStore.create(File(filesDir, "plugins.preferences_pb").absolutePath),
                     snapshots = FileSnapshotStore(FileSystem.SYSTEM, File(filesDir, "snapshots").toOkioPath()),
+                    history = FileHistoryStore(FileSystem.SYSTEM, File(filesDir, "history").toOkioPath()),
                 ),
             scope = appScope,
             // Request logging is debug-only; release builds never log requests.

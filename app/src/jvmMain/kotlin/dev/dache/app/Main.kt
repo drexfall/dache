@@ -25,6 +25,7 @@ import dev.dache.app.resources.Res
 import dev.dache.app.resources.alerts_timer_failed
 import dev.dache.app.resources.app_name
 import dev.dache.core.account.DataStoreAccountStore
+import dev.dache.core.dashboard.FileHistoryStore
 import dev.dache.core.dashboard.FileSnapshotStore
 import dev.dache.core.settings.DataStoreSettingsStore
 import dev.dache.plugin.registry.DataStorePluginStore
@@ -50,19 +51,10 @@ fun main(args: Array<String>) {
     val platform = DesktopPlatform.current()
     val dataDir = platform.dataDir
     dataDir.mkdirs()
-    val settings = DataStoreSettingsStore.create(File(dataDir, "settings.preferences_pb").absolutePath)
     val container =
         AppContainer(
             vault = platform.vault,
-            stores =
-                AppStores(
-                    accounts = DataStoreAccountStore.create(File(dataDir, "accounts.preferences_pb").absolutePath),
-                    settings = settings,
-                    alerts = if (headless) HeadlessAlertStore(settings, File(dataDir, "reported-alerts")) else settings,
-                    writeLog = settings,
-                    plugins = DataStorePluginStore.create(File(dataDir, "plugins.preferences_pb").absolutePath),
-                    snapshots = FileSnapshotStore(FileSystem.SYSTEM, File(dataDir, "snapshots").toOkioPath()),
-                ),
+            stores = stores(dataDir, headless),
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
             // Off unless a developer opts in; requests are redacted either way.
             requestLogger = if (System.getenv("DACHE_LOG_HTTP") == "1") RequestLogger.Console else RequestLogger.None,
@@ -107,6 +99,23 @@ fun main(args: Array<String>) {
             DacheApp(container, backgroundChecks = backgroundChecks, backRequests = backRequests)
         }
     }
+}
+
+/** Everything the desktop app persists, under [dataDir]. A headless check keeps its alert state in its own file. */
+private fun stores(
+    dataDir: File,
+    headless: Boolean,
+): AppStores {
+    val settings = DataStoreSettingsStore.create(File(dataDir, "settings.preferences_pb").absolutePath)
+    return AppStores(
+        accounts = DataStoreAccountStore.create(File(dataDir, "accounts.preferences_pb").absolutePath),
+        settings = settings,
+        alerts = if (headless) HeadlessAlertStore(settings, File(dataDir, "reported-alerts")) else settings,
+        writeLog = settings,
+        plugins = DataStorePluginStore.create(File(dataDir, "plugins.preferences_pb").absolutePath),
+        snapshots = FileSnapshotStore(FileSystem.SYSTEM, File(dataDir, "snapshots").toOkioPath()),
+        history = FileHistoryStore(FileSystem.SYSTEM, File(dataDir, "history").toOkioPath()),
+    )
 }
 
 private const val MIN_WIDTH = 400

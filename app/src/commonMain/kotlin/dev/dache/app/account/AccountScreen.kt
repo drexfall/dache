@@ -96,7 +96,7 @@ fun AccountScreen(
                     AdaptiveGrid(cards, minCellWidth = 240.dp, maxColumns = 4, spacing = 12.dp)
                 }
             }
-            val charts = activityCharts(listOf(snapshot), now)
+            val charts = activityCharts(listOf(snapshot), listOfNotNull(state.history(account.id)), now)
             if (charts.isNotEmpty()) {
                 CollapsibleSection(Res.string.overview_activity) { AdaptiveGrid(charts, minCellWidth = 420.dp) }
             }

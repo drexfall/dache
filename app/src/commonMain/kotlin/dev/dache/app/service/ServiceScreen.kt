@@ -90,7 +90,8 @@ fun ServiceScreen(
         Dimmed(dim = result.error != null) {
             val stats = accountStats(shown, now)
             if (stats.isNotEmpty()) StatTiles(stats)
-            val charts = activityCharts(listOf(shown), now)
+            val history = state.history(account.id)?.only(page)
+            val charts = activityCharts(listOf(shown), listOfNotNull(history), now)
             if (charts.isNotEmpty()) {
                 CollapsibleSection(Res.string.overview_activity) { AdaptiveGrid(charts, minCellWidth = 420.dp) }
             }
