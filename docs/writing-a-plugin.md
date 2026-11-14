@@ -102,6 +102,8 @@ A plugin reads with GET only. Anything else is an action, declared under `action
 
 For software people run themselves, add `"selfHosted": { "label": "Coolify server", "hint": "coolify.example.com" }`, list only `"hosts": ["self.hosted"]`, and write every URL against `https://self.hosted`. Each account enters its own server (a hostname or IPv4 address, `:port` if it isn't 443); the engine swaps it in for that account only, so its token goes to that server and nowhere else. A server whose certificate the device trusts just works. A self-signed one fails with its SHA-256 fingerprint; the user can compare it with the server's and trust it, after which only that certificate is accepted from that server. Plain HTTP isn't supported. See `coolify.json` and `proxmox.json`.
 
+To test one, pass the server as a setting: `test coolify.json --fixtures fixtures --setting server=coolify.lan:8000` answers from `fixtures/coolify.lan/…`, exactly as the app would call that server. Without `--setting server=…` the requests keep the placeholder host and are answered from `fixtures/self.hosted/…`.
+
 ## Status page
 
 If the provider publishes a public status page, describe its API under `status`, and the app shows it on the account page, with a banner on the overview when something is impaired. The status URL is fetched without the token, from its own host only. For Atlassian Statuspage (Cloudflare, GitHub, Netlify, Vercel, DigitalOcean):
