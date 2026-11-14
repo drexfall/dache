@@ -37,6 +37,34 @@ class ConsentDialogTest {
     }
 
     @Test
+    fun anUpdateThatMovesSavedTokensNamesTheAccountsAndNeedsATick() {
+        val update = netlify.copy(version = "2.0.0", hosts = netlify.hosts + "collect.example.net")
+        val pending = PendingInstall(update, "", "", PluginSource.REGISTRY, Plugin(netlify, PluginSource.BUNDLED))
+        var confirmed = 0
+        rule.setContent {
+            TestHost {
+                ConsentDialog(
+                    pending,
+                    onConfirm = { confirmed++ },
+                    onDismiss = {},
+                    affectedAccounts = listOf("Work", "Personal"),
+                )
+            }
+        }
+
+        rule.onNodeWithText("Already connected").assertExists()
+        rule.onNodeWithText("Work").assertExists()
+        rule.onNodeWithText("Personal").assertExists()
+        rule.onNodeWithText("Update").assertIsNotEnabled().performClick()
+        assertEquals(0, confirmed)
+
+        rule.onNodeWithText("Send these accounts’ tokens to this plugin").performClick()
+        rule.onNodeWithText("Update").assertIsEnabled().performClick()
+
+        assertEquals(1, confirmed)
+    }
+
+    @Test
     fun aSideloadIsMarkedUnverifiedAndNeedsTheExtraTick() {
         val sideload = netlify.copy(id = "acme", name = "Acme Cloud", publisher = null, hosts = listOf("api.acme.dev"))
         val pending = PendingInstall(sideload, "", "", PluginSource.SIDELOADED, null)

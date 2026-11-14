@@ -326,6 +326,9 @@
     <string name="consent_token">an API token</string>
     <string name="consent_shows">Shows</string>
     <string name="consent_trust_unverified">I trust this plugin with the token I give it</string>
+    <string name="consent_accounts">Already connected</string>
+    <string name="consent_accounts_body">These accounts’ saved tokens will be sent to the hosts above, in the way shown. If you don’t expect that, cancel and remove the accounts first.</string>
+    <string name="consent_accounts_confirm">Send these accounts’ tokens to this plugin</string>
     <string name="alerts_title">Background checks</string>
     <string name="alerts_body">Checks your accounts while Dache is closed and notifies you when something breaks.</string>
     <string name="alerts_denied">Dache isn’t allowed to show notifications, so background checks stay off.</string>
