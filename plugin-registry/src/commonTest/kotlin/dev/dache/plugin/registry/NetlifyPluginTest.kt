@@ -43,6 +43,10 @@ class NetlifyPluginTest {
                         request.url.encodedPath == "/api/v1/user" -> HttpStatusCode.OK to NetlifyFixtures.user
                         request.url.encodedPath == "/api/v1/sites" && request.url.parameters["page"] == "1" ->
                             HttpStatusCode.OK to NetlifyFixtures.sitesPage1
+                        request.url.encodedPath == "/api/v1/sites/${NetlifyFixtures.DOCS_ID}/deploys" ->
+                            HttpStatusCode.OK to NetlifyFixtures.docsDeploys
+                        request.url.encodedPath == "/api/v1/sites/${NetlifyFixtures.BLOG_ID}/deploys" ->
+                            HttpStatusCode.OK to "[]"
                         else -> HttpStatusCode.NotFound to """{"code":404,"message":"Not Found"}"""
                     }
                 respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
@@ -80,7 +84,7 @@ class NetlifyPluginTest {
         }
 
     @Test
-    fun listsSitesWithTheirLatestDeploy() =
+    fun listsSitesWithTheirRecentDeploys() =
         runTest {
             vault.tokens[account.tokenKey()] = NetlifyFixtures.TOKEN
 
@@ -99,12 +103,18 @@ class NetlifyPluginTest {
             assertEquals("https://docs.acme.example", docs.primaryUrl)
             assertEquals(listOf("docs.acme.example", "www.docs.acme.example"), docs.customDomains)
             assertEquals("https://github.com/acme/docs", docs.repoUrl)
-            val deploy = checkNotNull(docs.latestDeployment)
-            assertEquals(DeployStatus.SUCCESS, deploy.status)
-            assertEquals("main", deploy.branch)
-            assertEquals("Update install guide", deploy.commitMessage)
-            assertEquals(Instant.parse("2026-10-27T08:15:02.531Z"), deploy.createdAt)
-            assertEquals(94, deploy.durationSeconds)
+            // Recent deploys, not only the published one, so a failed build after it shows and alerts.
+            val deployRequest = requests.single { it.url.encodedPath.endsWith("${NetlifyFixtures.DOCS_ID}/deploys") }
+            assertEquals("10", deployRequest.url.parameters["per_page"])
+            assertEquals(2, docs.deployments.size)
+            val failed = checkNotNull(docs.latestDeployment)
+            assertEquals(DeployStatus.FAILED, failed.status)
+            assertEquals("Bump the docs theme", failed.commitMessage)
+            val published = docs.deployments.single { it.status == DeployStatus.SUCCESS }
+            assertEquals("main", published.branch)
+            assertEquals("Update install guide", published.commitMessage)
+            assertEquals(Instant.parse("2026-10-27T08:15:02.531Z"), published.createdAt)
+            assertEquals(94, published.durationSeconds)
 
             val blog = sites[1]
             assertTrue(blog.customDomains.isEmpty())

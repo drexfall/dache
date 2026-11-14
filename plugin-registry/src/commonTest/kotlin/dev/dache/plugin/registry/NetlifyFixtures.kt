@@ -70,5 +70,41 @@ object NetlifyFixtures {
         ]
         """.trimIndent()
 
+    const val DOCS_ID = "2f9c6a1e-0000-4000-8000-00000000d0c5"
+    const val BLOG_ID = "7b3e2d4c-0000-4000-8000-0000000b10c9"
+
+    /** `GET /sites/{id}/deploys` for acme-docs, newest first: a failed build after the published one. */
+    val docsDeploys =
+        """
+        [
+          {
+            "id": "6720bb000000000000000002",
+            "site_id": "$DOCS_ID",
+            "state": "error",
+            "name": "acme-docs",
+            "deploy_ssl_url": "https://6720bb000000000000000002--acme-docs.netlify.app",
+            "created_at": "2026-10-28T09:00:00.000Z",
+            "title": "Bump the docs theme",
+            "context": "production",
+            "branch": "main",
+            "error_message": "Build script returned non-zero exit code: 2",
+            "deploy_time": 31
+          },
+          {
+            "id": "6720aa000000000000000001",
+            "site_id": "$DOCS_ID",
+            "state": "ready",
+            "name": "acme-docs",
+            "deploy_ssl_url": "https://6720aa000000000000000001--acme-docs.netlify.app",
+            "created_at": "2026-10-27T08:15:02.531Z",
+            "published_at": "2026-10-27T08:16:40.112Z",
+            "title": "Update install guide",
+            "context": "production",
+            "branch": "main",
+            "deploy_time": 94
+          }
+        ]
+        """.trimIndent()
+
     const val UNAUTHORIZED = """{"code":401,"message":"Access Denied: Invalid token"}"""
 }
