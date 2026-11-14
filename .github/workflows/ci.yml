@@ -14,7 +14,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Lint
         run: ./gradlew ktlintCheck detekt
       - name: Unit tests (shared code on Android host and desktop JVM)
@@ -42,7 +42,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Render every screen
         env:
           DACHE_RENDER_DIR: ${{ github.workspace }}/screenshots
