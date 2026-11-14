@@ -95,10 +95,10 @@ class VercelPluginTest {
         runTest {
             val sites = vercel().fetchSnapshot(account()).getOrThrow().sites
 
-            // Sites and environment variables each page through the projects.
+            // Sites and environment variables both page through the projects, but one refresh sends each page once.
             val projectRequests = requests.filter { it.url.encodedPath == "/v10/projects" }
             assertEquals(
-                listOf(null, "1793000000000", null, "1793000000000"),
+                listOf(null, "1793000000000"),
                 projectRequests.map { it.url.parameters["until"] },
             )
             assertTrue(projectRequests.all { it.url.parameters["limit"] == "100" })
