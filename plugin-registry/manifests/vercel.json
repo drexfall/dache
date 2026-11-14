@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "vercel",
   "name": "Vercel",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "publisher": "Dache",
   "dashboardUrl": "https://vercel.com/dashboard",
   "tokenUrl": "https://vercel.com/account/tokens",
@@ -266,6 +266,7 @@
       "id": "edit-env",
       "label": "Change value",
       "target": "service:env",
+      "destructive": true,
       "permission": "Environment Variables Write",
       "description": "Sets a new value. Deployments pick it up when they next build.",
       "inputs": [
