@@ -55,6 +55,9 @@ kotlin {
         }
         jvmTest.dependencies {
             implementation(libs.ktor.client.mock)
+            // Compose UI tests run on the desktop JVM, so every screen is testable without an emulator.
+            @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+            implementation(compose.desktop.uiTestJUnit4)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)

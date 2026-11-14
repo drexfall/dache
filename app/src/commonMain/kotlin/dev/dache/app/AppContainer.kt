@@ -23,6 +23,7 @@ import dev.dache.plugin.registry.RegistryClient
 import dev.dache.plugin.runtime.RequestLogger
 import dev.dache.plugin.runtime.http.createPluginHttpClient
 import dev.dache.plugin.runtime.providerFor
+import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -41,21 +42,21 @@ class AppStores(
 
 /**
  * Manual DI root, created once per process by the platform entry point. Pass [requestLogger] only in debug
- * builds; release builds keep the default and log nothing about requests.
+ * builds; release builds keep the default and log nothing about requests. [httpClient] is the one every plugin
+ * and the registry use; tests pass one with a mock engine.
  */
 class AppContainer(
     vault: TokenVault,
     stores: AppStores,
     val scope: CoroutineScope,
     requestLogger: RequestLogger = RequestLogger.None,
+    private val httpClient: HttpClient = createPluginHttpClient(),
 ) {
     val settingsStore: SettingsStore = stores.settings
     val alertStore: AlertStore = stores.alerts
     val writeLog: WriteLog = stores.writeLog
     private val accountStore = stores.accounts
     private val pluginStore = stores.plugins
-
-    private val httpClient = createPluginHttpClient()
 
     val registryClient = RegistryClient(httpClient)
 
