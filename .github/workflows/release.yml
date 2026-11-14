@@ -7,8 +7,21 @@ on:
 permissions:
   contents: write
 
+# The release starts as a draft and is published only once the AppImage, the APK, the MSI and SHA256SUMS are all
+# attached. A failed build leaves an unpublished draft to fix or delete, never a public release with files missing.
 jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft --verify-tag \
+            --title "Dache $GITHUB_REF_NAME" --generate-notes
+
   appimage:
+    needs: draft
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -21,15 +34,13 @@ jobs:
         env:
           PACKAGING_JDK: ${{ env.JAVA_HOME }}
         run: ./gradlew :app:packageAppImage
-      - name: Attach it to the release
+      - name: Attach it to the draft
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "$GITHUB_REF_NAME" --title "Dache $GITHUB_REF_NAME" --generate-notes \
-            app/build/compose/binaries/main/appimage/*.AppImage
+        run: gh release upload "$GITHUB_REF_NAME" app/build/compose/binaries/main/appimage/*.AppImage
 
   apk:
-    needs: appimage
+    needs: draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,13 +64,13 @@ jobs:
           export DACHE_KEYSTORE_FILE="$RUNNER_TEMP/release.jks"
           ./gradlew :androidApp:assembleRelease
           cp androidApp/build/outputs/apk/release/androidApp-release.apk "Dache-${GITHUB_REF_NAME#v}.apk"
-      - name: Attach it to the release
+      - name: Attach it to the draft
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$GITHUB_REF_NAME" Dache-*.apk
 
   msi:
-    needs: appimage
+    needs: draft
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -72,8 +83,29 @@ jobs:
         run: ./gradlew :core:jvmTest :app:jvmTest
       - name: Build the MSI
         run: ./gradlew :app:packageMsi
-      - name: Attach it to the release
+      - name: Attach it to the draft
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: gh release upload "$GITHUB_REF_NAME" app/build/compose/binaries/main/msi/*.msi
+
+  publish:
+    needs: [appimage, apk, msi]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add SHA256SUMS and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir assets && cd assets
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY"
+          for pattern in '*.AppImage' '*.apk' '*.msi'; do
+            if ! compgen -G "$pattern" > /dev/null; then
+              echo "::error::the draft has no $pattern"
+              exit 1
+            fi
+          done
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+          gh release upload "$GITHUB_REF_NAME" SHA256SUMS --repo "$GITHUB_REPOSITORY"
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
