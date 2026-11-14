@@ -92,7 +92,7 @@ class RenderScreens {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    // The registry is private, so a real check fails: render that state.
+    // Screenshots never touch the network: the registry answers 404, so the plugin screen shows its unreachable state.
     private val registry =
         RegistryClient(createPluginHttpClient(MockEngine { respondError(HttpStatusCode.NotFound) }))
 

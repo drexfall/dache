@@ -33,11 +33,13 @@ class DacheApplication : Application() {
 
     val container: AppContainer by lazy {
         val settings = DataStoreSettingsStore.create(File(filesDir, "settings.preferences_pb").absolutePath)
+        val accounts = DataStoreAccountStore.create(File(filesDir, "accounts.preferences_pb").absolutePath)
         AppContainer(
             vault = TinkTokenVault(this),
             stores =
                 AppStores(
-                    accounts = DataStoreAccountStore.create(File(filesDir, "accounts.preferences_pb").absolutePath),
+                    accounts = accounts,
+                    profiles = accounts,
                     settings = settings,
                     alerts = settings,
                     writeLog = settings,

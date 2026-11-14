@@ -19,6 +19,7 @@ import dev.dache.app.ui.components.LocalLinkOpener
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
 import dev.dache.app.ui.theme.DacheTheme
+import dev.dache.core.account.InMemoryProfileStore
 import dev.dache.core.actions.WriteLog
 import dev.dache.core.actions.WriteLogEntry
 import dev.dache.core.alerts.AlertSettings
@@ -115,6 +116,7 @@ fun testContainer(
         stores =
             AppStores(
                 accounts = accountStore,
+                profiles = InMemoryProfileStore(),
                 settings = settings,
                 alerts = InMemoryAlertStore(),
                 writeLog = InMemoryWriteLog(),
