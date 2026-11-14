@@ -146,7 +146,10 @@ private fun PluginsPage(
     container: AppContainer,
     onOpenMenu: (() -> Unit)?,
 ) {
-    val pluginsViewModel = viewModel { PluginsViewModel(container.plugins, container.registryClient) }
+    val pluginsViewModel =
+        viewModel {
+            PluginsViewModel(container.plugins, container.registryClient, container.accountRepository.accounts)
+        }
     val pluginsState by pluginsViewModel.state.collectAsStateWithLifecycle()
     PluginsScreen(pluginsViewModel, pluginsState, onOpenMenu)
 }

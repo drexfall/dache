@@ -40,6 +40,13 @@ class PendingInstall(
 
     val needsConsent: Boolean
         get() = current == null || !current.verified || !verified || changesAccess(current.manifest, manifest)
+
+    /**
+     * It replaces a plugin and changes the hosts it calls or where the token goes, so the tokens of accounts
+     * already connected to that plugin would go to the new hosts or in the new way.
+     */
+    val changesAccessForSavedTokens: Boolean
+        get() = current != null && changesAccess(current.manifest, manifest)
 }
 
 /** A newer version of an installed plugin in the registry. */

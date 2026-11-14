@@ -38,6 +38,9 @@ import dev.dache.app.resources.Res
 import dev.dache.app.resources.action_cancel
 import dev.dache.app.resources.action_install
 import dev.dache.app.resources.action_update
+import dev.dache.app.resources.consent_accounts
+import dev.dache.app.resources.consent_accounts_body
+import dev.dache.app.resources.consent_accounts_confirm
 import dev.dache.app.resources.consent_added
 import dev.dache.app.resources.consent_asks_for
 import dev.dache.app.resources.consent_auth
@@ -63,17 +66,20 @@ import org.jetbrains.compose.resources.stringResource
 /**
  * Shown before a plugin is installed, and before an update that changes the hosts it calls or where the token
  * goes: which hosts it contacts, how it sends the token, what it asks for and shows, who published it, and
- * whether the registry verified it. An unverified plugin needs an extra tick before it can be installed.
+ * whether the registry verified it. An unverified plugin needs an extra tick before it can be installed, and so does
+ * one that would send [affectedAccounts]' saved tokens to new hosts or in a new way.
  */
 @Composable
 fun ConsentDialog(
     pending: PendingInstall,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    affectedAccounts: List<String> = emptyList(),
 ) {
     val manifest = pending.manifest
     val update = pending.current != null
     var trusted by remember(pending) { mutableStateOf(pending.verified) }
+    var handOver by remember(pending, affectedAccounts) { mutableStateOf(affectedAccounts.isEmpty()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -112,29 +118,54 @@ fun ConsentDialog(
                 Section(stringResource(Res.string.consent_shows)) {
                     Text(manifest.capabilities.joinToString(", ") { capabilityLabel(it) })
                 }
-                if (!pending.verified) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .toggleable(value = trusted, role = Role.Checkbox, onValueChange = { trusted = it }),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(checked = trusted, onCheckedChange = null)
+                if (affectedAccounts.isNotEmpty()) {
+                    Section(stringResource(Res.string.consent_accounts)) {
+                        affectedAccounts.forEach { Text(it, fontWeight = FontWeight.SemiBold) }
                         Text(
-                            stringResource(Res.string.consent_trust_unverified),
-                            modifier = Modifier.padding(start = 8.dp),
+                            stringResource(Res.string.consent_accounts_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
                         )
                     }
+                    Tick(
+                        checked = handOver,
+                        label = stringResource(Res.string.consent_accounts_confirm),
+                        onChange = { handOver = it },
+                    )
+                }
+                if (!pending.verified) {
+                    Tick(
+                        checked = trusted,
+                        label = stringResource(Res.string.consent_trust_unverified),
+                        onChange = { trusted = it },
+                    )
                 }
             }
         },
         confirmButton = {
-            Button(onClick = onConfirm, enabled = trusted) {
+            Button(onClick = onConfirm, enabled = trusted && handOver) {
                 Text(stringResource(if (update) Res.string.action_update else Res.string.action_install))
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) } },
     )
+}
+
+@Composable
+private fun Tick(
+    checked: Boolean,
+    label: String,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, role = Role.Checkbox, onValueChange = onChange),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(checked = checked, onCheckedChange = null)
+        Text(label, modifier = Modifier.padding(start = 8.dp))
+    }
 }
 
 @Composable
