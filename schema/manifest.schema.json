@@ -20,10 +20,7 @@
           "$ref": "#/$defs/RequestSpec"
         },
         "body": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/kotlinxserializationjsonJsonElement"
-          }
+          "type": "object"
         },
         "inputs": {
           "type": "array",
@@ -1166,9 +1163,6 @@
         "displayName"
       ],
       "additionalProperties": false
-    },
-    "kotlinxserializationjsonJsonElement": {
-      "oneOf": []
     }
   }
 }

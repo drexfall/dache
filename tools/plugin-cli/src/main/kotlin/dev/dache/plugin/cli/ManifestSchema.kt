@@ -34,6 +34,7 @@ object ManifestSchema {
 
     private const val API_PACKAGE = "dev.dache.plugin.api."
     private const val FIELD_SPEC = "FieldSpec"
+    private const val JSON_ELEMENT = "kotlinx.serialization.json.JsonElement"
     private const val JSON_OBJECT = "kotlinx.serialization.json.JsonObject"
     private const val NESTED = "FieldSpecNested"
 
@@ -60,8 +61,14 @@ object ManifestSchema {
         private val defs: MutableMap<String, JsonObject>,
     ) {
         fun schema(descriptor: SerialDescriptor): JsonObject =
-            // An action body is free-form JSON; its string values are templates.
-            if (descriptor.serialName == JSON_OBJECT) type("object") else typed(descriptor)
+            // An action body is free-form JSON; its string values are templates. JsonElement is a sealed class
+            // whose descriptor has none of the type/value layout sealed() reads, which made `oneOf: []`: no value
+            // could match, so every body with a value failed in editors.
+            when (descriptor.serialName.removeSuffix("?")) {
+                JSON_OBJECT -> type("object")
+                JSON_ELEMENT -> JsonObject(emptyMap())
+                else -> typed(descriptor)
+            }
 
         private fun typed(descriptor: SerialDescriptor): JsonObject =
             when (val kind = descriptor.kind) {

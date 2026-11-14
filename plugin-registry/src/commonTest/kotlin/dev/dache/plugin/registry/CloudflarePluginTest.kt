@@ -125,6 +125,8 @@ class CloudflarePluginTest {
                 (write.body as TextContent).text.let { Json.parseToJsonElement(it).toString() },
             )
             assertTrue(provider.actions.single { it.id == "delete-record" }.destructive)
+            // Editing a live record can take a name offline, so it is confirmed like a delete.
+            assertTrue(provider.actions.single { it.id == "edit-record" }.destructive)
         }
 
     @Test

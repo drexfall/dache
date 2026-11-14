@@ -2,6 +2,7 @@ package dev.dache.app.plugins
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.dache.core.model.ConnectedAccount
 import dev.dache.plugin.api.IndexEntry
 import dev.dache.plugin.registry.PendingInstall
 import dev.dache.plugin.registry.Plugin
@@ -11,19 +12,27 @@ import dev.dache.plugin.registry.RegistryStatus
 import dev.dache.plugin.registry.Update
 import dev.dache.plugin.registry.missingFrom
 import dev.dache.plugin.registry.updatesIn
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** What the plugin screen is doing besides showing plugins: a download or check under way, or one awaiting consent. */
+/**
+ * What the plugin screen is doing besides showing plugins: a download or check under way, or one awaiting consent.
+ * [affectedAccounts] names the connected accounts whose saved tokens [pending] would send to new hosts or in a new
+ * way, so the consent screen can say so.
+ */
 data class PluginWork(
     val busy: Boolean = false,
     val pending: PendingInstall? = null,
     val error: Throwable? = null,
+    val affectedAccounts: List<String> = emptyList(),
 )
 
 data class PluginsUiState(
@@ -46,6 +55,7 @@ data class PluginsUiState(
 class PluginsViewModel(
     private val manager: PluginManager,
     private val registry: RegistryClient,
+    private val accounts: Flow<List<ConnectedAccount>> = flowOf(emptyList()),
 ) : ViewModel() {
     private val work = MutableStateFlow(PluginWork())
 
@@ -78,7 +88,7 @@ class PluginsViewModel(
             step()
                 .onSuccess { pending ->
                     if (pending.needsConsent) {
-                        work.value = PluginWork(pending = pending)
+                        work.value = PluginWork(pending = pending, affectedAccounts = affectedAccounts(pending))
                     } else {
                         manager.install(pending)
                         work.value = PluginWork()
@@ -86,6 +96,14 @@ class PluginsViewModel(
                 }.onFailure { work.value = PluginWork(error = it) }
         }
     }
+
+    /** Accounts connected to the plugin [pending] replaces, when it changes where their tokens go. */
+    private suspend fun affectedAccounts(pending: PendingInstall): List<String> =
+        if (pending.changesAccessForSavedTokens) {
+            accounts.first().filter { it.providerId.id == pending.manifest.id }.map { it.displayName }
+        } else {
+            emptyList()
+        }
 
     /** The user agreed on the consent screen. */
     fun confirm() {

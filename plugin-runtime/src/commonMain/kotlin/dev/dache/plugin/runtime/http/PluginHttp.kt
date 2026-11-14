@@ -80,8 +80,18 @@ internal class PluginHttp(
         secret: String,
     ): JsonElement = get(url, headers, secret).body
 
-    /** @throws ProviderError */
+    /**
+     * Within a refresh, the same GET is sent once and its response shared.
+     *
+     * @throws ProviderError
+     */
     suspend fun get(
+        url: Url,
+        headers: Map<String, String>,
+        secret: String,
+    ): JsonResponse = cachedGet(url, headers) { fetch(url, headers, secret) }
+
+    private suspend fun fetch(
         url: Url,
         headers: Map<String, String>,
         secret: String,

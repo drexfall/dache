@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "cloudflare",
   "name": "Cloudflare",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "publisher": "Dache",
   "dashboardUrl": "https://dash.cloudflare.com",
   "tokenUrl": "https://dash.cloudflare.com/profile/api-tokens",
@@ -336,6 +336,8 @@
       "id": "edit-record",
       "label": "Edit record",
       "target": "dnsRecord",
+      "destructive": true,
+      "description": "Changes the live record; a wrong value can take the name offline.",
       "permission": "DNS Edit",
       "inputs": [
         {

@@ -140,7 +140,14 @@ fun PluginsScreen(
         SideloadCard(state.allowSideload, state.work.busy, viewModel)
     }
 
-    state.work.pending?.let { ConsentDialog(it, onConfirm = viewModel::confirm, onDismiss = viewModel::dismiss) }
+    state.work.pending?.let {
+        ConsentDialog(
+            it,
+            affectedAccounts = state.work.affectedAccounts,
+            onConfirm = viewModel::confirm,
+            onDismiss = viewModel::dismiss,
+        )
+    }
     removing?.let { plugin ->
         val bundled = plugin.id in viewModel.bundledIds
         AlertDialog(

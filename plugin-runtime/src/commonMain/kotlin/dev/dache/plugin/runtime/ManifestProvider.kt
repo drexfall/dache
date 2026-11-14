@@ -19,6 +19,7 @@ import dev.dache.core.provider.DevOpsProvider
 import dev.dache.core.security.TokenVault
 import dev.dache.plugin.api.PluginManifest
 import dev.dache.plugin.runtime.http.PluginHttp
+import dev.dache.plugin.runtime.http.RefreshCache
 import dev.dache.plugin.runtime.http.RequestBudget
 import dev.dache.plugin.runtime.mapping.Binder
 import dev.dache.plugin.runtime.mapping.Expression
@@ -99,7 +100,7 @@ class ManifestProvider(
 
     override suspend fun fetchSnapshot(account: ConnectedAccount): Result<ProviderSnapshot> =
         attempt {
-            withContext(RequestBudget(manifest.limits.maxRequestsPerRefresh)) { fetch(account) }
+            withContext(RequestBudget(manifest.limits.maxRequestsPerRefresh) + RefreshCache()) { fetch(account) }
         }
 
     private suspend fun fetch(account: ConnectedAccount): ProviderSnapshot {
