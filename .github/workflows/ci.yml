@@ -21,14 +21,14 @@ jobs:
         run: ./gradlew test
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-reports
           path: '**/build/reports/tests/'
       - name: Build Android, desktop and plugin-cli
         run: ./gradlew :androidApp:assembleDebug :androidApp:assembleRelease :app:jvmJar :tools:plugin-cli:installDist
       - name: Upload the release APK (debug-signed on branches)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: androidApp-release
           path: androidApp/build/outputs/apk/release/*.apk
@@ -47,7 +47,7 @@ jobs:
         env:
           DACHE_RENDER_DIR: ${{ github.workspace }}/screenshots
         run: ./gradlew :app:jvmTest --tests '*RenderScreens*'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: screenshots
           path: screenshots/*.png
