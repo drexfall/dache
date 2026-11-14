@@ -12,6 +12,7 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.respondError
 import io.ktor.http.HttpStatusCode
+import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -29,6 +30,9 @@ import kotlin.test.assertTrue
 class PluginManagerTest {
     private val base = "https://registry.example/index"
     private var files = mapOf<String, String>()
+
+    // Stream bodies without a Content-Length, as a chunked response would arrive.
+    private var withoutLength = false
     private val store = InMemoryPluginStore()
     private val catalog = ProviderCatalog(ready = false)
     private val bundledNetlifyVersion = BundledPlugins.manifests.single { it.id == "netlify" }.version
@@ -50,7 +54,9 @@ class PluginManagerTest {
     private val client =
         createPluginHttpClient(
             MockEngine { request ->
-                files[request.url.toString()]?.let { respond(it) } ?: respondError(HttpStatusCode.NotFound)
+                files[request.url.toString()]?.let { body ->
+                    if (withoutLength) respond(ByteReadChannel(body.encodeToByteArray())) else respond(body)
+                } ?: respondError(HttpStatusCode.NotFound)
             },
         )
 
@@ -207,6 +213,28 @@ class PluginManagerTest {
             assertIs<RegistryException>(failure)
             assertEquals("That file is too large to be a plugin.", failure.message)
             assertIs<RegistryStatus.Failed>(manager.registryStatus.value)
+        }
+
+    @Test
+    fun anOversizedIndexWithoutALengthIsRefusedToo() =
+        runTest {
+            serve("x".repeat(RegistryClient.MAX_MANIFEST_BYTES + 1), RegistryFixtures.INDEX_10_SIG)
+            withoutLength = true
+            val manager = manager()
+
+            val failure = manager.checkRegistry().exceptionOrNull()
+
+            assertIs<RegistryException>(failure)
+            assertEquals("That file is too large to be a plugin.", failure.message)
+        }
+
+    @Test
+    fun aStreamedIndexWithoutALengthStillVerifies() =
+        runTest {
+            serve(RegistryFixtures.INDEX_10, RegistryFixtures.INDEX_10_SIG)
+            withoutLength = true
+
+            assertTrue(manager().checkRegistry().isSuccess)
         }
 
     @Test

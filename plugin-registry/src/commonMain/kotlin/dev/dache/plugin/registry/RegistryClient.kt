@@ -6,11 +6,13 @@ import dev.dache.plugin.api.RegistryIndex
 import dev.dache.plugin.runtime.LoadResult
 import dev.dache.plugin.runtime.ManifestLoader
 import io.ktor.client.HttpClient
-import io.ktor.client.request.get
-import io.ktor.client.statement.readRawBytes
+import io.ktor.client.request.prepareGet
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
+import io.ktor.utils.io.readRemaining
 import kotlinx.coroutines.CancellationException
+import kotlinx.io.readByteArray
 import kotlinx.serialization.SerializationException
 import kotlin.io.encoding.Base64
 
@@ -92,19 +94,25 @@ class RegistryClient(
             fetch(url.trim()).decodeToString()
         }
 
-    /** Reads a whole body, refusing anything over [MAX_MANIFEST_BYTES]: the index and manifests are small files. */
-    private suspend fun fetch(url: String): ByteArray {
-        val response = client.get(url)
-        if (!response.status.isSuccess()) {
-            throw RegistryException("The plugin registry answered ${response.status.value}.")
+    /**
+     * Reads a whole body, refusing anything over [MAX_MANIFEST_BYTES]: the index and manifests are small files.
+     * The body is streamed and read one byte past the limit at most, so a response without a Content-Length, or
+     * one that lies about it, can't make the app hold more than that in memory. (A plain `get` would read the
+     * whole body before returning.)
+     */
+    private suspend fun fetch(url: String): ByteArray =
+        client.prepareGet(url).execute { response ->
+            if (!response.status.isSuccess()) {
+                throw RegistryException("The plugin registry answered ${response.status.value}.")
+            }
+            val declared = response.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: 0L
+            if (declared > MAX_MANIFEST_BYTES) throw tooLarge()
+            val bytes = response.bodyAsChannel().readRemaining(MAX_MANIFEST_BYTES + 1L).readByteArray()
+            if (bytes.size > MAX_MANIFEST_BYTES) throw tooLarge()
+            bytes
         }
-        val declared = response.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: 0L
-        val bytes = if (declared > MAX_MANIFEST_BYTES) ByteArray(0) else response.readRawBytes()
-        if (declared > MAX_MANIFEST_BYTES || bytes.size > MAX_MANIFEST_BYTES) {
-            throw RegistryException("That file is too large to be a plugin.")
-        }
-        return bytes
-    }
+
+    private fun tooLarge() = RegistryException("That file is too large to be a plugin.")
 
     // Network failures surface as RegistryException so the screen has one kind of error to explain.
     @Suppress("TooGenericExceptionCaught")
