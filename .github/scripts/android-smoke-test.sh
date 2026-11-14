@@ -10,7 +10,20 @@ adb wait-for-device
 adb shell input keyevent 82 || true
 adb install -r "$apk"
 adb logcat -c
-adb shell am start -W -n "$package/.MainActivity"
+# Launch whatever the APK declares as its launcher activity. The code lives in dev.dache.android, not under the
+# application id, so a hard-coded "$package/.MainActivity" names a class that doesn't exist.
+activity="$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$package" | tail -n 1 | tr -d '\r')"
+if [[ "$activity" != "$package/"* ]]; then
+    echo "::error::$package has no launcher activity (resolve-activity said: $activity)"
+    exit 1
+fi
+# am start exits 0 even when it can't start the activity, so check what it printed.
+start="$(adb shell am start -W -n "$activity" | tr -d '\r')"
+echo "$start"
+if grep -q "^Error" <<< "$start"; then
+    echo "::error::couldn't start $activity"
+    exit 1
+fi
 sleep 10
 
 if ! adb shell pidof "$package" > /dev/null; then
