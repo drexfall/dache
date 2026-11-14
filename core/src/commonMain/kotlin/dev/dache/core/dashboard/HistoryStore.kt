@@ -6,6 +6,9 @@ import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.ResourceKind
 import dev.dache.core.model.ServicePage
 import dev.dache.core.model.TimedValue
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.serialization.Serializable
 import okio.FileSystem
 import okio.Path
@@ -171,8 +174,9 @@ interface HistoryStore {
 class FileHistoryStore(
     fileSystem: FileSystem,
     dir: Path,
+    io: CoroutineDispatcher = Dispatchers.IO,
 ) : HistoryStore {
-    private val files = JsonDirectory(fileSystem, dir)
+    private val files = JsonDirectory(fileSystem, dir, io)
 
     override fun load(): Map<String, AccountHistory> =
         files.readAll(AccountHistory.serializer()).values.associateBy { it.accountId }
