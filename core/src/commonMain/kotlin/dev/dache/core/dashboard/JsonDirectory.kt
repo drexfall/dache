@@ -1,5 +1,6 @@
 package dev.dache.core.dashboard
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -14,10 +15,12 @@ import okio.Path
  * A directory of small JSON files, one per key: `<key>.json`. Reads are synchronous and forgiving, since they
  * happen once at startup and a file that can't be read is simply absent until the next write replaces it.
  * Writes go to a sibling file first and move into place, so a crash mid-write keeps the previous version.
+ * Writes and deletes run on [io]; tests pass their own dispatcher so file work stays on the test scheduler.
  */
 class JsonDirectory(
     private val fileSystem: FileSystem,
     private val dir: Path,
+    private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -40,7 +43,7 @@ class JsonDirectory(
         key: String,
         serializer: KSerializer<T>,
         value: T,
-    ) = withContext(Dispatchers.IO) {
+    ) = withContext(io) {
         val path = fileFor(key)
         fileSystem.createDirectories(dir)
         val tmp = dir / "${path.name}.tmp"
@@ -50,7 +53,7 @@ class JsonDirectory(
 
     /** Deletes every file whose key isn't in [keys]. */
     suspend fun keepOnly(keys: Collection<String>) =
-        withContext(Dispatchers.IO) {
+        withContext(io) {
             if (!fileSystem.exists(dir)) return@withContext
             val keep = keys.map { fileFor(it) }.toSet()
             fileSystem

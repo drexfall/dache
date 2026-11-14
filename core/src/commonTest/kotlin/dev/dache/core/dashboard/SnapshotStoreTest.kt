@@ -11,6 +11,7 @@ import dev.dache.core.provider.mock.MockFixtures
 import dev.dache.core.provider.mock.MockProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okio.Path.Companion.toPath
@@ -31,11 +32,16 @@ class SnapshotStoreTest {
     private val now = Instant.parse("2026-11-14T09:00:00Z")
     private val fileSystem = FakeFileSystem()
     private val dir = "/data/snapshots".toPath()
-    private val store = FileSnapshotStore(fileSystem, dir)
+
+    // File work runs on the test scheduler, not Dispatchers.IO: on real threads the repository's keepOnly could
+    // land after a later save, or not have finished when an assertion read the directory.
+    private val testScope = TestScope()
+    private val io = UnconfinedTestDispatcher(testScope.testScheduler)
+    private val store = FileSnapshotStore(fileSystem, dir, io)
 
     @Test
     fun roundTripsEveryProvidersSnapshotAndTheStatuses() =
-        runTest {
+        testScope.runTest {
             val status =
                 ProviderStatus(ProviderId.NETLIFY, StatusLevel.DEGRADED, "Slow", null, emptyList(), emptyList(), now)
             ProviderId.entries.forEachIndexed { i, id ->
@@ -43,7 +49,7 @@ class SnapshotStoreTest {
             }
             store.saveStatuses(listOf(status))
 
-            val cached = FileSnapshotStore(fileSystem, dir).load()
+            val cached = FileSnapshotStore(fileSystem, dir, io).load()
 
             assertEquals(ProviderId.entries.size, cached.snapshots.size)
             ProviderId.entries.forEachIndexed { i, id ->
@@ -62,7 +68,7 @@ class SnapshotStoreTest {
 
     @Test
     fun keepOnlyDeletesTheOtherAccountsFiles() =
-        runTest {
+        testScope.runTest {
             store.save(CachedSnapshot("keep", now, ProviderSnapshot()))
             store.save(CachedSnapshot("gone", now, ProviderSnapshot()))
             store.saveStatuses(emptyList())
@@ -75,7 +81,7 @@ class SnapshotStoreTest {
 
     @Test
     fun anUnreadableFileIsSkippedNotFatal() =
-        runTest {
+        testScope.runTest {
             store.save(CachedSnapshot("good", now, ProviderSnapshot()))
             fileSystem.write(dir / "bad.json") { writeUtf8("{ not json") }
             fileSystem.write(dir / "statuses.json") { writeUtf8("[1, 2") }
@@ -94,7 +100,7 @@ class SnapshotStoreTest {
 
     @Test
     fun theCacheNeverHoldsTheToken() =
-        runTest {
+        testScope.runTest {
             val token = "secret-token-7f3a9c"
             val vault = InMemoryTokenVault()
             val clock =
@@ -120,7 +126,7 @@ class SnapshotStoreTest {
 
     @Test
     fun aColdStartShowsTheCacheAndAFailedRefreshKeepsIt() =
-        runTest {
+        testScope.runTest {
             val clock =
                 object : Clock {
                     override fun now() = this@SnapshotStoreTest.now
@@ -143,7 +149,7 @@ class SnapshotStoreTest {
                 object : Clock {
                     override fun now() = this@SnapshotStoreTest.now + 3.hours
                 }
-            val second = DashboardRepository(accounts, scope, later, FileSnapshotStore(fileSystem, dir))
+            val second = DashboardRepository(accounts, scope, later, FileSnapshotStore(fileSystem, dir, io))
             val restored = second.state.value
             assertEquals(now, restored.lastUpdated)
             assertEquals(fetched.snapshot, restored.results.single().snapshot)
@@ -182,6 +188,6 @@ class SnapshotStoreTest {
 
             // Removing the account removes its file.
             accounts.remove(account)
-            assertTrue(FileSnapshotStore(fileSystem, dir).load().snapshots.isEmpty())
+            assertTrue(FileSnapshotStore(fileSystem, dir, io).load().snapshots.isEmpty())
         }
 }
