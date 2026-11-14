@@ -7,6 +7,7 @@ import dev.dache.core.model.ActionPreview
 import dev.dache.core.model.ActionRequest
 import dev.dache.core.model.Capability
 import dev.dache.core.model.ConnectedAccount
+import dev.dache.core.model.ProviderIcon
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.ProviderStatus
@@ -77,4 +78,17 @@ interface DevOpsProvider {
         account: ConnectedAccount,
         request: ActionRequest,
     ): Result<Unit> = Result.failure(UnsupportedOperationException("no actions"))
+
+    /**
+     * The site whose favicon stands for this provider, e.g. `https://dash.cloudflare.com`, for an account with
+     * [settings]; null when there is none to fetch. Self-hosted providers answer with the account's own server, so
+     * accounts on different servers can show different icons. Icons are cached by this value.
+     */
+    fun iconSite(settings: Map<String, String>): String? = null
+
+    /**
+     * The favicon of [iconSite], fetched without any token or cookie. Success with null when the site has none
+     * the app can use; failure when it couldn't be reached, so the fetch is retried sooner.
+     */
+    suspend fun fetchIcon(settings: Map<String, String>): Result<ProviderIcon?> = Result.success(null)
 }

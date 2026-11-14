@@ -9,6 +9,7 @@ import dev.dache.core.model.ActionRequest
 import dev.dache.core.model.Capability
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderError
+import dev.dache.core.model.ProviderIcon
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.ProviderStatus
@@ -27,6 +28,7 @@ import dev.dache.plugin.runtime.mapping.ManifestKind
 import dev.dache.plugin.runtime.mapping.Mapping
 import dev.dache.plugin.runtime.mapping.asText
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
 import kotlin.time.TimeSource
@@ -35,6 +37,7 @@ import kotlin.time.TimeSource
  * Runs a declarative plugin. [manifest] must have passed [ManifestValidator] (use [ManifestLoader]); this
  * class trusts it to parse. The token is read from [vault] for each refresh and only handed to the transport.
  */
+@Suppress("TooManyFunctions")
 class ManifestProvider(
     private val manifest: PluginManifest,
     override val id: ProviderId = manifest.providerId(),
@@ -58,6 +61,23 @@ class ManifestProvider(
     private val checker = TokenChecker(lists, resources, manifest.validate.permission)
     private val executor = ActionExecutor(manifest, http)
     private val status = manifest.status?.let { StatusReader(it, id, client) }
+    private val favicons = Favicons(client)
+    private val iconPage = iconPageOf(manifest.dashboardUrl)
+
+    override fun iconSite(settings: Map<String, String>): String? = iconPage?.let(::siteOf)
+
+    // Whatever stops the site answering only means "try again later"; it never fails anything else.
+    @Suppress("TooGenericExceptionCaught")
+    override suspend fun fetchIcon(settings: Map<String, String>): Result<ProviderIcon?> {
+        val page = iconPage ?: return Result.success(null)
+        return try {
+            Result.success(favicons.fetch(page))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
     override val hasStatus: Boolean get() = status != null
 
@@ -222,7 +242,14 @@ class InvalidSettingException : Exception("a setting can't be used in a request"
 
 /** The provider [this] manifest talks to, with its name and links. */
 fun PluginManifest.providerId(): ProviderId =
-    ProviderId(id = id, displayName = name, dashboardUrl = dashboardUrl, tokenPageUrl = tokenUrl, tokenHelp = tokenHelp)
+    ProviderId(
+        id = id,
+        displayName = name,
+        dashboardUrl = dashboardUrl,
+        tokenPageUrl = tokenUrl,
+        tokenHelp = tokenHelp,
+        icon = icon?.let(ProviderIcon::fromDataUri),
+    )
 
 private fun add(
     snapshot: ProviderSnapshot,

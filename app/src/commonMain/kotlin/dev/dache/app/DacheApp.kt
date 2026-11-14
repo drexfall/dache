@@ -43,6 +43,7 @@ import dev.dache.app.navigation.BackStack
 import dev.dache.app.navigation.BackStackSaver
 import dev.dache.app.navigation.Destination
 import dev.dache.app.navigation.LocalAppNavigator
+import dev.dache.app.navigation.LocalProviderIcons
 import dev.dache.app.navigation.Sidebar
 import dev.dache.app.navigation.StateNavigator
 import dev.dache.app.navigation.accountId
@@ -235,6 +236,7 @@ private fun DacheContent(
         initialValue = true,
     )
     val alertSettings by container.alertStore.alertSettings.collectAsStateWithLifecycle(AlertSettings())
+    val providerIcons by container.providerIcons.icons.collectAsStateWithLifecycle()
     var stack by stackState
     val destination = stack.current
     val navigator = remember(stackState) { StateNavigator(stackState) }
@@ -258,6 +260,7 @@ private fun DacheContent(
             LocalAppNavigator provides navigator,
             LocalActionHost provides actionHost,
             LocalStaleAfter provides staleAfter(alertSettings),
+            LocalProviderIcons provides providerIcons,
         ) {
             ExternalLinkHost(confirm = confirmLinks, onStopAsking = { container.setConfirmExternalLinks(false) }) {
                 val sidebar: @Composable (onPicked: () -> Unit) -> Unit = { onPicked ->

@@ -8,6 +8,8 @@ A Dache plugin is one JSON file, a manifest. It names the hosts the plugin may c
 
 Copy `docs/plugin-template/example.json` and its `fixtures/` folder. The template lists projects with their deployments, plus an optional storage list, split into two pages. Set `id` (lowercase, also the token's storage namespace), `name`, `hosts` and `auth`. Then `dashboardUrl`, the provider's web dashboard (required, HTTPS), `tokenUrl`, where users create a token, and `tokenHelp`, a sentence or two on which permissions to grant. The app shows the last two when someone connects an account.
 
+Next to each account the app shows the provider's icon. By default that's the favicon of `dashboardUrl`'s site. It's fetched once without any token or cookie and kept for a month, and the name's first letter shows until it arrives. To ship your own icon, set `icon` to a `data:` URI holding a PNG or WebP of at most 64 KB (`data:image/png;base64,iVBOR…`). Make it 96×96 px or larger so it stays sharp. SVG isn't accepted because Android can't draw it. A self-hosted plugin without an icon gets each account's server's favicon.
+
 Keep `"$schema": "../../schema/manifest.schema.json"` (adjust the path to where your file lives). Editors then complete keys, kinds, field names and capabilities, and flag a misspelt field as you type.
 
 ## 2. Map the endpoints

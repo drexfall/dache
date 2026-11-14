@@ -1,5 +1,6 @@
 package dev.dache.plugin.runtime
 
+import dev.dache.core.model.IconFormat
 import dev.dache.plugin.api.AuthSpec
 import dev.dache.plugin.api.FieldSpec
 import dev.dache.plugin.api.ListSpec
@@ -8,6 +9,7 @@ import dev.dache.plugin.api.PluginManifest
 import dev.dache.plugin.api.RequestSpec
 import dev.dache.plugin.api.ResourceSpec
 import dev.dache.plugin.api.SettingSpec
+import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -43,6 +45,40 @@ class ManifestValidatorTest {
         assertProblem("id: must match", valid.copy(id = "Netlify!"))
         assertProblem("version: must be MAJOR.MINOR.PATCH", valid.copy(version = "1"))
         assertProblem("capabilities[0]: unknown capability \"SITE\"", valid.copy(capabilities = listOf("SITE")))
+    }
+
+    @Test
+    fun iconMustBeASmallRasterDataUri() {
+        val png = byteArrayOf(0x89.toByte(), 'P'.code.toByte(), 'N'.code.toByte(), 'G'.code.toByte(), 0, 0)
+        val svg = "<svg xmlns=\"http://www.w3.org/2000/svg\"/>".encodeToByteArray()
+
+        fun uri(
+            type: String,
+            bytes: ByteArray,
+        ) = "data:$type;base64,${Base64.encode(bytes)}"
+
+        assertEquals(emptyList(), problems(valid.copy(icon = uri("image/png", png))))
+        assertProblem("icon: must be a data: URI", valid.copy(icon = "https://example.com/icon.png"))
+        assertProblem("icon: must be a data: URI", valid.copy(icon = uri("image/svg+xml", svg)))
+        assertProblem(
+            "icon: must be a data: URI",
+            valid.copy(icon = uri("image/png", "not an image".encodeToByteArray())),
+        )
+        assertProblem(
+            "icon: must be a data: URI",
+            valid.copy(
+                icon =
+                    uri(
+                        "image/png",
+                        png + ByteArray(IconFormat.MAX_BYTES),
+                    ),
+            ),
+        )
+    }
+
+    @Test
+    fun dashboardUrlIsRequired() {
+        assertProblem("dashboardUrl: name the provider's web dashboard", valid.copy(dashboardUrl = null))
     }
 
     @Test

@@ -11,8 +11,8 @@ import kotlinx.serialization.encoding.Encoder
 /**
  * A provider, named by the plugin that talks to it. [id] is the stable plugin identifier, also the TokenVault
  * namespace; two ids are equal when their [id]s are, whatever else they carry. The rest comes from the plugin's
- * manifest: [dashboardUrl] is the provider's web dashboard, [tokenPageUrl] where users create a token, and
- * [tokenHelp] least-privilege guidance shown before they do.
+ * manifest: [dashboardUrl] is the provider's web dashboard, [tokenPageUrl] where users create a token,
+ * [tokenHelp] least-privilege guidance shown before they do, and [icon] the image the plugin ships, if any.
  *
  * Stored as [id] alone. A stored id carries only its [id] until the account repository matches it to an installed
  * plugin, so an account whose plugin was removed is still named by its id.
@@ -24,6 +24,7 @@ class ProviderId(
     val dashboardUrl: String? = null,
     val tokenPageUrl: String? = null,
     val tokenHelp: String? = null,
+    val icon: ProviderIcon? = null,
 ) : Comparable<ProviderId> {
     override fun equals(other: Any?): Boolean = other is ProviderId && other.id == id
 

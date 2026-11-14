@@ -41,7 +41,12 @@ object ManifestSchema {
     fun generate(): JsonObject {
         val defs = sortedMapOf<String, JsonObject>()
         val root = Builder(defs).schema(PluginManifest.serializer().descriptor)
-        defs["PluginManifest"] = defs.getValue("PluginManifest").withProperty("capabilities", capabilities())
+        // dashboardUrl is nullable only so the validator, not the parser, reports a manifest without one.
+        defs["PluginManifest"] =
+            defs
+                .getValue("PluginManifest")
+                .withProperty("capabilities", capabilities())
+                .withRequired("dashboardUrl")
         defs["ResourceSpec"] =
             defs
                 .getValue("ResourceSpec")
@@ -207,4 +212,15 @@ private fun JsonObject.withProperty(
 ): JsonObject {
     val properties = getValue("properties") as JsonObject
     return plus("properties" to JsonObject(properties + (name to schema)))
+}
+
+private fun JsonObject.withRequired(name: String): JsonObject {
+    val required = (get("required") as? JsonArray).orEmpty()
+    return if (required.any { it == JsonPrimitive(name) }) {
+        this
+    } else {
+        plus(
+            "required" to JsonArray(required + JsonPrimitive(name)),
+        )
+    }
 }

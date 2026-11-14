@@ -1,13 +1,10 @@
 package dev.dache.app.navigation
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -22,7 +19,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -45,7 +41,6 @@ import dev.dache.app.service.problemsOn
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.dashboard.DashboardSummary
 import dev.dache.core.model.Profiles
-import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.ServicePage
 import org.jetbrains.compose.resources.stringResource
@@ -116,7 +111,7 @@ fun Sidebar(
                         )
                     }
                 },
-                icon = { ProviderAvatar(account.providerId) },
+                icon = { ProviderAvatar(account.providerId, accountId = account.id) },
                 selected = current == Destination.Account(account.id),
                 onClick = { onSelect(Destination.Account(account.id)) },
                 badge = {
@@ -185,23 +180,5 @@ private fun ProblemBadge(count: Int) {
     val description = stringResource(Res.string.nav_problems, count)
     Badge(modifier = Modifier.padding(start = 4.dp)) {
         Text(count.toString(), modifier = Modifier.clearAndSetSemantics { contentDescription = description })
-    }
-}
-
-/** A lettered circle per provider. Brand logos are deliberately not used. */
-@Composable
-fun ProviderAvatar(
-    provider: ProviderId,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier.size(28.dp).background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            provider.displayName.take(1),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
     }
 }
