@@ -85,6 +85,35 @@ class FixtureTest {
     }
 
     @Test
+    fun aSelfHostedManifestTalksToTheServerSetting() {
+        val proxmox = File("../../plugin-registry/manifests/proxmox.json")
+        // Recorded under the server's host only, so the refresh passes only if every request went there.
+        fixture("pve.lan/api2/json/version.json", """{"data": {"version": "8.2.4"}}""")
+        fixture(
+            "pve.lan/api2/json/cluster/resources.json",
+            """{"data": [{"id": "qemu/100", "name": "web", "node": "pve1", "status": "running"}]}""",
+        )
+        val client = createPluginHttpClient(Fixtures(dir).engine())
+
+        val outcome = runBlocking { refresh(proxmox, client, "fixture-token", mapOf("server" to "pve.lan:8006")) }
+
+        assertTrue(outcome.ok, outcome.text)
+        assertTrue("web  ACTIVE" in outcome.text, outcome.text)
+    }
+
+    @Test
+    fun aSelfHostedManifestWithoutAServerKeepsThePlaceholderHost() {
+        val proxmox = File("../../plugin-registry/manifests/proxmox.json")
+        fixture("self.hosted/api2/json/version.json", """{"data": {"version": "8.2.4"}}""")
+        fixture("self.hosted/api2/json/cluster/resources.json", """{"data": []}""")
+        val client = createPluginHttpClient(Fixtures(dir).engine())
+
+        val outcome = runBlocking { refresh(proxmox, client, "fixture-token", emptyMap()) }
+
+        assertTrue(outcome.ok, outcome.text)
+    }
+
+    @Test
     fun aFailingRefreshSaysWhyAndFails() {
         fixture("api.uptimerobot.com/v3/user/me.json", """{"email": "ops@acme.dev"}""")
         fixture("api.uptimerobot.com/v3/monitors.403.json", "{}")

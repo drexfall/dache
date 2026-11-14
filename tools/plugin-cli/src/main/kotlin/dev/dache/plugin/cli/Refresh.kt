@@ -4,9 +4,11 @@ import dev.dache.core.account.tokenKey
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.security.TokenKey
 import dev.dache.core.security.TokenVault
+import dev.dache.plugin.api.SelfHostedSpec
 import dev.dache.plugin.runtime.LoadResult
 import dev.dache.plugin.runtime.ManifestLoader
 import dev.dache.plugin.runtime.ManifestProvider
+import dev.dache.plugin.runtime.providerFor
 import dev.dache.plugin.runtime.providerId
 import io.ktor.client.HttpClient
 import java.io.File
@@ -15,6 +17,9 @@ import java.io.File
  * Validates the manifest at [file], checks [token] and refreshes once through [client], and describes what came
  * back. [settings] are the account settings the manifest asks for, by key. Make [client] with
  * createPluginHttpClient, so requests get the same timeouts and redirect handling as in the app.
+ *
+ * A self-hosted manifest given a `server` setting runs the way the app runs it, with every request going to that
+ * server; without one, its requests keep the placeholder host, so recorded responses can sit under `self.hosted`.
  */
 suspend fun refresh(
     file: File,
@@ -28,7 +33,12 @@ suspend fun refresh(
     val id = manifest.providerId()
     val account = ConnectedAccount(id = "cli", providerId = id, displayName = manifest.name, settings = settings)
     val vault = SingleTokenVault(account.tokenKey(), token)
-    val provider = ManifestProvider(manifest, id, vault, client)
+    val provider =
+        if (manifest.selfHosted != null && SelfHostedSpec.HOST_SETTING !in settings) {
+            ManifestProvider(manifest, id, vault, client)
+        } else {
+            providerFor(manifest, vault, client)
+        }
     val check = provider.checkToken(token, settings)
     // A refused token would only fail again, so there is no refresh to show.
     val snapshot = check.mapCatching { if (it.accepted) provider.fetchSnapshot(account).getOrThrow() else null }
