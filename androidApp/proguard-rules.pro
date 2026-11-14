@@ -30,6 +30,11 @@
 -dontwarn com.google.errorprone.annotations.**
 -dontwarn javax.annotation.**
 
+# WorkManager's Room database (WorkDatabase_Impl) is created by reflection through its no-argument constructor.
+# Room 2.6's own rule keeps the class but not the constructor, which R8 full mode then removes, so the app
+# crashed at startup in androidx.startup's WorkManagerInitializer.
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+
 # Coroutines debug hooks that aren't on Android.
 -dontwarn java.lang.instrument.**
 -dontwarn sun.misc.SignalHandler

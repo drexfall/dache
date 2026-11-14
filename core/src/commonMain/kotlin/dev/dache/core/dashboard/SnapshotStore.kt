@@ -3,6 +3,9 @@ package dev.dache.core.dashboard
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.ProviderStatus
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import okio.FileSystem
@@ -57,8 +60,9 @@ interface SnapshotStore {
 class FileSnapshotStore(
     fileSystem: FileSystem,
     dir: Path,
+    io: CoroutineDispatcher = Dispatchers.IO,
 ) : SnapshotStore {
-    private val files = JsonDirectory(fileSystem, dir)
+    private val files = JsonDirectory(fileSystem, dir, io)
 
     override fun load(): CachedDashboard {
         val snapshots =
