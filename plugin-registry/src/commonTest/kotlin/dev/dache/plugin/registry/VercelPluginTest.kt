@@ -77,6 +77,19 @@ class VercelPluginTest {
     }
 
     @Test
+    fun writesThatReplaceLiveValuesAreDestructive() {
+        val destructive =
+            vercel()
+                .actions
+                .filter { it.destructive }
+                .map { it.id }
+                .toSet()
+
+        // Overwriting an environment variable is as hard to undo as deleting it: the old value isn't kept.
+        assertEquals(setOf("rollback", "edit-env", "delete-env"), destructive)
+    }
+
+    @Test
     fun validTokenNamesTheAccountByEmail() =
         runTest {
             assertEquals("dev@example.com", vercel().validateCredentials(VercelFixtures.TOKEN).getOrThrow().displayName)
