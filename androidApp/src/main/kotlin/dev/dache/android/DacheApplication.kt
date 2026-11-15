@@ -11,6 +11,7 @@ import dev.dache.android.widget.DacheWidgets
 import dev.dache.app.AppContainer
 import dev.dache.app.AppStores
 import dev.dache.core.account.DataStoreAccountStore
+import dev.dache.core.boards.FileBoardStore
 import dev.dache.core.dashboard.FileHistoryStore
 import dev.dache.core.dashboard.FileSnapshotStore
 import dev.dache.core.icons.FileIconStore
@@ -48,6 +49,7 @@ class DacheApplication : Application() {
                     snapshots = FileSnapshotStore(FileSystem.SYSTEM, File(filesDir, "snapshots").toOkioPath()),
                     history = FileHistoryStore(FileSystem.SYSTEM, File(filesDir, "history").toOkioPath()),
                     icons = FileIconStore(FileSystem.SYSTEM, File(filesDir, "icons").toOkioPath()),
+                    boards = FileBoardStore(FileSystem.SYSTEM, File(filesDir, "boards").toOkioPath()),
                 ),
             scope = appScope,
             // Request logging is debug-only; release builds never log requests.

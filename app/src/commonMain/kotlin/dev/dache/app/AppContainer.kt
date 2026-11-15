@@ -9,6 +9,8 @@ import dev.dache.core.actions.WriteLog
 import dev.dache.core.alerts.AlertSettings
 import dev.dache.core.alerts.AlertStore
 import dev.dache.core.alerts.BackgroundCheck
+import dev.dache.core.boards.BoardRepository
+import dev.dache.core.boards.BoardStore
 import dev.dache.core.dashboard.DashboardRepository
 import dev.dache.core.dashboard.HistoryStore
 import dev.dache.core.dashboard.SnapshotStore
@@ -45,6 +47,8 @@ class AppStores(
     val history: HistoryStore = HistoryStore.None,
     /** Fetched provider favicons, so they aren't fetched on every launch. */
     val icons: IconStore = IconStore.None,
+    /** The dashboards users make. */
+    val boards: BoardStore = BoardStore.InMemory(),
 )
 
 /**
@@ -87,6 +91,8 @@ class AppContainer(
     /** Every provider's and account's icon; favicons are fetched in the background. */
     val providerIcons =
         ProviderIconRepository(catalog, accountRepository.accounts, scope, stores.icons).apply { start() }
+
+    val boardRepository = BoardRepository(stores.boards, accountRepository.profiles, scope)
 
     val backgroundCheck = BackgroundCheck(dashboardRepository, alertStore)
     val actionService = ActionService(accountRepository, dashboardRepository, writeLog)

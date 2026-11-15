@@ -36,6 +36,8 @@ import dev.dache.app.actions.ActionsViewModel
 import dev.dache.app.actions.LocalActionHost
 import dev.dache.app.alerts.BackgroundChecksCard
 import dev.dache.app.alerts.BackgroundChecksPlatform
+import dev.dache.app.boards.BoardPage
+import dev.dache.app.boards.BoardsViewModel
 import dev.dache.app.dashboard.DashboardViewModel
 import dev.dache.app.navigation.BackNavigation
 import dev.dache.app.navigation.BackRequests
@@ -49,6 +51,8 @@ import dev.dache.app.navigation.StateNavigator
 import dev.dache.app.navigation.accountId
 import dev.dache.app.navigation.current
 import dev.dache.app.navigation.keepingAccounts
+import dev.dache.app.navigation.keepingBoardIds
+import dev.dache.app.navigation.keepingBoards
 import dev.dache.app.navigation.push
 import dev.dache.app.navigation.sidebarEntry
 import dev.dache.app.overview.OverviewScreen
@@ -56,6 +60,8 @@ import dev.dache.app.plugins.PluginsScreen
 import dev.dache.app.plugins.PluginsViewModel
 import dev.dache.app.profiles.ProfilesViewModel
 import dev.dache.app.resource.ResourceScreen
+import dev.dache.app.resources.Res
+import dev.dache.app.resources.board_default_name
 import dev.dache.app.security.AppLockCard
 import dev.dache.app.security.AppLockController
 import dev.dache.app.security.IntegrityNote
@@ -86,6 +92,7 @@ import dev.dache.core.security.IntegrityChecker
 import dev.dache.core.security.IntegritySignal
 import dev.dache.core.settings.AppLockSettings
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Pass [lockAuthenticator] on platforms with a screen lock; without one the app lock isn't offered. Pass
@@ -228,6 +235,9 @@ private fun DacheContent(
     val actionsViewModel = viewModel { actionsViewModel(container, platform.lockAuthenticator) }
     val profilesViewModel = viewModel { ProfilesViewModel(container.accountRepository) }
     val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
+    val boardsViewModel = viewModel { BoardsViewModel(container.boardRepository) }
+    val boards by boardsViewModel.boards.collectAsStateWithLifecycle()
+    val newBoardName = stringResource(Res.string.board_default_name, boards.orEmpty().size + 1)
     val state by dashboardViewModel.state.collectAsStateWithLifecycle()
     val accountsState by accountsViewModel.state.collectAsStateWithLifecycle()
     val tokenChecks by accountsViewModel.tokenChecks.collectAsStateWithLifecycle()
@@ -250,6 +260,8 @@ private fun DacheContent(
     LaunchedEffect(state.accounts, state.accountsLoaded) {
         if (state.accountsLoaded) stack = stack.keepingAccounts(state.accounts.map { it.id })
     }
+    // A deleted board's page, or another profile's after a switch, has nothing to show.
+    LaunchedEffect(boards) { stack = stack.keepingBoards(boards) }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val formFactor = if (maxWidth >= EXPANDED_MIN_WIDTH) FormFactor.EXPANDED else FormFactor.COMPACT
@@ -277,6 +289,11 @@ private fun DacheContent(
                         },
                         profiles = profiles,
                         profileActions = profilesViewModel.actions,
+                        boards = boards.orEmpty(),
+                        onNewBoard = {
+                            boardsViewModel.create(newBoardName) { open(Destination.Board(it.id)) }
+                            onPicked()
+                        },
                     )
                 }
                 val page: @Composable (onOpenMenu: (() -> Unit)?) -> Unit = { onOpenMenu ->
@@ -316,6 +333,17 @@ private fun DacheContent(
                                     onNavigate = open,
                                 )
                             }
+                        is Destination.Board ->
+                            BoardPage(
+                                board = boards.orEmpty().firstOrNull { it.id == target.boardId },
+                                state = state,
+                                viewModel = boardsViewModel,
+                                onDeleted = { id ->
+                                    stack = stack.keepingBoardIds(boards.orEmpty().map { it.id } - id)
+                                },
+                                onRefresh = dashboardViewModel::refresh,
+                                onOpenMenu = onOpenMenu,
+                            )
                         Destination.Plugins -> PluginsPage(container, onOpenMenu)
                         Destination.ManageAccounts ->
                             AccountsScreen(

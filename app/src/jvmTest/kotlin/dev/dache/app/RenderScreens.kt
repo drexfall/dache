@@ -9,6 +9,9 @@ import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.use
 import dev.dache.app.account.AccountScreen
+import dev.dache.app.boards.BoardActions
+import dev.dache.app.boards.BoardScreen
+import dev.dache.app.boards.WidgetEditorDialog
 import dev.dache.app.navigation.AppNavigator
 import dev.dache.app.navigation.LocalAppNavigator
 import dev.dache.app.overview.OverviewScreen
@@ -20,6 +23,12 @@ import dev.dache.app.ui.components.LocalLinkOpener
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
 import dev.dache.app.ui.theme.DacheTheme
+import dev.dache.core.boards.Board
+import dev.dache.core.boards.Datapoint
+import dev.dache.core.boards.Widget
+import dev.dache.core.boards.WidgetChart
+import dev.dache.core.boards.WidgetScope
+import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ResourceRef
 import dev.dache.core.provider.ProviderCatalog
@@ -81,6 +90,7 @@ class RenderScreens {
                         ConsentDialog(pending, onConfirm = {}, onDismiss = {})
                     }
                 }
+                boardShots(dir, "$name-$mode", width, dark, form, state)
                 state.accounts.forEach { account ->
                     shot(File(dir, "${account.providerId.id}-$name-$mode.png"), width, dark, form) {
                         AccountScreen(account, state, onRefresh = {}, onOpenMenu = null, onNavigate = {})
@@ -91,6 +101,67 @@ class RenderScreens {
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /** A sample dashboard, viewed and in edit mode, and its widget editor. */
+    private fun boardShots(
+        dir: File,
+        suffix: String,
+        width: Int,
+        dark: Boolean,
+        form: FormFactor,
+        state: DashboardState,
+    ) {
+        for (editing in listOf(false, true)) {
+            val label = if (editing) "board-editing" else "board"
+            shot(File(dir, "$label-$suffix.png"), width, dark, form) {
+                BoardScreen(
+                    sampleBoard,
+                    state,
+                    NoBoardActions,
+                    onRefresh = {},
+                    onOpenMenu = null,
+                    startEditing = editing,
+                )
+            }
+        }
+        shot(File(dir, "widget-editor-$suffix.png"), width, dark, form) {
+            WidgetEditorDialog(sampleBoard.widgets[1], isNew = false, state = state, onSave = {}, onDismiss = {})
+        }
+    }
+
+    private val sampleBoard =
+        Board(
+            "board",
+            "Release health",
+            "default",
+            listOf(
+                Widget("w1", Datapoint.DEPLOYS, WidgetChart.STAT),
+                Widget("w2", Datapoint.FAILED_DEPLOYS, WidgetChart.STAT),
+                Widget("w3", Datapoint.MONITORS_DOWN, WidgetChart.STAT),
+                Widget("w4", Datapoint.DAILY_COST, WidgetChart.STAT, scope = WidgetScope(providerId = "digitalocean")),
+                Widget("w5", Datapoint.DEPLOYS, WidgetChart.BARS, days = 30, span = 2),
+                Widget("w6", Datapoint.RESPONSE_TIME, WidgetChart.LINE, span = 2),
+                Widget("w7", Datapoint.SITES, WidgetChart.LIST, span = 2),
+                Widget("w8", Datapoint.MONITORS, WidgetChart.LIST, span = 2),
+            ),
+        )
+
+    private object NoBoardActions : BoardActions {
+        override fun rename(name: String) = Unit
+
+        override fun delete() = Unit
+
+        override fun putWidget(widget: Widget) = Unit
+
+        override fun removeWidget(id: String) = Unit
+
+        override fun moveWidget(
+            id: String,
+            by: Int,
+        ) = Unit
+
+        override fun newWidgetId() = "new"
+    }
 
     // Screenshots never touch the network: the registry answers 404, so the plugin screen shows its unreachable state.
     private val registry =

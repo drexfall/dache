@@ -25,6 +25,7 @@ import dev.dache.app.resources.Res
 import dev.dache.app.resources.alerts_timer_failed
 import dev.dache.app.resources.app_name
 import dev.dache.core.account.DataStoreAccountStore
+import dev.dache.core.boards.FileBoardStore
 import dev.dache.core.dashboard.FileHistoryStore
 import dev.dache.core.dashboard.FileSnapshotStore
 import dev.dache.core.icons.FileIconStore
@@ -119,6 +120,7 @@ private fun stores(
         snapshots = FileSnapshotStore(FileSystem.SYSTEM, File(dataDir, "snapshots").toOkioPath()),
         history = FileHistoryStore(FileSystem.SYSTEM, File(dataDir, "history").toOkioPath()),
         icons = FileIconStore(FileSystem.SYSTEM, File(dataDir, "icons").toOkioPath()),
+        boards = FileBoardStore(FileSystem.SYSTEM, File(dataDir, "boards").toOkioPath()),
     )
 }
 

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
@@ -30,7 +31,9 @@ import dev.dache.app.resources.Res
 import dev.dache.app.resources.app_name
 import dev.dache.app.resources.nav_accounts_header
 import dev.dache.app.resources.nav_add_account
+import dev.dache.app.resources.nav_boards_header
 import dev.dache.app.resources.nav_manage_accounts
+import dev.dache.app.resources.nav_new_board
 import dev.dache.app.resources.nav_no_accounts
 import dev.dache.app.resources.nav_overview
 import dev.dache.app.resources.nav_plugins
@@ -38,6 +41,7 @@ import dev.dache.app.resources.nav_problems
 import dev.dache.app.resources.nav_refresh_failed
 import dev.dache.app.service.pageTitle
 import dev.dache.app.service.problemsOn
+import dev.dache.core.boards.Board
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.dashboard.DashboardSummary
 import dev.dache.core.model.Profiles
@@ -56,6 +60,8 @@ fun Sidebar(
     modifier: Modifier = Modifier,
     profiles: Profiles = Profiles(),
     profileActions: ProfileActions = ProfileActions.None,
+    boards: List<Board> = emptyList(),
+    onNewBoard: (() -> Unit)? = null,
 ) {
     Column(
         modifier.fillMaxHeight().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 16.dp),
@@ -79,6 +85,7 @@ fun Sidebar(
             onClick = { onSelect(Destination.Overview) },
             badge = { ProblemBadge(totalProblems) },
         )
+        if (onNewBoard != null) BoardItems(boards, current, onSelect, onNewBoard)
 
         Text(
             stringResource(Res.string.nav_accounts_header),
@@ -151,6 +158,37 @@ fun Sidebar(
             onClick = { onSelect(Destination.Plugins) },
         )
     }
+}
+
+/** The active profile's dashboards, then a way to make another. */
+@Composable
+private fun BoardItems(
+    boards: List<Board>,
+    current: Destination,
+    onSelect: (Destination) -> Unit,
+    onNewBoard: () -> Unit,
+) {
+    Text(
+        stringResource(Res.string.nav_boards_header),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
+    )
+    boards.forEach { board ->
+        val destination = Destination.Board(board.id)
+        NavigationDrawerItem(
+            label = { Text(board.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
+            selected = current == destination,
+            onClick = { onSelect(destination) },
+        )
+    }
+    NavigationDrawerItem(
+        label = { Text(stringResource(Res.string.nav_new_board)) },
+        icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+        selected = false,
+        onClick = onNewBoard,
+    )
 }
 
 @Composable

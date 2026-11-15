@@ -6,6 +6,8 @@ import dev.dache.app.navigation.Destination
 import dev.dache.app.navigation.accountId
 import dev.dache.app.navigation.current
 import dev.dache.app.navigation.keepingAccounts
+import dev.dache.app.navigation.keepingBoardIds
+import dev.dache.app.navigation.keepingBoards
 import dev.dache.app.navigation.pop
 import dev.dache.app.navigation.push
 import dev.dache.app.navigation.sidebarEntry
@@ -101,12 +103,24 @@ class DestinationTest {
                 .push(Destination.Service("cf-acc", "r2"))
                 .push(worker)
                 .push(Destination.AccountSettings("cf-acc"))
+                .push(Destination.Board("board-1"))
                 .push(Destination.Plugins)
         val scope = SaverScope { true }
 
         val saved = with(BackStackSaver) { scope.save(stack) }
 
         assertEquals(stack, saved?.let { BackStackSaver.restore(it) })
+    }
+
+    @Test
+    fun aDeletedOrOtherProfilesBoardLosesItsPage() {
+        val board = Destination.Board("b1")
+        val stack = start + board + Destination.Plugins
+
+        assertEquals(stack, stack.keepingBoards(null), "boards not loaded yet: keep everything")
+        assertEquals(start + Destination.Plugins, stack.keepingBoards(emptyList()))
+        assertEquals(stack, stack.keepingBoardIds(listOf("b1")))
+        assertEquals(start, listOf<Destination>(board).keepingBoardIds(emptyList()))
     }
 
     @Test

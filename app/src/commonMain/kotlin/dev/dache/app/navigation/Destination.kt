@@ -1,6 +1,7 @@
 package dev.dache.app.navigation
 
 import androidx.compose.runtime.saveable.Saver
+import dev.dache.core.boards.Board
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ResourceKind
 import dev.dache.core.model.ResourceRef
@@ -33,6 +34,11 @@ sealed interface Destination {
     data class Resource(
         val ref: ResourceRef,
     ) : Destination
+
+    /** A dashboard the user made. */
+    data class Board(
+        val boardId: String,
+    ) : Destination
 }
 
 /**
@@ -58,6 +64,20 @@ fun BackStack.push(destination: Destination): BackStack {
 
 /** Back to the previous page; the first page stays. */
 fun BackStack.pop(): BackStack = if (size > 1) dropLast(1) else this
+
+/** Drops every page of a dashboard not in [boards]: deleted, or another profile's. Null (not loaded) keeps all. */
+fun BackStack.keepingBoards(boards: List<Board>?): BackStack =
+    if (boards ==
+        null
+    ) {
+        this
+    } else {
+        keepingBoardIds(boards.map { it.id })
+    }
+
+/** Drops every page of a dashboard not in [boardIds]. */
+fun BackStack.keepingBoardIds(boardIds: Collection<String>): BackStack =
+    filter { it !is Destination.Board || it.boardId in boardIds }.ifEmpty { listOf(Destination.Overview) }
 
 /** Drops every page about an account that is gone, so removing an account can't leave its pages open. */
 fun BackStack.keepingAccounts(accountIds: Collection<String>): BackStack =
@@ -87,7 +107,7 @@ val Destination.accountId: String?
             is Destination.Service -> accountId
             is Destination.AccountSettings -> accountId
             is Destination.Resource -> ref.accountId
-            Destination.Overview, Destination.ManageAccounts, Destination.Plugins -> null
+            Destination.Overview, Destination.ManageAccounts, Destination.Plugins, is Destination.Board -> null
         }
 
 /** Saves the whole stack as a flat token list, so rotation and process death restore every page. */
@@ -106,6 +126,7 @@ private fun Destination.tokens(): List<String> =
         is Destination.Service -> listOf("service", accountId, pageId)
         is Destination.AccountSettings -> listOf("settings", accountId)
         is Destination.Resource -> listOf("resource", ref.providerId.id, ref.accountId, ref.kind.name, ref.nativeId)
+        is Destination.Board -> listOf("board", boardId)
     }
 
 private fun decode(tokens: List<String>): BackStack {
@@ -120,6 +141,7 @@ private fun decode(tokens: List<String>): BackStack {
                 "account" -> Destination.Account(rest.removeFirst())
                 "service" -> Destination.Service(rest.removeFirst(), rest.removeFirst())
                 "settings" -> Destination.AccountSettings(rest.removeFirst())
+                "board" -> Destination.Board(rest.removeFirst())
                 "resource" -> {
                     val provider = ProviderId(rest.removeFirst())
                     val accountId = rest.removeFirst()

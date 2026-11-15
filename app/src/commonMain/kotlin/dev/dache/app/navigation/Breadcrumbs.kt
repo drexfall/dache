@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.breadcrumb_current
 import dev.dache.app.resources.breadcrumb_settings
+import dev.dache.app.resources.nav_boards_header
 import dev.dache.app.resources.nav_manage_accounts
 import dev.dache.app.resources.nav_overview
 import dev.dache.app.resources.nav_plugins
@@ -119,6 +120,7 @@ private fun crumbLabel(
                 ?.let { pageTitle(it) }
                 ?: destination.pageId
         is Destination.AccountSettings -> stringResource(Res.string.breadcrumb_settings)
+        is Destination.Board -> stringResource(Res.string.nav_boards_header)
     }
 
 private fun crumbProvider(
