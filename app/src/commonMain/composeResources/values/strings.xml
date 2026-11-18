@@ -10,6 +10,29 @@
     <string name="nav_refresh_failed">Refresh failed</string>
     <string name="action_open_navigation">Open navigation</string>
 
+    <string name="profile_default">Default</string>
+    <plurals name="profile_accounts">
+        <item quantity="one">%1$d account</item>
+        <item quantity="other">%1$d accounts</item>
+    </plurals>
+    <string name="profile_switcher_description">Profile: %1$s</string>
+    <string name="profile_open_menu">Show profiles</string>
+    <string name="profile_next">Switch to the next profile</string>
+    <string name="profile_new">New profile</string>
+    <string name="profile_rename">Rename profile</string>
+    <string name="profile_delete">Delete profile</string>
+    <string name="profile_name_label">Profile name</string>
+    <string name="profile_create">Create</string>
+    <string name="profile_save">Save</string>
+    <string name="profile_delete_title">Delete %1$s?</string>
+    <plurals name="profile_delete_body">
+        <item quantity="one">Its account and stored token will be removed from this device.</item>
+        <item quantity="other">Its %1$d accounts and their stored tokens will be removed from this device.</item>
+    </plurals>
+    <string name="profile_delete_empty">It has no accounts.</string>
+    <string name="profile_move">Move to profile</string>
+    <string name="profile_move_description">Move %1$s to another profile</string>
+
     <string name="overview_activity">Activity</string>
     <string name="overview_resources">Resources</string>
     <string name="section_count">%1$s (%2$d)</string>

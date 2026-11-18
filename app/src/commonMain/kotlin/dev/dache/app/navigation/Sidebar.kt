@@ -28,6 +28,8 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.dache.app.profiles.ProfileActions
+import dev.dache.app.profiles.ProfileSwitcher
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.app_name
 import dev.dache.app.resources.nav_accounts_header
@@ -42,13 +44,14 @@ import dev.dache.app.service.pageTitle
 import dev.dache.app.service.problemsOn
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.dashboard.DashboardSummary
+import dev.dache.core.model.Profiles
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.ServicePage
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Clock
 
-/** Overview, then one entry per connected account, then account management. */
+/** The profile switcher, the overview, then one entry per account in the active profile, then account management. */
 @Composable
 fun Sidebar(
     state: DashboardState,
@@ -56,6 +59,8 @@ fun Sidebar(
     onSelect: (Destination) -> Unit,
     onAddAccount: () -> Unit,
     modifier: Modifier = Modifier,
+    profiles: Profiles = Profiles(),
+    profileActions: ProfileActions = ProfileActions.None,
 ) {
     Column(
         modifier.fillMaxHeight().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 16.dp),
@@ -63,7 +68,13 @@ fun Sidebar(
         Text(
             stringResource(Res.string.app_name),
             style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(start = 16.dp, bottom = 16.dp),
+            modifier = Modifier.padding(start = 16.dp, bottom = 12.dp),
+        )
+        ProfileSwitcher(
+            profiles = profiles,
+            accountCount = state.accounts.size,
+            actions = profileActions,
+            modifier = Modifier.padding(bottom = 12.dp),
         )
         val totalProblems = state.summary.problemCount
         NavigationDrawerItem(

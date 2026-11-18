@@ -4,9 +4,9 @@ import dev.dache.core.dashboard.DashboardRepository
 import kotlinx.coroutines.flow.first
 
 /**
- * One background check: refresh every account, then report problems that weren't there last time. The first
- * check only records what is already wrong, so turning checks on doesn't replay old failures. A problem that
- * clears is forgotten and alerts again if it comes back; an account that fails to refresh keeps its problems,
+ * One background check: refresh the active profile's accounts, then report problems that weren't there last time.
+ * The first check only records what is already wrong, so turning checks on doesn't replay old failures. A problem
+ * that clears is forgotten and alerts again if it comes back; an account that fails to refresh keeps its problems,
  * since nothing is known about them.
  */
 class BackgroundCheck(

@@ -20,14 +20,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.concurrent.Volatile
 import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
 /**
@@ -86,9 +91,11 @@ data class DashboardState(
 }
 
 /**
- * Fetches every connected account in parallel. One account failing only marks that account as errored and keeps
- * its last snapshot; the rest of the dashboard still updates. Data for removed accounts is dropped immediately.
- * Starts from whatever [store] kept from the last refresh, so there is something to show before any request.
+ * Fetches the active profile's accounts in parallel and shows them. One account failing only marks that account as
+ * errored and keeps its last snapshot; the rest of the dashboard still updates. Other profiles keep what they last
+ * fetched, so switching to one shows it at once while the switch refreshes it. Data for removed accounts is dropped
+ * immediately. Starts from whatever [store] kept from the last refresh, so there is something to show before any
+ * request.
  */
 class DashboardRepository(
     private val accountRepository: AccountRepository,
@@ -98,8 +105,16 @@ class DashboardRepository(
     private val historyStore: HistoryStore = HistoryStore.None,
 ) {
     private val catalog = accountRepository.catalog
-    private val fetched = MutableStateFlow(restore(store.load(), historyStore.load()))
+    private val cached = store.load()
+    private val fetched = MutableStateFlow(restore(cached, historyStore.load()))
+
+    /** When each account was last refreshed, failed or not; a profile's last update is its newest. */
+    private val refreshedAt = MutableStateFlow(cached.snapshots.associate { it.accountId to it.fetchedAt })
     private val refreshLock = Mutex()
+
+    /** Counts finished refreshes; [refreshedIn] records the one that last covered each account. Guarded by the lock. */
+    @Volatile private var generation = 0L
+    private val refreshedIn = mutableMapOf<String, Long>()
 
     init {
         scope.launch {
@@ -109,46 +124,70 @@ class DashboardRepository(
                 historyStore.keepOnly(ids)
             }
         }
+        // Switching to a profile refreshes it, unless it was refreshed a moment ago.
+        scope.launch {
+            accountRepository.profiles
+                .map { it.active.id }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect {
+                    launch {
+                        val ids = accountRepository.activeAccounts.first().map { it.id }
+                        val last = ids.mapNotNull { refreshedAt.value[it] }.maxOrNull()
+                        if (ids.isNotEmpty() && (last == null || clock.now() - last > SWITCH_FRESH_FOR)) refresh()
+                    }
+                }
+        }
     }
 
     val state: StateFlow<DashboardState> =
-        combine(fetched, accountRepository.accounts, catalog.providers) { state, accounts, providers ->
-            val ids = accounts.map { it.id }.toSet()
-            val results = state.results.filter { it.account.id in ids }.map(::resolveProvider)
-            val pages = providers.mapValues { (_, provider) -> provider.pages }
-            val statuses =
-                state.statuses.values
-                    .map(::resolveProvider)
-                    .associateBy { it.providerId }
-            val histories = state.histories.filterKeys { it in ids }
-            if (results.size == state.results.size) {
-                state.copy(
-                    accounts = accounts,
-                    results = results,
-                    pages = pages,
-                    statuses = statuses,
-                    accountsLoaded = true,
-                    histories = histories,
-                )
-            } else {
-                derive(results, state.lastUpdated).copy(
-                    accounts = accounts,
-                    isRefreshing = state.isRefreshing,
-                    pages = pages,
-                    statuses = statuses,
-                    accountsLoaded = true,
-                    histories = histories,
-                )
-            }
+        combine(fetched, accountRepository.activeAccounts, catalog.providers, refreshedAt) { state, accounts, _, at ->
+            view(state, accounts, at)
         }.stateIn(scope, SharingStarted.Eagerly, DashboardState())
 
+    /** [state] narrowed to [accounts], the active profile's, with that profile's own last update. */
+    private fun view(
+        state: DashboardState,
+        accounts: List<ConnectedAccount>,
+        refreshedAt: Map<String, Instant>,
+    ): DashboardState {
+        val ids = accounts.map { it.id }.toSet()
+        val results = state.results.filter { it.account.id in ids }.map(::resolveProvider)
+        val pages = catalog.providers.value.mapValues { (_, provider) -> provider.pages }
+        val inUse = accounts.map { it.providerId }.toSet()
+        val statuses =
+            state.statuses.values
+                .map(::resolveProvider)
+                .filter { it.providerId in inUse }
+                .associateBy { it.providerId }
+        // A profile without accounts has nothing of its own to date; the last refresh stands in.
+        val lastUpdated =
+            if (accounts.isEmpty()) state.lastUpdated else accounts.mapNotNull { refreshedAt[it.id] }.maxOrNull()
+        return derive(results, lastUpdated).copy(
+            accounts = accounts,
+            isRefreshing = state.isRefreshing,
+            pages = pages,
+            statuses = statuses,
+            accountsLoaded = true,
+            histories = state.histories.filterKeys { it in ids },
+        )
+    }
+
+    /** Refreshes the active profile's accounts. Waits for a refresh under way, and skips if that one covered them. */
     suspend fun refresh() {
         catalog.awaitReady()
-        // Overlapping refreshes (pull-to-refresh plus a widget update) would just repeat the same calls.
-        if (refreshLock.isLocked) return
+        val asked = generation
         refreshLock.withLock {
+            // Read now, not when asked: after fast profile switching, the profile the user landed on is what counts.
+            val accounts = accountRepository.activeAccounts.first()
+            // Overlapping refreshes (pull-to-refresh plus a widget update) would just repeat the same calls.
+            if (generation > asked && accounts.all { (refreshedIn[it.id] ?: -1L) > asked }) return
             fetched.update { it.copy(isRefreshing = true) }
-            val accounts = accountRepository.accounts.first()
+            val everyone =
+                accountRepository.accounts
+                    .first()
+                    .map { it.id }
+                    .toSet()
             val previous = fetched.value
             val now = clock.now()
             val (results, statuses) =
@@ -157,15 +196,21 @@ class DashboardRepository(
                     val statuses = accounts.map { it.providerId }.distinct().map { async { status(it) } }
                     results.awaitAll() to statuses.awaitAll().filterNotNull().toMap()
                 }
+            val refreshed = accounts.map { it.id }.toSet()
+            // Other profiles' accounts keep their last results until they are shown and refreshed again.
+            val kept = previous.results.filter { it.account.id !in refreshed && it.account.id in everyone }
             val merged = previous.statuses + statuses
             val fresh = results.filter { it.error == null && it.snapshot != null }
             val histories =
-                previous.histories.filterKeys { id -> accounts.any { it.id == id } } +
+                previous.histories.filterKeys { it in everyone } +
                     fresh.associate { result ->
                         val id = result.account.id
                         id to (previous.histories[id] ?: AccountHistory(id)).absorb(result.snapshot!!, now)
                     }
-            fetched.value = derive(results, now).copy(statuses = merged, histories = histories)
+            generation++
+            refreshed.forEach { refreshedIn[it] = generation }
+            refreshedAt.update { at -> at.filterKeys { it in everyone } + refreshed.associateWith { now } }
+            fetched.value = derive(results + kept, now).copy(statuses = merged, histories = histories)
             fresh.forEach { result ->
                 store.save(CachedSnapshot(result.account.id, now, result.snapshot!!))
                 historyStore.save(histories.getValue(result.account.id))
@@ -174,11 +219,10 @@ class DashboardRepository(
         }
     }
 
-    /** Refreshes, or waits for the refresh already under way, and returns what was fetched. */
+    /** Refreshes the active profile, or waits for the refresh already under way, and returns what it shows. */
     suspend fun refreshAndGet(): DashboardState {
         refresh()
-        refreshLock.withLock { }
-        return fetched.value
+        return view(fetched.value, accountRepository.activeAccounts.first(), refreshedAt.value)
     }
 
     /** The provider's public status, or null when it has none or it couldn't be read this time. */
@@ -265,5 +309,10 @@ class DashboardRepository(
     private fun resolveProvider(status: ProviderStatus): ProviderStatus {
         val provider = catalog.resolve(status.providerId)
         return if (provider === status.providerId) status else status.copy(providerId = provider)
+    }
+
+    private companion object {
+        /** How recent a profile's last refresh can be for switching to it not to refresh again. */
+        val SWITCH_FRESH_FOR: Duration = 1.minutes
     }
 }

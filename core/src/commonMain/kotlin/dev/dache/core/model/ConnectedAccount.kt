@@ -10,6 +10,8 @@ data class ConnectedAccount(
     val displayName: String,
     /** Values for the provider's [AccountSetting]s, by key. Blank optional settings are left out. */
     val settings: Map<String, String> = emptyMap(),
+    /** The [Profile] the account belongs to. Accounts stored before profiles existed belong to the default one. */
+    val profileId: String = Profile.DEFAULT_ID,
 )
 
 /** A non-secret value the user gives when connecting, such as a team to scope requests to. */

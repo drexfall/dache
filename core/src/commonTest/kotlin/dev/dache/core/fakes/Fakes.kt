@@ -23,6 +23,9 @@ class InMemoryAccountStore(
 class InMemoryTokenVault : TokenVault {
     val tokens = mutableMapOf<TokenKey, String>()
 
+    /** Every key read, in order; a provider fetch reads its account's token. */
+    val reads = mutableListOf<TokenKey>()
+
     /** Simulates a missing keyring: [put] throws. */
     var unavailable = false
 
@@ -34,7 +37,10 @@ class InMemoryTokenVault : TokenVault {
         tokens[key] = token
     }
 
-    override suspend fun get(key: TokenKey): String? = tokens[key]
+    override suspend fun get(key: TokenKey): String? {
+        reads += key
+        return tokens[key]
+    }
 
     override suspend fun delete(key: TokenKey) {
         tokens.remove(key)

@@ -53,6 +53,7 @@ import dev.dache.app.navigation.sidebarEntry
 import dev.dache.app.overview.OverviewScreen
 import dev.dache.app.plugins.PluginsScreen
 import dev.dache.app.plugins.PluginsViewModel
+import dev.dache.app.profiles.ProfilesViewModel
 import dev.dache.app.resource.ResourceScreen
 import dev.dache.app.security.AppLockCard
 import dev.dache.app.security.AppLockController
@@ -224,6 +225,8 @@ private fun DacheContent(
             )
         }
     val actionsViewModel = viewModel { actionsViewModel(container, platform.lockAuthenticator) }
+    val profilesViewModel = viewModel { ProfilesViewModel(container.accountRepository) }
+    val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
     val state by dashboardViewModel.state.collectAsStateWithLifecycle()
     val accountsState by accountsViewModel.state.collectAsStateWithLifecycle()
     val tokenChecks by accountsViewModel.tokenChecks.collectAsStateWithLifecycle()
@@ -249,6 +252,7 @@ private fun DacheContent(
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val formFactor = if (maxWidth >= EXPANDED_MIN_WIDTH) FormFactor.EXPANDED else FormFactor.COMPACT
         val actionHost = remember(state.accounts) { DashboardActionHost(container, state.accounts, actionsViewModel) }
+
         CompositionLocalProvider(
             LocalFormFactor provides formFactor,
             LocalAppNavigator provides navigator,
@@ -268,6 +272,8 @@ private fun DacheContent(
                             accountsViewModel.startAdding()
                             onPicked()
                         },
+                        profiles = profiles,
+                        profileActions = profilesViewModel.actions,
                     )
                 }
                 val page: @Composable (onOpenMenu: (() -> Unit)?) -> Unit = { onOpenMenu ->
@@ -316,6 +322,8 @@ private fun DacheContent(
                                 onOpenMenu = onOpenMenu,
                                 onAddAccount = accountsViewModel::startAdding,
                                 onRemove = accountsViewModel::remove,
+                                profiles = profiles,
+                                onMove = profilesViewModel::moveAccount,
                                 onOpenSettings = { open(Destination.AccountSettings(it.id)) },
                                 confirmExternalLinks = confirmLinks,
                                 onConfirmExternalLinksChange = container::setConfirmExternalLinks,

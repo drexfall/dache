@@ -35,10 +35,11 @@ import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Instant
 
 /**
- * Shared page frame. Compact: menu button for the modal sidebar and pull to refresh. Expanded: the sidebar is
- * always visible, so no menu button, and a thin progress bar replaces the pull indicator. [header] sits under
- * the app bar and stays put while the body scrolls. [lastUpdated] shows as "Updated 3 h ago" beside the refresh
- * control, in the warning tone once the data is older than the page's staleness threshold.
+ * Shared page frame. Compact: menu button for the modal sidebar. Expanded: the sidebar is always visible, so no
+ * menu button. On Android every width gets pull to refresh; on desktop a thin progress bar under the app bar
+ * shows a refresh instead (see [LocalPullToRefresh]). [header] sits under the app bar and stays put while the body
+ * scrolls. [lastUpdated] shows as "Updated 3 h ago" beside the refresh control, in the warning tone once the data
+ * is older than the page's staleness threshold.
  */
 @Composable
 fun PageScaffold(
@@ -55,6 +56,7 @@ fun PageScaffold(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val compact = LocalFormFactor.current == FormFactor.COMPACT
+    val pullToRefresh = LocalPullToRefresh.current
     Scaffold(
         modifier = modifier,
         floatingActionButton = floatingActionButton,
@@ -94,7 +96,7 @@ fun PageScaffold(
                     },
                 )
                 header?.invoke()
-                if (!compact && isRefreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (!pullToRefresh && isRefreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
             }
         },
     ) { padding ->
@@ -111,7 +113,7 @@ fun PageScaffold(
                 )
             }
         }
-        if (compact) {
+        if (pullToRefresh) {
             PullToRefreshBox(isRefreshing = isRefreshing, onRefresh = onRefresh, modifier = Modifier.padding(padding)) {
                 body()
             }

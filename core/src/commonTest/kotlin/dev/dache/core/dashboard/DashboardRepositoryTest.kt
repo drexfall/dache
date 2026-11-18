@@ -1,8 +1,10 @@
 package dev.dache.core.dashboard
 
 import dev.dache.core.account.AccountRepository
+import dev.dache.core.account.tokenKey
 import dev.dache.core.fakes.InMemoryAccountStore
 import dev.dache.core.fakes.InMemoryTokenVault
+import dev.dache.core.model.Profile
 import dev.dache.core.model.ProviderError
 import dev.dache.core.model.ProviderId
 import dev.dache.core.provider.mock.MockProvider
@@ -63,6 +65,60 @@ class DashboardRepositoryTest {
             )
             assertEquals(now, state.lastUpdated)
             assertFalse(state.isRefreshing)
+        }
+
+    @Test
+    fun refreshFetchesOnlyTheActiveProfile() =
+        runTest {
+            val (accounts, dashboard) = subject()
+            val personal = accounts.connect(ProviderId.NETLIFY, "fake-token-123").getOrThrow()
+            accounts.createProfile("Work")
+            val work = accounts.connect(ProviderId.VERCEL, "fake-token-456").getOrThrow()
+
+            val state = dashboard.refreshAndGet()
+
+            assertEquals(listOf(work), state.accounts)
+            assertEquals(listOf(work.id), state.results.map { it.account.id })
+            assertEquals(now, state.lastUpdated)
+            assertFalse(personal.tokenKey() in vault.reads)
+            assertTrue(work.tokenKey() in vault.reads)
+        }
+
+    @Test
+    fun switchingRefreshesTheNewProfileAndKeepsTheOldOnesResults() =
+        runTest {
+            val (accounts, dashboard) = subject()
+            val personal = accounts.connect(ProviderId.NETLIFY, "fake-token-123").getOrThrow()
+            dashboard.refresh()
+            accounts.createProfile("Work")
+            val work = accounts.connect(ProviderId.VERCEL, "fake-token-456").getOrThrow()
+
+            // Switching back to the default profile finds its results still there; its refresh is a moment old.
+            accounts.switchProfile(work.profileId)
+            dashboard.refresh()
+            accounts.cycleProfile()
+
+            val shown = dashboard.state.value
+            assertEquals(listOf(personal.id), shown.results.map { it.account.id })
+            assertNotNull(shown.results.single().snapshot)
+            assertEquals(now, shown.lastUpdated)
+        }
+
+    @Test
+    fun aProfileNeverRefreshedIsRefreshedWhenSwitchedTo() =
+        runTest {
+            val (accounts, dashboard) = subject()
+            accounts.createProfile("Work")
+            val work = accounts.connect(ProviderId.VERCEL, "fake-token-456").getOrThrow()
+            accounts.switchProfile(Profile.DEFAULT_ID)
+            assertNull(dashboard.state.value.lastUpdated)
+
+            accounts.switchProfile(work.profileId)
+
+            // No refresh asked for: the switch started it.
+            val state = dashboard.state.value
+            assertEquals(listOf(work.id), state.results.map { it.account.id })
+            assertNotNull(state.results.single().snapshot)
         }
 
     @Test

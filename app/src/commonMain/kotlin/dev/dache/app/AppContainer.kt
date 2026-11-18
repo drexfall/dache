@@ -3,6 +3,7 @@ package dev.dache.app
 import dev.dache.app.security.AppLockController
 import dev.dache.core.account.AccountRepository
 import dev.dache.core.account.AccountStore
+import dev.dache.core.account.ProfileStore
 import dev.dache.core.actions.ActionService
 import dev.dache.core.actions.WriteLog
 import dev.dache.core.alerts.AlertSettings
@@ -30,6 +31,8 @@ import kotlinx.coroutines.launch
 /** Where the app keeps what it persists. Several are often one store implementing more than one of these. */
 class AppStores(
     val accounts: AccountStore,
+    /** Usually the same store as [accounts], so profiles and their accounts are kept together. */
+    val profiles: ProfileStore,
     val settings: SettingsStore,
     val alerts: AlertStore,
     val writeLog: WriteLog,
@@ -73,7 +76,7 @@ class AppContainer(
             providerFor = { providerFor(it, vault, httpClient, requestLogger) },
         ).apply { start(scope) }
 
-    val accountRepository = AccountRepository(accountStore, vault, catalog)
+    val accountRepository = AccountRepository(accountStore, vault, catalog, profileStore = stores.profiles)
     val dashboardRepository =
         DashboardRepository(accountRepository, scope, store = stores.snapshots, historyStore = stores.history)
 

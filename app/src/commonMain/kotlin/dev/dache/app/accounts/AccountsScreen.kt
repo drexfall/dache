@@ -1,14 +1,19 @@
 package dev.dache.app.accounts
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,8 +28,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import dev.dache.app.actions.WriteLogCard
 import dev.dache.app.navigation.ProviderAvatar
+import dev.dache.app.profiles.ProfileBadge
+import dev.dache.app.profiles.profileName
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.accounts_empty_body
 import dev.dache.app.resources.accounts_empty_title
@@ -34,6 +42,7 @@ import dev.dache.app.resources.action_cancel
 import dev.dache.app.resources.action_remove
 import dev.dache.app.resources.pref_confirm_links
 import dev.dache.app.resources.pref_confirm_links_body
+import dev.dache.app.resources.profile_move_description
 import dev.dache.app.resources.remove_account_body
 import dev.dache.app.resources.remove_account_description
 import dev.dache.app.resources.remove_account_title
@@ -45,11 +54,12 @@ import dev.dache.app.ui.layout.LocalFormFactor
 import dev.dache.app.ui.layout.PageScaffold
 import dev.dache.core.actions.WriteLogEntry
 import dev.dache.core.model.ConnectedAccount
+import dev.dache.core.model.Profiles
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * Lists connected accounts with remove; tapping one opens its settings. Adding goes through the shared
- * add-account flow.
+ * Lists the active profile's accounts with remove, and move to another profile when there is one; tapping one opens
+ * its settings. Adding goes through the shared add-account flow, into the active profile.
  */
 @Composable
 fun AccountsScreen(
@@ -68,6 +78,8 @@ fun AccountsScreen(
     backgroundCard: (@Composable () -> Unit)? = null,
     /** Writes sent from Dache, newest first. */
     writeLog: List<WriteLogEntry> = emptyList(),
+    profiles: Profiles = Profiles(),
+    onMove: (ConnectedAccount, profileId: String) -> Unit = { _, _ -> },
 ) {
     var pendingRemoval by remember { mutableStateOf<ConnectedAccount?>(null) }
     val compact = LocalFormFactor.current == FormFactor.COMPACT
@@ -112,15 +124,9 @@ fun AccountsScreen(
                         headlineContent = { Text(account.displayName) },
                         supportingContent = { Text(account.providerId.displayName) },
                         trailingContent = {
-                            IconButton(onClick = { pendingRemoval = account }) {
-                                Icon(
-                                    Icons.Filled.Delete,
-                                    contentDescription =
-                                        stringResource(
-                                            Res.string.remove_account_description,
-                                            account.displayName,
-                                        ),
-                                )
+                            Row {
+                                if (profiles.all.size > 1) MoveButton(account, profiles, onMove)
+                                RemoveButton(account) { pendingRemoval = account }
                             }
                         },
                     )
@@ -144,6 +150,50 @@ fun AccountsScreen(
                 TextButton(onClick = { pendingRemoval = null }) { Text(stringResource(Res.string.action_cancel)) }
             },
         )
+    }
+}
+
+@Composable
+private fun RemoveButton(
+    account: ConnectedAccount,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick) {
+        Icon(
+            Icons.Filled.Delete,
+            contentDescription = stringResource(Res.string.remove_account_description, account.displayName),
+        )
+    }
+}
+
+/** Lists the other profiles to move [account] to. */
+@Composable
+private fun MoveButton(
+    account: ConnectedAccount,
+    profiles: Profiles,
+    onMove: (ConnectedAccount, String) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(
+                Icons.Filled.Person,
+                contentDescription = stringResource(Res.string.profile_move_description, account.displayName),
+            )
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            profiles.all.filter { it.id != account.profileId }.forEach { profile ->
+                val name = profileName(profile)
+                DropdownMenuItem(
+                    text = { Text(name) },
+                    leadingIcon = { ProfileBadge(name, size = 24.dp) },
+                    onClick = {
+                        open = false
+                        onMove(account, profile.id)
+                    },
+                )
+            }
+        }
     }
 }
 

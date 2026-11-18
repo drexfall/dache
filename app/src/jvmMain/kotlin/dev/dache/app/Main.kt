@@ -107,8 +107,10 @@ private fun stores(
     headless: Boolean,
 ): AppStores {
     val settings = DataStoreSettingsStore.create(File(dataDir, "settings.preferences_pb").absolutePath)
+    val accounts = DataStoreAccountStore.create(File(dataDir, "accounts.preferences_pb").absolutePath)
     return AppStores(
-        accounts = DataStoreAccountStore.create(File(dataDir, "accounts.preferences_pb").absolutePath),
+        accounts = accounts,
+        profiles = accounts,
         settings = settings,
         alerts = if (headless) HeadlessAlertStore(settings, File(dataDir, "reported-alerts")) else settings,
         writeLog = settings,

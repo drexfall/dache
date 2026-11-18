@@ -64,6 +64,7 @@ data class AddAccountState(
 }
 
 data class AccountsUiState(
+    /** The active profile's accounts. */
     val accounts: List<ConnectedAccount> = emptyList(),
     val addAccount: AddAccountState? = null,
 )
@@ -84,7 +85,7 @@ class AccountsViewModel(
     val connected: SharedFlow<ConnectedAccount> = connectedEvents
 
     val state: StateFlow<AccountsUiState> =
-        combine(accounts.accounts, addAccount, ::AccountsUiState)
+        combine(accounts.activeAccounts, addAccount, ::AccountsUiState)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), AccountsUiState())
 
     fun startAdding() {
