@@ -73,7 +73,7 @@ class BoardRepositoryTest {
         }
 
     @Test
-    fun widgetsMoveAndAreRemoved() =
+    fun widgetsAreReorderedResizedAndRemoved() =
         testScope.runTest {
             val boards = repository()
             val board = boards.create("B")
@@ -81,16 +81,18 @@ class BoardRepositoryTest {
                 boards.update(board.id) { it.withWidget(Widget("w$i", datapoint)) }
             }
 
-            fun order() = boards.board(board.id)!!.widgets.map { it.id }
+            fun widgets() = boards.board(board.id)!!.widgets
 
-            boards.update(board.id) { it.moved("w0", 1) }
-            assertEquals(listOf("w1", "w0", "w2"), order())
-            boards.update(board.id) { it.moved("w2", -5) }
-            assertEquals(listOf("w2", "w1", "w0"), order())
-            boards.update(board.id) { it.movedTo("w2", 2) }
-            assertEquals(listOf("w1", "w0", "w2"), order())
+            val (w0, w1, w2) = widgets()
+            boards.update(board.id) { it.withWidgets(listOf(w2, w0.copy(span = 9, height = 2), w1)) }
+            assertEquals(listOf("w2", "w0", "w1"), widgets().map { it.id })
+            assertEquals(
+                Widget.MAX_SPAN to 2,
+                widgets()[1].let { it.span to it.height },
+                "saved widgets are made valid",
+            )
             boards.update(board.id) { it.withoutWidget("w0") }
-            assertEquals(listOf("w1", "w2"), order())
+            assertEquals(listOf("w2", "w1"), widgets().map { it.id })
 
             boards.delete(board.id)
             assertEquals(emptyList(), boards.boards.value.orEmpty())

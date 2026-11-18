@@ -10,8 +10,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.use
 import dev.dache.app.account.AccountScreen
 import dev.dache.app.boards.BoardActions
+import dev.dache.app.boards.BoardEditorScreen
 import dev.dache.app.boards.BoardScreen
-import dev.dache.app.boards.WidgetEditorDialog
 import dev.dache.app.navigation.AppNavigator
 import dev.dache.app.navigation.LocalAppNavigator
 import dev.dache.app.overview.OverviewScreen
@@ -102,7 +102,7 @@ class RenderScreens {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    /** A sample dashboard, viewed and in edit mode, and its widget editor. */
+    /** A sample dashboard, and its editor with a widget selected. */
     private fun boardShots(
         dir: File,
         suffix: String,
@@ -111,21 +111,11 @@ class RenderScreens {
         form: FormFactor,
         state: DashboardState,
     ) {
-        for (editing in listOf(false, true)) {
-            val label = if (editing) "board-editing" else "board"
-            shot(File(dir, "$label-$suffix.png"), width, dark, form) {
-                BoardScreen(
-                    sampleBoard,
-                    state,
-                    NoBoardActions,
-                    onRefresh = {},
-                    onOpenMenu = null,
-                    startEditing = editing,
-                )
-            }
+        shot(File(dir, "board-$suffix.png"), width, dark, form) {
+            BoardScreen(sampleBoard, state, NoBoardActions, onEdit = {}, onRefresh = {}, onOpenMenu = null)
         }
-        shot(File(dir, "widget-editor-$suffix.png"), width, dark, form) {
-            WidgetEditorDialog(sampleBoard.widgets[1], isNew = false, state = state, onSave = {}, onDismiss = {})
+        shot(File(dir, "board-editor-$suffix.png"), width, dark, form) {
+            BoardEditorScreen(sampleBoard, state, NoBoardActions, initialSelection = "w6", onClose = {})
         }
     }
 
@@ -152,14 +142,7 @@ class RenderScreens {
 
         override fun delete() = Unit
 
-        override fun putWidget(widget: Widget) = Unit
-
-        override fun removeWidget(id: String) = Unit
-
-        override fun moveWidget(
-            id: String,
-            by: Int,
-        ) = Unit
+        override fun saveWidgets(widgets: List<Widget>) = Unit
 
         override fun newWidgetId() = "new"
     }

@@ -104,6 +104,8 @@ class DestinationTest {
                 .push(worker)
                 .push(Destination.AccountSettings("cf-acc"))
                 .push(Destination.Board("board-1"))
+                .push(Destination.BoardEditor("board-1", widgetId = "w2"))
+                .push(Destination.BoardEditor("board-1"))
                 .push(Destination.Plugins)
         val scope = SaverScope { true }
 
@@ -115,12 +117,13 @@ class DestinationTest {
     @Test
     fun aDeletedOrOtherProfilesBoardLosesItsPage() {
         val board = Destination.Board("b1")
-        val stack = start + board + Destination.Plugins
+        val stack = start + board + Destination.BoardEditor("b1", "w1") + Destination.Plugins
 
         assertEquals(stack, stack.keepingBoards(null), "boards not loaded yet: keep everything")
         assertEquals(start + Destination.Plugins, stack.keepingBoards(emptyList()))
         assertEquals(stack, stack.keepingBoardIds(listOf("b1")))
         assertEquals(start, listOf<Destination>(board).keepingBoardIds(emptyList()))
+        assertEquals(board, Destination.BoardEditor("b1").sidebarEntry, "the editor highlights its board")
     }
 
     @Test

@@ -120,7 +120,7 @@ private fun crumbLabel(
                 ?.let { pageTitle(it) }
                 ?: destination.pageId
         is Destination.AccountSettings -> stringResource(Res.string.breadcrumb_settings)
-        is Destination.Board -> stringResource(Res.string.nav_boards_header)
+        is Destination.Board, is Destination.BoardEditor -> stringResource(Res.string.nav_boards_header)
     }
 
 private fun crumbProvider(

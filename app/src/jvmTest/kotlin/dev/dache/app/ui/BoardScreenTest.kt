@@ -1,13 +1,8 @@
 package dev.dache.app.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -78,35 +73,18 @@ class BoardScreenTest {
             lastUpdated = Clock.System.now(),
         )
 
-    /** Applies actions the way the repository would, and remembers what was opened. */
-    private inner class Harness(
-        initial: Board,
-    ) : BoardActions {
-        var board by mutableStateOf(initial)
+    /** Remembers what the screen asked for. */
+    private class Harness : BoardActions {
         val opened = mutableListOf<ResourceRef>()
+        val edits = mutableListOf<String?>()
 
-        override fun rename(name: String) {
-            board = board.copy(name = name)
-        }
+        override fun rename(name: String) = Unit
 
         override fun delete() = Unit
 
-        override fun putWidget(widget: Widget) {
-            board = board.withWidget(widget)
-        }
+        override fun saveWidgets(widgets: List<Widget>) = Unit
 
-        override fun removeWidget(id: String) {
-            board = board.withoutWidget(id)
-        }
-
-        override fun moveWidget(
-            id: String,
-            by: Int,
-        ) {
-            board = board.moved(id, by)
-        }
-
-        override fun newWidgetId() = "new-${board.widgets.size}"
+        override fun newWidgetId() = "new"
 
         val navigator =
             object : AppNavigator {
@@ -121,11 +99,18 @@ class BoardScreenTest {
     }
 
     private fun show(board: Board): Harness {
-        val harness = Harness(board)
+        val harness = Harness()
         rule.setContent {
             TestHost {
                 CompositionLocalProvider(LocalAppNavigator provides harness.navigator) {
-                    BoardScreen(harness.board, state, harness, onRefresh = {}, onOpenMenu = null)
+                    BoardScreen(
+                        board,
+                        state,
+                        harness,
+                        onEdit = { harness.edits += it },
+                        onRefresh = {},
+                        onOpenMenu = null,
+                    )
                 }
             }
         }
@@ -133,56 +118,16 @@ class BoardScreenTest {
     }
 
     @Test
-    fun anEmptyBoardAddsAWidgetChosenInTheEditor() {
+    fun anEmptyBoardOffersTheEditor() {
         val harness = show(Board("b", "Ops", "default"))
 
-        rule.onNodeWithText("Add widget").performClick()
-        // The data dropdown; the preview below shows the same name as its title.
-        rule.onAllNodesWithText("Deploys")[0].performClick()
-        rule.onNodeWithText("Failing sites").performClick()
-        rule.onNodeWithText("List").performClick()
-        // The preview already shows the user's own failing site.
-        rule.onNodeWithText("shop").assertExists()
-        rule.onNodeWithText("Add").performClick()
+        rule.onNodeWithText("Edit dashboard").performClick()
         rule.waitForIdle()
-
-        val widget = harness.board.widgets.single()
-        assertEquals(Datapoint.FAILING_SITES, widget.datapoint)
-        assertEquals(WidgetChart.LIST, widget.chart)
+        assertEquals(listOf<String?>(null), harness.edits)
     }
 
     @Test
-    fun editModeMovesResizesAndRemovesWidgets() {
-        val harness =
-            show(
-                Board(
-                    "b",
-                    "Ops",
-                    "default",
-                    listOf(
-                        Widget("a", Datapoint.DEPLOYS, title = "Alpha"),
-                        Widget("b", Datapoint.SITES, title = "Beta"),
-                    ),
-                ),
-            )
-        rule.onNodeWithContentDescription("Edit").performClick()
-
-        rule.onNodeWithContentDescription("Move Alpha earlier").assertIsNotEnabled()
-        rule.onNodeWithContentDescription("Move Alpha later").performClick()
-        rule.waitForIdle()
-        assertEquals(listOf("b", "a"), harness.board.widgets.map { it.id })
-
-        rule.onNodeWithContentDescription("Make Beta wider").performClick()
-        rule.waitForIdle()
-        assertEquals(2, harness.board.widget("b")?.span)
-
-        rule.onNodeWithContentDescription("Remove Alpha").performClick()
-        rule.waitForIdle()
-        assertEquals(listOf("b"), harness.board.widgets.map { it.id })
-    }
-
-    @Test
-    fun aLongPressStartsEditingAndListItemsOpenTheirResource() {
+    fun listItemsOpenTheirResourceAndALongPressEditsTheWidget() {
         val harness = show(Board("b", "Ops", "default", listOf(Widget("s", Datapoint.SITES, WidgetChart.LIST))))
 
         rule.onNodeWithText("shop").performClick()
@@ -191,6 +136,10 @@ class BoardScreenTest {
 
         rule.onNodeWithText("Sites").performTouchInput { longClick() }
         rule.waitForIdle()
-        rule.onNodeWithContentDescription("Remove Sites").assertExists()
+        assertEquals(listOf<String?>("s"), harness.edits)
+
+        rule.onNodeWithContentDescription("Edit").performClick()
+        rule.waitForIdle()
+        assertEquals(listOf("s", null), harness.edits)
     }
 }

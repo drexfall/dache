@@ -34,22 +34,11 @@ class BoardsViewModel(
         viewModelScope.launch { repository.delete(id) }
     }
 
-    /** Adds [widget], or replaces the one with its id. */
-    fun putWidget(
+    /** Saves [widgets] as board [boardId]'s, in this order; the editor calls this after every change. */
+    fun saveWidgets(
         boardId: String,
-        widget: Widget,
-    ) = change(boardId) { it.withWidget(widget) }
-
-    fun removeWidget(
-        boardId: String,
-        widgetId: String,
-    ) = change(boardId) { it.withoutWidget(widgetId) }
-
-    fun moveWidget(
-        boardId: String,
-        widgetId: String,
-        by: Int,
-    ) = change(boardId) { it.moved(widgetId, by) }
+        widgets: List<Widget>,
+    ) = change(boardId) { it.withWidgets(widgets) }
 
     fun newWidgetId(): String = repository.newWidgetId()
 
@@ -66,14 +55,7 @@ class BoardsViewModel(
                 onDeleted()
             }
 
-            override fun putWidget(widget: Widget) = this@BoardsViewModel.putWidget(boardId, widget)
-
-            override fun removeWidget(id: String) = this@BoardsViewModel.removeWidget(boardId, id)
-
-            override fun moveWidget(
-                id: String,
-                by: Int,
-            ) = this@BoardsViewModel.moveWidget(boardId, id, by)
+            override fun saveWidgets(widgets: List<Widget>) = this@BoardsViewModel.saveWidgets(boardId, widgets)
 
             override fun newWidgetId(): String = this@BoardsViewModel.newWidgetId()
         }

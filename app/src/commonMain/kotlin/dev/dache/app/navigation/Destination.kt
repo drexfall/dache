@@ -39,6 +39,12 @@ sealed interface Destination {
     data class Board(
         val boardId: String,
     ) : Destination
+
+    /** The editor for dashboard [boardId], opened with [widgetId] selected if given. */
+    data class BoardEditor(
+        val boardId: String,
+        val widgetId: String? = null,
+    ) : Destination
 }
 
 /**
@@ -77,7 +83,16 @@ fun BackStack.keepingBoards(boards: List<Board>?): BackStack =
 
 /** Drops every page of a dashboard not in [boardIds]. */
 fun BackStack.keepingBoardIds(boardIds: Collection<String>): BackStack =
-    filter { it !is Destination.Board || it.boardId in boardIds }.ifEmpty { listOf(Destination.Overview) }
+    filter { it.boardId == null || it.boardId in boardIds }.ifEmpty { listOf(Destination.Overview) }
+
+/** The dashboard this page shows or edits, if any. */
+val Destination.boardId: String?
+    get() =
+        when (this) {
+            is Destination.Board -> boardId
+            is Destination.BoardEditor -> boardId
+            else -> null
+        }
 
 /** Drops every page about an account that is gone, so removing an account can't leave its pages open. */
 fun BackStack.keepingAccounts(accountIds: Collection<String>): BackStack =
@@ -96,6 +111,7 @@ val Destination.sidebarEntry: Destination
         when (this) {
             is Destination.Resource -> Destination.Account(ref.accountId)
             is Destination.AccountSettings -> Destination.Account(accountId)
+            is Destination.BoardEditor -> Destination.Board(boardId)
             else -> this
         }
 
@@ -107,7 +123,12 @@ val Destination.accountId: String?
             is Destination.Service -> accountId
             is Destination.AccountSettings -> accountId
             is Destination.Resource -> ref.accountId
-            Destination.Overview, Destination.ManageAccounts, Destination.Plugins, is Destination.Board -> null
+            Destination.Overview,
+            Destination.ManageAccounts,
+            Destination.Plugins,
+            is Destination.Board,
+            is Destination.BoardEditor,
+            -> null
         }
 
 /** Saves the whole stack as a flat token list, so rotation and process death restore every page. */
@@ -127,6 +148,7 @@ private fun Destination.tokens(): List<String> =
         is Destination.AccountSettings -> listOf("settings", accountId)
         is Destination.Resource -> listOf("resource", ref.providerId.id, ref.accountId, ref.kind.name, ref.nativeId)
         is Destination.Board -> listOf("board", boardId)
+        is Destination.BoardEditor -> listOf("board-editor", boardId, widgetId.orEmpty())
     }
 
 private fun decode(tokens: List<String>): BackStack {
@@ -142,6 +164,7 @@ private fun decode(tokens: List<String>): BackStack {
                 "service" -> Destination.Service(rest.removeFirst(), rest.removeFirst())
                 "settings" -> Destination.AccountSettings(rest.removeFirst())
                 "board" -> Destination.Board(rest.removeFirst())
+                "board-editor" -> Destination.BoardEditor(rest.removeFirst(), rest.removeFirst().ifEmpty { null })
                 "resource" -> {
                     val provider = ProviderId(rest.removeFirst())
                     val accountId = rest.removeFirst()

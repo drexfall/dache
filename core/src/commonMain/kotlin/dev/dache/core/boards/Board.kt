@@ -3,8 +3,9 @@ package dev.dache.core.boards
 import kotlinx.serialization.Serializable
 
 /**
- * A dashboard the user put together: a grid of [widgets] in reading order, each [Widget.span] columns wide. It
- * belongs to one profile and shows that profile's accounts.
+ * A dashboard the user put together: a grid of [widgets] in reading order, each [Widget.span] columns wide and
+ * [Widget.effectiveHeight] rows tall, placed by [BoardGrid]. It belongs to one profile and shows that profile's
+ * accounts.
  */
 @Serializable
 data class Board(
@@ -31,25 +32,8 @@ data class Board(
 
     fun withoutWidget(id: String): Board = copy(widgets = widgets.filterNot { it.id == id })
 
-    /** Moves widget [id] [by] places in reading order (negative is earlier); stops at either end. */
-    fun moved(
-        id: String,
-        by: Int,
-    ): Board {
-        val from = widgets.indexOfFirst { it.id == id }
-        if (from < 0) return this
-        val to = (from + by).coerceIn(0, widgets.lastIndex)
-        return copy(widgets = widgets.toMutableList().apply { add(to, removeAt(from)) })
-    }
-
-    /** Moves widget [id] to [index] in reading order, e.g. where it was dropped. */
-    fun movedTo(
-        id: String,
-        index: Int,
-    ): Board {
-        val from = widgets.indexOfFirst { it.id == id }
-        return if (from < 0) this else moved(id, index.coerceIn(0, widgets.lastIndex) - from)
-    }
+    /** These [widgets] in this order, each made valid; what the editor saves. */
+    fun withWidgets(widgets: List<Widget>): Board = copy(widgets = widgets.map { it.normalized() })
 
     companion object {
         const val MAX_NAME_LENGTH = 40
@@ -59,7 +43,8 @@ data class Board(
 /**
  * One tile on a [Board]: [datapoint] over the last [days] days for the accounts in [scope], drawn as [chart].
  * A blank [title] shows the datapoint's own name. [aggregation] turns a series into one number for a stat; null
- * uses the datapoint's default.
+ * uses the datapoint's default. [height] is in grid rows; null uses the chart's default, so boards saved before
+ * widgets had a height keep their look.
  */
 @Serializable
 data class Widget(
@@ -71,8 +56,11 @@ data class Widget(
     val aggregation: Aggregation? = null,
     val days: Int = DEFAULT_DAYS,
     val span: Int = 1,
+    val height: Int? = null,
 ) {
     val effectiveAggregation: Aggregation get() = aggregation ?: datapoint.defaultAggregation
+
+    val effectiveHeight: Int get() = height ?: chart.defaultHeight
 
     /** This widget with every choice made valid for its datapoint, so a stored widget can always be drawn. */
     fun normalized(): Widget =
@@ -82,10 +70,12 @@ data class Widget(
             aggregation = aggregation?.takeIf { datapoint.shape == DatapointShape.SERIES },
             days = days.takeIf { it in DAY_RANGES } ?: DEFAULT_DAYS,
             span = span.coerceIn(1, MAX_SPAN),
+            height = height?.coerceIn(1, MAX_HEIGHT),
         )
 
     companion object {
         const val MAX_SPAN = 4
+        const val MAX_HEIGHT = 6
         const val DEFAULT_DAYS = 14
         const val MAX_TITLE_LENGTH = 60
         val DAY_RANGES = listOf(7, 14, 30, 90)
@@ -99,17 +89,23 @@ data class WidgetScope(
     val accountId: String? = null,
 )
 
-enum class WidgetChart {
+/** Lists start tall enough to show a handful of items. */
+private const val LIST_HEIGHT = 3
+
+/** How a widget is drawn; [defaultHeight] is how many grid rows it takes until the user resizes it. */
+enum class WidgetChart(
+    val defaultHeight: Int,
+) {
     /** One number, e.g. "42 deploys". */
-    STAT,
-    LINE,
-    BARS,
+    STAT(1),
+    LINE(2),
+    BARS(2),
 
     /** The things counted, each with its status. */
-    LIST,
+    LIST(LIST_HEIGHT),
 
     /** A row of day cells per monitor, days with downtime marked; only for [Datapoint.UPTIME]. */
-    STRIP,
+    STRIP(2),
 }
 
 /** How a series becomes one number for a [WidgetChart.STAT]. */

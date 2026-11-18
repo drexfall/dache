@@ -2,13 +2,6 @@ package dev.dache.app
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.PermanentDrawerSheet
-import androidx.compose.material3.PermanentNavigationDrawer
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -21,7 +14,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.dache.app.account.AccountScreen
@@ -36,16 +28,17 @@ import dev.dache.app.actions.ActionsViewModel
 import dev.dache.app.actions.LocalActionHost
 import dev.dache.app.alerts.BackgroundChecksCard
 import dev.dache.app.alerts.BackgroundChecksPlatform
+import dev.dache.app.boards.BoardEditorPage
 import dev.dache.app.boards.BoardPage
 import dev.dache.app.boards.BoardsViewModel
 import dev.dache.app.dashboard.DashboardViewModel
-import dev.dache.app.navigation.BackNavigation
 import dev.dache.app.navigation.BackRequests
 import dev.dache.app.navigation.BackStack
 import dev.dache.app.navigation.BackStackSaver
 import dev.dache.app.navigation.Destination
 import dev.dache.app.navigation.LocalAppNavigator
 import dev.dache.app.navigation.LocalProviderIcons
+import dev.dache.app.navigation.NavigationFrame
 import dev.dache.app.navigation.Sidebar
 import dev.dache.app.navigation.StateNavigator
 import dev.dache.app.navigation.accountId
@@ -53,6 +46,7 @@ import dev.dache.app.navigation.current
 import dev.dache.app.navigation.keepingAccounts
 import dev.dache.app.navigation.keepingBoardIds
 import dev.dache.app.navigation.keepingBoards
+import dev.dache.app.navigation.pop
 import dev.dache.app.navigation.push
 import dev.dache.app.navigation.sidebarEntry
 import dev.dache.app.overview.OverviewScreen
@@ -291,7 +285,10 @@ private fun DacheContent(
                         profileActions = profilesViewModel.actions,
                         boards = boards.orEmpty(),
                         onNewBoard = {
-                            boardsViewModel.create(newBoardName) { open(Destination.Board(it.id)) }
+                            boardsViewModel.create(newBoardName) {
+                                open(Destination.Board(it.id))
+                                open(Destination.BoardEditor(it.id))
+                            }
                             onPicked()
                         },
                     )
@@ -338,11 +335,20 @@ private fun DacheContent(
                                 board = boards.orEmpty().firstOrNull { it.id == target.boardId },
                                 state = state,
                                 viewModel = boardsViewModel,
+                                onEdit = { widgetId -> open(Destination.BoardEditor(target.boardId, widgetId)) },
                                 onDeleted = { id ->
                                     stack = stack.keepingBoardIds(boards.orEmpty().map { it.id } - id)
                                 },
                                 onRefresh = dashboardViewModel::refresh,
                                 onOpenMenu = onOpenMenu,
+                            )
+                        is Destination.BoardEditor ->
+                            BoardEditorPage(
+                                board = boards.orEmpty().firstOrNull { it.id == target.boardId },
+                                state = state,
+                                viewModel = boardsViewModel,
+                                initialSelection = target.widgetId,
+                                onClose = { stack = stack.pop() },
                             )
                         Destination.Plugins -> PluginsPage(container, onOpenMenu)
                         Destination.ManageAccounts ->
@@ -368,23 +374,15 @@ private fun DacheContent(
                     }
                 }
 
-                if (formFactor == FormFactor.EXPANDED) {
-                    BackNavigation(stackState, platform.backRequests, closeDrawer = null)
-                    PermanentNavigationDrawer(
-                        drawerContent = { PermanentDrawerSheet(Modifier.width(280.dp)) { sidebar {} } },
-                    ) { page(null) }
-                } else {
-                    val drawerState = rememberDrawerState(DrawerValue.Closed)
-                    val scope = rememberCoroutineScope()
-                    // Back closes an open drawer before it leaves the page.
-                    val closeDrawer: (() -> Unit)? =
-                        if (drawerState.isOpen) ({ scope.launch { drawerState.close() } }) else null
-                    BackNavigation(stackState, platform.backRequests, closeDrawer)
-                    ModalNavigationDrawer(
-                        drawerState = drawerState,
-                        drawerContent = { ModalDrawerSheet { sidebar { scope.launch { drawerState.close() } } } },
-                    ) { page { scope.launch { drawerState.open() } } }
-                }
+                NavigationFrame(
+                    // The editor takes the whole window: it needs the width for its three panes.
+                    fullScreen = destination is Destination.BoardEditor,
+                    formFactor = formFactor,
+                    stackState = stackState,
+                    backRequests = platform.backRequests,
+                    sidebar = sidebar,
+                    page = page,
+                )
 
                 IntegrityWarning(
                     signals = platform.signals,
