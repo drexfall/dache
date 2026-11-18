@@ -52,6 +52,20 @@ data class WidgetItem(
     val detail: ItemDetail? = null,
 )
 
+/** One monitor's row in a [WidgetValue.Strips]: its uptime per UTC day, oldest first. */
+data class UptimeRow(
+    val name: String,
+    val ref: ResourceRef,
+    val days: List<TimedValue>,
+) {
+    val average: Double get() = days.map { it.value }.average()
+    val daysWithDowntime: Int get() = days.count { it.value < FULL_UPTIME }
+
+    companion object {
+        const val FULL_UPTIME = 100.0
+    }
+}
+
 /** What a widget shows, worked out from the dashboard; the UI only draws it. */
 sealed interface WidgetValue {
     val unit: ValueUnit
@@ -79,6 +93,14 @@ sealed interface WidgetValue {
         override val unit: ValueUnit get() = ValueUnit.COUNT
         override val currency: String? get() = null
     }
+
+    /** One row per monitor with uptime in range, the most downtime first. */
+    data class Strips(
+        val rows: List<UptimeRow>,
+    ) : WidgetValue {
+        override val unit: ValueUnit get() = ValueUnit.PERCENT
+        override val currency: String? get() = null
+    }
 }
 
 /** Works out widget values from the dashboard: live snapshots merged with stored history, as the built-in charts do. */
@@ -91,6 +113,8 @@ object WidgetData {
         val results = state.results.filter { it.account.inScope(widget.scope) }
         val datapoint = widget.datapoint
         return when (datapoint.shape) {
+            DatapointShape.SERIES if widget.chart == WidgetChart.STRIP ->
+                WidgetValue.Strips(uptimeRows(results, state, widget.days, now))
             DatapointShape.SERIES -> {
                 val series = series(datapoint, results, state, widget.days, now)
                 if (widget.chart == WidgetChart.STAT) {
@@ -210,6 +234,19 @@ object WidgetData {
                 .orEmpty()
                 .map { it.withHistory(history?.monitor(it.nativeId)) }
         }
+
+    private fun uptimeRows(
+        results: List<AccountResult>,
+        state: DashboardState,
+        days: Int,
+        now: Instant,
+    ): List<UptimeRow> {
+        val first = startOfUtcDay(now) - (days - 1).days
+        return monitors(results, state)
+            .map { UptimeRow(it.name, it.ref, dailyAverage(it.dailyUptime, first)) }
+            .filter { it.days.isNotEmpty() }
+            .sortedWith(compareByDescending<UptimeRow> { it.daysWithDowntime }.thenBy { it.average }.thenBy { it.name })
+    }
 
     private fun dailyAverage(
         points: List<TimedValue>,

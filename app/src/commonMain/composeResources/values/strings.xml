@@ -451,6 +451,7 @@
     <string name="widget_chart_description">%1$s over the last %2$d days; latest %3$s, highest %4$s</string>
     <string name="widget_expires">expires %1$s</string>
     <string name="widget_uptime">%1$s up</string>
+    <string name="widget_strip_description">%1$s: %2$s average uptime, %3$d days with downtime in the last %4$d days.</string>
 
     <string name="datapoint_deploys">Deploys</string>
     <string name="datapoint_failed_deploys">Failed deploys</string>
@@ -472,6 +473,7 @@
     <string name="widget_chart_line">Line</string>
     <string name="widget_chart_bars">Bars</string>
     <string name="widget_chart_list">List</string>
+    <string name="widget_chart_strip">Uptime strip</string>
 
     <string name="aggregation_sum">Total</string>
     <string name="aggregation_average">Average</string>

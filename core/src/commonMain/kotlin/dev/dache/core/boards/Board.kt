@@ -107,6 +107,9 @@ enum class WidgetChart {
 
     /** The things counted, each with its status. */
     LIST,
+
+    /** A row of day cells per monitor, days with downtime marked; only for [Datapoint.UPTIME]. */
+    STRIP,
 }
 
 /** How a series becomes one number for a [WidgetChart.STAT]. */
@@ -144,6 +147,8 @@ enum class Datapoint(
     val charts: List<WidgetChart>
         get() =
             when (shape) {
+                DatapointShape.SERIES if this == UPTIME ->
+                    listOf(WidgetChart.LINE, WidgetChart.STRIP, WidgetChart.BARS, WidgetChart.STAT)
                 DatapointShape.SERIES ->
                     if (unit == ValueUnit.COUNT || unit == ValueUnit.MONEY) {
                         listOf(WidgetChart.BARS, WidgetChart.LINE, WidgetChart.STAT)

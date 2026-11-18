@@ -50,7 +50,20 @@ class WidgetDataTest {
         name: String,
         status: MonitorStatus,
         responseTimes: List<TimedValue> = emptyList(),
-    ) = Monitor(robot.providerId, robot.id, name, "https://x", name, "https://$name", status, 99.5, 120, responseTimes)
+        dailyUptime: List<TimedValue> = emptyList(),
+    ) = Monitor(
+        robot.providerId,
+        robot.id,
+        name,
+        "https://x",
+        name,
+        "https://$name",
+        status,
+        99.5,
+        120,
+        responseTimes,
+        dailyUptime,
+    )
 
     private val state =
         DashboardState(
@@ -110,8 +123,19 @@ class WidgetDataTest {
                                                 300.0,
                                             ),
                                         ),
+                                        dailyUptime = listOf(TimedValue(today, 100.0)),
                                     ),
-                                    monitor("web", MonitorStatus.DOWN),
+                                    monitor(
+                                        "web",
+                                        MonitorStatus.DOWN,
+                                        dailyUptime =
+                                            listOf(
+                                                TimedValue(today - 20.days, 50.0),
+                                                TimedValue(today - 1.days, 100.0),
+                                                TimedValue(today, 90.0),
+                                            ),
+                                    ),
+                                    monitor("idle", MonitorStatus.PAUSED),
                                 ),
                         ),
                         error = null,
@@ -203,6 +227,37 @@ class WidgetDataTest {
                 .single()
                 .ref.accountId,
         )
+    }
+
+    @Test
+    fun uptimeStripsShowEachMonitorsDaysInRange() {
+        val strips = assertIs<WidgetValue.Strips>(value(Widget("w", Datapoint.UPTIME, WidgetChart.STRIP, days = 7)))
+
+        assertEquals(listOf("web", "api"), strips.rows.map { it.name }, "downtime first; no uptime, no row")
+        val web = strips.rows.first()
+        assertEquals(listOf(today - 1.days, today), web.days.map { it.at }, "the day 20 days ago is out of range")
+        assertEquals(1, web.daysWithDowntime)
+        assertEquals(95.0, web.average)
+        assertEquals(robot.id, web.ref.accountId)
+
+        val month = assertIs<WidgetValue.Strips>(value(Widget("w", Datapoint.UPTIME, WidgetChart.STRIP, days = 30)))
+        assertEquals(
+            3,
+            month.rows
+                .first()
+                .days.size,
+        )
+
+        val elsewhere =
+            value(Widget("w", Datapoint.UPTIME, WidgetChart.STRIP, scope = WidgetScope(providerId = "netlify")))
+        assertEquals(emptyList(), assertIs<WidgetValue.Strips>(elsewhere).rows)
+    }
+
+    @Test
+    fun onlyUptimeCanBeAStrip() {
+        assertEquals(WidgetChart.STRIP, Widget("w", Datapoint.UPTIME, WidgetChart.STRIP).normalized().chart)
+        assertEquals(WidgetChart.LINE, Widget("w", Datapoint.RESPONSE_TIME, WidgetChart.STRIP).normalized().chart)
+        assertEquals(WidgetChart.STAT, Widget("w", Datapoint.MONITORS, WidgetChart.STRIP).normalized().chart)
     }
 
     @Test

@@ -143,6 +143,7 @@ class RenderScreens {
                 Widget("w6", Datapoint.RESPONSE_TIME, WidgetChart.LINE, span = 2),
                 Widget("w7", Datapoint.SITES, WidgetChart.LIST, span = 2),
                 Widget("w8", Datapoint.MONITORS, WidgetChart.LIST, span = 2),
+                Widget("w9", Datapoint.UPTIME, WidgetChart.STRIP, span = 2),
             ),
         )
 

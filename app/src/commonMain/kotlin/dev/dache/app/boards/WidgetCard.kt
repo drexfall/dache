@@ -99,6 +99,7 @@ fun WidgetCard(
             is WidgetValue.Series -> SeriesWidget(title, widget, value)
             is WidgetValue.Stat -> StatWidget(title, widget, value)
             is WidgetValue.Items -> ItemsWidget(title, value)
+            is WidgetValue.Strips -> StripsWidget(title, widget, value)
         }
     }
 }
@@ -302,7 +303,7 @@ private fun ItemRow(
 }
 
 @Composable
-private fun WidgetSurface(content: @Composable () -> Unit) {
+internal fun WidgetSurface(content: @Composable () -> Unit) {
     val colors = LocalChartColors.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -315,7 +316,7 @@ private fun WidgetSurface(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun WidgetTitle(title: String) {
+internal fun WidgetTitle(title: String) {
     Text(
         title,
         style = MaterialTheme.typography.titleSmall,
@@ -352,4 +353,4 @@ private fun Modifier.onLongPress(action: () -> Unit): Modifier =
 
 private val PLOT_HEIGHT = 120.dp
 private val STRIP_BUTTON = 36.dp
-private const val MAX_ITEMS = 8
+internal const val MAX_ITEMS = 8

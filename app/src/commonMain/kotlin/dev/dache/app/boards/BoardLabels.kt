@@ -26,6 +26,7 @@ import dev.dache.app.resources.widget_chart_bars
 import dev.dache.app.resources.widget_chart_line
 import dev.dache.app.resources.widget_chart_list
 import dev.dache.app.resources.widget_chart_stat
+import dev.dache.app.resources.widget_chart_strip
 import dev.dache.app.ui.components.ValueFormats
 import dev.dache.core.boards.Aggregation
 import dev.dache.core.boards.Datapoint
@@ -62,6 +63,7 @@ val WidgetChart.label: StringResource
             WidgetChart.LINE -> Res.string.widget_chart_line
             WidgetChart.BARS -> Res.string.widget_chart_bars
             WidgetChart.LIST -> Res.string.widget_chart_list
+            WidgetChart.STRIP -> Res.string.widget_chart_strip
         }
 
 val Aggregation.label: StringResource
