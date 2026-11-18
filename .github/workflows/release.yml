@@ -89,9 +89,11 @@ jobs:
         shell: bash
         run: gh release upload "$GITHUB_REF_NAME" app/build/compose/binaries/main/msi/*.msi
 
+  # Waits for manual approval in the "release" environment, so the drafted APK can be tried on a device first.
   publish:
     needs: [appimage, apk, msi]
     runs-on: ubuntu-latest
+    environment: release
     steps:
       - name: Add SHA256SUMS and publish
         env:
