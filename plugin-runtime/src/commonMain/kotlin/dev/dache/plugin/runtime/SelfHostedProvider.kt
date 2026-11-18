@@ -8,6 +8,7 @@ import dev.dache.core.model.ActionRequest
 import dev.dache.core.model.Capability
 import dev.dache.core.model.ConnectedAccount
 import dev.dache.core.model.ProviderError
+import dev.dache.core.model.ProviderIcon
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ProviderSnapshot
 import dev.dache.core.model.ProviderStatus
@@ -34,6 +35,7 @@ import kotlinx.coroutines.sync.withLock
  * certificate the system trusts is used as is. One with a self-signed certificate fails with
  * [ProviderError.UntrustedCertificate] until the user trusts that exact certificate, which is then pinned.
  */
+@Suppress("TooManyFunctions")
 class SelfHostedProvider(
     private val template: PluginManifest,
     private val vault: TokenVault,
@@ -91,6 +93,16 @@ class SelfHostedProvider(
         account: ConnectedAccount,
         request: ActionRequest,
     ): Result<Unit> = forServer(account.settings) { it.runAction(account, request) }
+
+    override fun iconSite(settings: Map<String, String>): String? =
+        Server.parse(settings[SelfHostedSpec.HOST_SETTING])?.let { "https://${it.authority}" }
+
+    // Through the server's own provider, so a trusted self-signed certificate is honoured here too.
+    override suspend fun fetchIcon(settings: Map<String, String>): Result<ProviderIcon?> {
+        val server = Server.parse(settings[SelfHostedSpec.HOST_SETTING]) ?: return Result.success(null)
+        val pin = settings[SelfHostedSpec.CERTIFICATE_SETTING]?.takeIf { it.isNotBlank() }?.let(::normalizeFingerprint)
+        return providerFor(server, pin).fetchIcon(settings)
+    }
 
     /**
      * Runs [block] against the account's server. A network failure on a server without a trusted certificate is

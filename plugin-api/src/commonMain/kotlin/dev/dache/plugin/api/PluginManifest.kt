@@ -39,6 +39,12 @@ data class PluginManifest(
      * Required; nullable only so a manifest missing it is reported by the validator rather than the parser.
      */
     val dashboardUrl: String? = null,
+    /**
+     * The provider's icon as a `data:` URI holding a PNG or WebP (`data:image/png;base64,…`), at most 64 KB
+     * decoded; 96×96 px or more looks sharp. Without one the app shows the favicon of [dashboardUrl], or the
+     * name's first letter.
+     */
+    val icon: String? = null,
     /** How hard the plugin may hit the provider. */
     val limits: LimitsSpec = LimitsSpec(),
     /** Where users create a token. */

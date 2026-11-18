@@ -120,7 +120,7 @@ fun AccountsScreen(
                 Paged(accounts, key = "accounts") { account ->
                     ListItem(
                         modifier = Modifier.clickable(role = Role.Button) { onOpenSettings(account) },
-                        leadingContent = { ProviderAvatar(account.providerId) },
+                        leadingContent = { ProviderAvatar(account.providerId, accountId = account.id) },
                         headlineContent = { Text(account.displayName) },
                         supportingContent = { Text(account.providerId.displayName) },
                         trailingContent = {

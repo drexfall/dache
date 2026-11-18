@@ -12,6 +12,8 @@ import dev.dache.core.alerts.BackgroundCheck
 import dev.dache.core.dashboard.DashboardRepository
 import dev.dache.core.dashboard.HistoryStore
 import dev.dache.core.dashboard.SnapshotStore
+import dev.dache.core.icons.IconStore
+import dev.dache.core.icons.ProviderIconRepository
 import dev.dache.core.provider.ProviderCatalog
 import dev.dache.core.security.IntegrityWarningSettings
 import dev.dache.core.security.TokenVault
@@ -41,6 +43,8 @@ class AppStores(
     val snapshots: SnapshotStore = SnapshotStore.None,
     /** What refreshes have shown over time, so charts reach back further than providers list. */
     val history: HistoryStore = HistoryStore.None,
+    /** Fetched provider favicons, so they aren't fetched on every launch. */
+    val icons: IconStore = IconStore.None,
 )
 
 /**
@@ -79,6 +83,10 @@ class AppContainer(
     val accountRepository = AccountRepository(accountStore, vault, catalog, profileStore = stores.profiles)
     val dashboardRepository =
         DashboardRepository(accountRepository, scope, store = stores.snapshots, historyStore = stores.history)
+
+    /** Every provider's and account's icon; favicons are fetched in the background. */
+    val providerIcons =
+        ProviderIconRepository(catalog, accountRepository.accounts, scope, stores.icons).apply { start() }
 
     val backgroundCheck = BackgroundCheck(dashboardRepository, alertStore)
     val actionService = ActionService(accountRepository, dashboardRepository, writeLog)

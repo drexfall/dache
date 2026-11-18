@@ -1,6 +1,8 @@
 package dev.dache.plugin.runtime
 
 import dev.dache.core.model.Capability
+import dev.dache.core.model.IconFormat
+import dev.dache.core.model.ProviderIcon
 import dev.dache.plugin.api.AuthSpec
 import dev.dache.plugin.api.FieldSpec
 import dev.dache.plugin.api.LimitsSpec
@@ -126,6 +128,7 @@ object ManifestValidator {
             listOf("dashboardUrl" to manifest.dashboardUrl, "tokenUrl" to manifest.tokenUrl).forEach { (key, url) ->
                 if (url != null && !isWebLink(url)) problem(key, "must be an https:// URL")
             }
+            problems += iconProblems(manifest.icon)
             problems += limitProblems(manifest.limits)
             problems += selfHostedProblems(manifest)
             problems += statusProblems(manifest.status)
@@ -315,6 +318,23 @@ private fun isWebLink(url: String): Boolean {
             .substringBefore('?')
             .let(HostGuard::isValidHost)
 }
+
+private const val BYTES_PER_KB = 1024
+
+// Raster only: Android can't draw SVG, and a plugin's icon should look the same everywhere.
+private val manifestIconFormats = setOf(IconFormat.PNG, IconFormat.WEBP)
+
+private fun iconProblems(icon: String?): List<ManifestProblem> =
+    if (icon == null || ProviderIcon.fromDataUri(icon)?.format in manifestIconFormats) {
+        emptyList()
+    } else {
+        listOf(
+            ManifestProblem(
+                "icon",
+                "must be a data: URI holding a PNG or WebP image of at most ${IconFormat.MAX_BYTES / BYTES_PER_KB} KB",
+            ),
+        )
+    }
 
 private fun limitProblems(limits: LimitsSpec): List<ManifestProblem> =
     listOfNotNull(

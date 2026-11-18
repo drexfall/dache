@@ -81,7 +81,9 @@ private fun Crumb(
         modifier = if (current) Modifier.semantics { stateDescription = currentText } else Modifier,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            crumbProvider(destination, state)?.let { ProviderAvatar(it, Modifier.size(20.dp)) }
+            crumbProvider(destination, state)?.let { (provider, accountId) ->
+                ProviderAvatar(provider, Modifier.size(20.dp), accountId)
+            }
             Text(
                 label,
                 style = MaterialTheme.typography.labelLarge,
@@ -122,9 +124,10 @@ private fun crumbLabel(
 private fun crumbProvider(
     destination: Destination,
     state: DashboardState,
-): ProviderId? =
+): Pair<ProviderId, String>? =
     when (destination) {
-        is Destination.Account -> state.accounts.firstOrNull { it.id == destination.accountId }?.providerId
-        is Destination.Resource -> destination.ref.providerId
+        is Destination.Account ->
+            state.accounts.firstOrNull { it.id == destination.accountId }?.let { it.providerId to it.id }
+        is Destination.Resource -> destination.ref.providerId to destination.ref.accountId
         else -> null
     }

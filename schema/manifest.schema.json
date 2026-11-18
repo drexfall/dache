@@ -397,6 +397,9 @@
         "dashboardUrl": {
           "type": "string"
         },
+        "icon": {
+          "type": "string"
+        },
         "limits": {
           "$ref": "#/$defs/LimitsSpec"
         },
@@ -419,7 +422,8 @@
         "auth",
         "capabilities",
         "validate",
-        "resources"
+        "resources",
+        "dashboardUrl"
       ],
       "additionalProperties": false
     },

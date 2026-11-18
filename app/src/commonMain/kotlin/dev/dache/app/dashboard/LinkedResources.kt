@@ -48,7 +48,7 @@ fun LinkedResources(
             AssistChip(
                 onClick = { navigator.openResource(other.ref) },
                 label = { Text(label) },
-                leadingIcon = { ProviderAvatar(other.providerId, Modifier.size(20.dp)) },
+                leadingIcon = { ProviderAvatar(other.providerId, Modifier.size(20.dp), other.ref.accountId) },
                 trailingIcon = {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowForward,

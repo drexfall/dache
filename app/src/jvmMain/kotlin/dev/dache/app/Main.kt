@@ -27,6 +27,7 @@ import dev.dache.app.resources.app_name
 import dev.dache.core.account.DataStoreAccountStore
 import dev.dache.core.dashboard.FileHistoryStore
 import dev.dache.core.dashboard.FileSnapshotStore
+import dev.dache.core.icons.FileIconStore
 import dev.dache.core.settings.DataStoreSettingsStore
 import dev.dache.plugin.registry.DataStorePluginStore
 import dev.dache.plugin.runtime.RequestLogger
@@ -117,6 +118,7 @@ private fun stores(
         plugins = DataStorePluginStore.create(File(dataDir, "plugins.preferences_pb").absolutePath),
         snapshots = FileSnapshotStore(FileSystem.SYSTEM, File(dataDir, "snapshots").toOkioPath()),
         history = FileHistoryStore(FileSystem.SYSTEM, File(dataDir, "history").toOkioPath()),
+        icons = FileIconStore(FileSystem.SYSTEM, File(dataDir, "icons").toOkioPath()),
     )
 }
 
