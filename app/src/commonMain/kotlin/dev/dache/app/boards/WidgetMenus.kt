@@ -66,11 +66,9 @@ internal fun canvasWidgetMenu(
         ) {
             state.move(widget.id, 1)
         },
-        ContextMenuItem(
-            stringResource(Res.string.context_widget_remove),
-            icon = Icons.Filled.Delete,
-            destructive = true,
-            startsGroup = true,
-        ) { state.remove(widget.id) },
+        // No icons here: one on remove alone would leave the other entries indented around empty slots.
+        ContextMenuItem(stringResource(Res.string.context_widget_remove), destructive = true, startsGroup = true) {
+            state.remove(widget.id)
+        },
     )
 }
