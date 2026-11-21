@@ -1,6 +1,8 @@
 package dev.dache.app.ui.components
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenu
@@ -10,12 +12,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -25,6 +31,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -118,14 +125,40 @@ private fun ContextMenu(
     items: List<ContextMenuItem>,
     onDismiss: () -> Unit,
 ) {
-    DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
+    // Focus moves into the menu when it opens, so Esc closes the menu instead of reaching the window, where it
+    // would go back a page, and the arrow keys walk the entries.
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(focus) {
+        // The popup isn't attached until it has been laid out; a request before then is dropped.
+        withFrameNanos {}
+        focus.requestFocus()
+    }
+    DropdownMenu(
+        expanded = true,
+        onDismissRequest = onDismiss,
+        modifier =
+            Modifier
+                .onPreviewKeyEvent { event ->
+                    val escape = event.key == Key.Escape
+                    if (escape && event.type == KeyEventType.KeyDown) onDismiss()
+                    escape
+                }.focusRequester(focus)
+                .focusable(),
+    ) {
+        // When some entries have icons, the rest keep an empty slot so every label starts in line.
+        val iconSlot = items.any { it.icon != null }
         items.forEachIndexed { index, item ->
             if (item.startsGroup && index > 0) HorizontalDivider()
             // Unspecified leaves the item's own colours, including its disabled one.
             val color = if (item.destructive && item.enabled) MaterialTheme.colorScheme.error else Color.Unspecified
             DropdownMenuItem(
                 text = { Text(item.label, color = color) },
-                leadingIcon = item.icon?.let { icon -> { Icon(icon, contentDescription = null) } },
+                leadingIcon =
+                    when {
+                        item.icon != null -> ({ Icon(item.icon, contentDescription = null) })
+                        iconSlot -> ({ Spacer(Modifier.size(24.dp)) })
+                        else -> null
+                    },
                 enabled = item.enabled,
                 onClick = {
                     onDismiss()

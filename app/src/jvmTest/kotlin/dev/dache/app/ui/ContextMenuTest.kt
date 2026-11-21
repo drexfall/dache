@@ -1,13 +1,19 @@
 package dev.dache.app.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
@@ -33,13 +39,21 @@ class ContextMenuTest {
     private fun show() {
         rule.setContent {
             TestHost {
-                ContextMenuArea(
-                    listOf(
-                        ContextMenuItem("Copy") { events += "copy" },
-                        ContextMenuItem("Delete", enabled = false) { events += "delete" },
-                    ),
-                ) { actions ->
-                    Text("Row", actions.size(200.dp, 48.dp).clickable { events += "click" })
+                // Stands in for the window, which goes back a page on Esc.
+                Box(
+                    Modifier.onKeyEvent {
+                        if (it.key == Key.Escape) events += "back"
+                        false
+                    },
+                ) {
+                    ContextMenuArea(
+                        listOf(
+                            ContextMenuItem("Copy") { events += "copy" },
+                            ContextMenuItem("Delete", enabled = false) { events += "delete" },
+                        ),
+                    ) { actions ->
+                        Text("Row", actions.size(200.dp, 48.dp).clickable { events += "click" })
+                    }
                 }
             }
         }
@@ -77,6 +91,17 @@ class ContextMenuTest {
         rule.onNodeWithText("Row").performKeyInput { pressKey(Key.Menu) }
         rule.onNodeWithText("Copy").performClick()
         assertEquals(listOf("copy"), events)
+    }
+
+    @Test
+    fun escapeClosesTheMenuWithoutReachingThePage() {
+        show()
+        rule.onNodeWithText("Row").performMouseInput { rightClick() }
+        // The menu is a popup: a root of its own, the last one.
+        rule.onAllNodes(isRoot()).onLast().performKeyInput { pressKey(Key.Escape) }
+        rule.waitForIdle()
+        assertEquals(0, rule.onAllNodesWithTextCount("Copy"))
+        assertEquals(emptyList(), events, "the window's Esc goes back a page; the menu must keep it")
     }
 
     @Test
