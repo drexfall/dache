@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.editor_canvas_empty
 import dev.dache.app.resources.widget_select
+import dev.dache.app.ui.components.ContextMenuArea
 import dev.dache.app.ui.theme.LocalChartColors
 import dev.dache.core.boards.BoardGrid
 import dev.dache.core.boards.Widget
@@ -141,14 +142,21 @@ fun EditorCanvas(
                         )
                     }
                     WidgetGrid(state.widgets, metrics, minRows = rows, placements = placements) { widget, _ ->
-                        CanvasItem(
-                            widget = widget,
-                            selected = widget.id == state.selectedId,
-                            dragging = widget.id == state.drag?.widget?.id,
-                            dashboard = dashboard,
-                            now = now,
-                            onSelect = { state.select(widget.id) },
-                        )
+                        // A right click selects the widget too, so the properties show what the menu acts on.
+                        ContextMenuArea(
+                            canvasWidgetMenu(widget, state),
+                            onOpen = { state.select(widget.id) },
+                        ) { menuActions ->
+                            CanvasItem(
+                                widget = widget,
+                                selected = widget.id == state.selectedId,
+                                dragging = widget.id == state.drag?.widget?.id,
+                                dashboard = dashboard,
+                                now = now,
+                                onSelect = { state.select(widget.id) },
+                                modifier = menuActions,
+                            )
+                        }
                     }
                     val selectedIndex = state.widgets.indexOfFirst { it.id == state.selectedId }
                     if (selectedIndex >= 0 && state.drag == null) {
@@ -168,6 +176,7 @@ private fun CanvasItem(
     dashboard: DashboardState,
     now: kotlin.time.Instant,
     onSelect: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = LocalChartColors.current
     val title = widget.displayTitle()
@@ -186,7 +195,7 @@ private fun CanvasItem(
     }
     val value = remember(widget, dashboard, now) { WidgetData.evaluate(widget, dashboard, now) }
     Box(
-        Modifier.fillMaxSize().semantics {
+        modifier.fillMaxSize().semantics {
             this.selected = selected
             contentDescription = title
             onClick(selectLabel) {

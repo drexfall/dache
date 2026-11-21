@@ -1,6 +1,7 @@
 package dev.dache.app.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasSetTextAction
@@ -9,8 +10,10 @@ import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.rightClick
 import dev.dache.app.boards.BoardActions
 import dev.dache.app.boards.BoardScreen
 import dev.dache.app.navigation.AppNavigator
@@ -34,6 +37,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.time.Clock
 
+@OptIn(ExperimentalTestApi::class)
 class BoardScreenTest {
     @get:Rule
     val rule = createComposeRule()
@@ -96,7 +100,11 @@ class BoardScreenTest {
 
         override fun delete() = Unit
 
-        override fun saveWidgets(widgets: List<Widget>) = Unit
+        var saved: List<Widget>? = null
+
+        override fun saveWidgets(widgets: List<Widget>) {
+            saved = widgets
+        }
 
         override fun newWidgetId() = "new"
 
@@ -196,5 +204,30 @@ class BoardScreenTest {
         rule.onNodeWithContentDescription("Edit").performClick()
         rule.waitForIdle()
         assertEquals(listOf("s", null), harness.edits)
+    }
+
+    @Test
+    fun rightClickingAWidgetEditsCopiesOrRemovesIt() {
+        val sites = Widget("s", Datapoint.SITES, WidgetChart.LIST)
+        val harness = show(Board("b", "Ops", "default", listOf(sites)))
+
+        fun choose(entry: String) {
+            rule.onNodeWithText("Sites").performMouseInput { rightClick() }
+            rule.onNodeWithText(entry).performClick()
+            rule.waitForIdle()
+        }
+
+        choose("Edit widget")
+        choose("Edit board")
+        assertEquals(listOf("s", null), harness.edits)
+
+        choose("Duplicate")
+        assertEquals(listOf("s", "new"), harness.saved.orEmpty().map { it.id })
+
+        choose("Remove widget")
+        assertEquals(emptyList(), harness.saved)
+
+        choose("Name and icon")
+        rule.onNodeWithText("Save").assertExists()
     }
 }

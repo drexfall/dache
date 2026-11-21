@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.rightClick
 import dev.dache.app.boards.BoardActions
 import dev.dache.app.boards.BoardEditorScreen
 import dev.dache.app.navigation.AppNavigator
@@ -252,5 +253,32 @@ class BoardEditorTest {
         val resized = harness.saved.orEmpty().first { it.id == "a" }
         assertEquals(2, resized.span, "a column wider")
         assertEquals(1, resized.effectiveHeight, "the right edge only changes the width")
+    }
+
+    @Test
+    fun rightClickingAWidgetSelectsItAndOffersItsMenu() {
+        val harness = show(listOf(alpha, beta))
+
+        fun choose(
+            widget: String,
+            entry: String,
+        ) {
+            rule.onNodeWithContentDescription(widget).performMouseInput { rightClick() }
+            rule.onNodeWithText(entry).performClick()
+            rule.waitForIdle()
+        }
+
+        rule.onNodeWithContentDescription("Beta").performMouseInput { rightClick() }
+        rule.onNodeWithContentDescription("Beta").assertIsSelected()
+        rule.onNodeWithText("Move later").assertIsNotEnabled()
+        rule.onNodeWithText("Move earlier").performClick()
+        rule.waitForIdle()
+        assertEquals(listOf("b", "a"), harness.order())
+
+        choose("Alpha", "Duplicate")
+        assertEquals(listOf("b", "a", "new-0"), harness.order())
+
+        choose("Beta", "Remove widget")
+        assertEquals(listOf("a", "new-0"), harness.order())
     }
 }

@@ -34,6 +34,7 @@ import dev.dache.app.resources.monitor_uptime
 import dev.dache.app.resources.state_collapsed
 import dev.dache.app.resources.state_expanded
 import dev.dache.app.resources.status_expiring
+import dev.dache.app.ui.components.ContextMenuArea
 import dev.dache.app.ui.components.ExpandChevron
 import dev.dache.app.ui.components.ExpandableBody
 import dev.dache.app.ui.components.StatusChip
@@ -216,36 +217,39 @@ internal fun ResourceRow(
             .map { it.displayName }
     val stateText = stringResource(if (expanded) Res.string.state_expanded else Res.string.state_collapsed)
     val actionText = stringResource(if (expanded) Res.string.action_collapse else Res.string.action_expand)
+    val menu = resourceMenuItems(resource, expanded, onToggle = { expanded = !expanded })
     Column {
-        ListItem(
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            modifier =
-                Modifier
-                    .clickable(role = Role.Button, onClickLabel = actionText) { expanded = !expanded }
-                    .semantics { stateDescription = stateText },
-            headlineContent = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            supportingContent = {
-                Column {
-                    summary.forEach { Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis) }
-                    if (linkedProviders.isNotEmpty() && !expanded) {
-                        Text(
-                            stringResource(Res.string.linked_to, linkedProviders.joinToString(", ")),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+        ContextMenuArea(menu) { menuActions ->
+            ListItem(
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier =
+                    menuActions
+                        .clickable(role = Role.Button, onClickLabel = actionText) { expanded = !expanded }
+                        .semantics { stateDescription = stateText },
+                headlineContent = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                supportingContent = {
+                    Column {
+                        summary.forEach { Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                        if (linkedProviders.isNotEmpty() && !expanded) {
+                            Text(
+                                stringResource(Res.string.linked_to, linkedProviders.joinToString(", ")),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
-                }
-            },
-            trailingContent = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    trailing()
-                    ExpandChevron(expanded)
-                }
-            },
-        )
+                },
+                trailingContent = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        trailing()
+                        ExpandChevron(expanded)
+                    }
+                },
+            )
+        }
         ExpandableBody(expanded) {
             Column(
                 Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
