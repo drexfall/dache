@@ -3,6 +3,7 @@ package dev.dache.app.boards
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.dache.core.boards.Board
+import dev.dache.core.boards.BoardIcon
 import dev.dache.core.boards.BoardRepository
 import dev.dache.core.boards.Widget
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +31,11 @@ class BoardsViewModel(
         viewModelScope.launch { repository.rename(id, name) }
     }
 
+    fun setIcon(
+        id: String,
+        icon: BoardIcon,
+    ) = change(id) { it.copy(icon = icon) }
+
     /** Deletes board [id], unless it's the profile's last, and then runs [onDeleted]. */
     fun delete(
         id: String,
@@ -53,6 +59,8 @@ class BoardsViewModel(
     ): BoardActions =
         object : BoardActions {
             override fun rename(name: String) = this@BoardsViewModel.rename(boardId, name)
+
+            override fun setIcon(icon: BoardIcon) = this@BoardsViewModel.setIcon(boardId, icon)
 
             override fun delete() = this@BoardsViewModel.delete(boardId, onDeleted)
 

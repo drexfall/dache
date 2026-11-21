@@ -2,17 +2,21 @@ package dev.dache.app.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import dev.dache.app.boards.BoardActions
 import dev.dache.app.boards.BoardScreen
 import dev.dache.app.navigation.AppNavigator
 import dev.dache.app.navigation.LocalAppNavigator
 import dev.dache.core.boards.Board
+import dev.dache.core.boards.BoardIcon
 import dev.dache.core.boards.Datapoint
 import dev.dache.core.boards.Widget
 import dev.dache.core.boards.WidgetChart
@@ -79,7 +83,16 @@ class BoardScreenTest {
         val opened = mutableListOf<ResourceRef>()
         val edits = mutableListOf<String?>()
 
-        override fun rename(name: String) = Unit
+        var name: String? = null
+        var savedIcon: BoardIcon? = null
+
+        override fun rename(name: String) {
+            this.name = name
+        }
+
+        override fun setIcon(icon: BoardIcon) {
+            savedIcon = icon
+        }
 
         override fun delete() = Unit
 
@@ -140,6 +153,22 @@ class BoardScreenTest {
 
         rule.onNodeWithContentDescription("More board actions").performClick()
         rule.onNodeWithText("Delete board").assertIsNotEnabled()
+    }
+
+    @Test
+    fun theBoardsNameAndIconAreChangedTogether() {
+        val harness = show(Board("b", "Ops", "default", icon = BoardIcon.ofSymbol("bell")))
+
+        rule.onNodeWithContentDescription("More board actions").performClick()
+        rule.onNodeWithText("Name and icon").performClick()
+        rule.onNodeWithContentDescription("Bell").assertIsSelected()
+        rule.onNode(hasSetTextAction()).performTextReplacement("Releases")
+        rule.onNodeWithContentDescription("Star").performClick()
+        rule.onNodeWithText("Save").performClick()
+        rule.waitForIdle()
+
+        assertEquals("Releases", harness.name)
+        assertEquals(BoardIcon.ofSymbol("star"), harness.savedIcon)
     }
 
     @Test

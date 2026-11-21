@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
@@ -25,6 +23,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.dache.app.boards.BoardIconImage
 import dev.dache.app.profiles.ProfileActions
 import dev.dache.app.profiles.ProfileSwitcher
 import dev.dache.app.resources.Res
@@ -174,7 +173,7 @@ private fun BoardItems(
         val home = index == 0
         NavigationDrawerItem(
             label = { Text(board.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            icon = { Icon(if (home) Icons.Filled.Home else Icons.AutoMirrored.Filled.List, contentDescription = null) },
+            icon = { BoardIconImage(board.icon) },
             selected = current == destination || (home && current == Destination.Home),
             onClick = { onSelect(destination) },
             badge = if (home) ({ ProblemBadge(totalProblems) }) else null,

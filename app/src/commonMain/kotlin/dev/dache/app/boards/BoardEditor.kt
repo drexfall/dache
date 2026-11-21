@@ -118,7 +118,7 @@ fun BoardEditorScreen(
                                         )
                                     }
                                 }
-                                WidgetProperties(state, dashboard, board.name, actions::rename)
+                                WidgetProperties(state, dashboard, board, actions)
                             }
                         } else {
                             WidgetLibrary(state, geometry, horizontal = true, modifier = Modifier.fillMaxSize())
@@ -139,8 +139,8 @@ fun BoardEditorScreen(
                     WidgetProperties(
                         state,
                         dashboard,
-                        board.name,
-                        actions::rename,
+                        board,
+                        actions,
                         Modifier.width(PROPERTIES_WIDTH).fillMaxHeight(),
                     )
                 }

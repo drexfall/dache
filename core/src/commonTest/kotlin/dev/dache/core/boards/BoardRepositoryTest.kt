@@ -40,6 +40,8 @@ class BoardRepositoryTest {
             val boards = repository()
             val ops = boards.create("  Ops  ")
             boards.update(ops.id) { it.withWidget(Widget(boards.newWidgetId(), Datapoint.DEPLOYS, span = 2)) }
+            val uploaded = BoardIcon(image = "iVBORw0KGgo=")
+            boards.update(ops.id) { it.copy(icon = uploaded) }
             profileStore.updateProfiles { it.copy(activeId = work.id) }
             boards.create("Work board")
 
@@ -55,6 +57,7 @@ class BoardRepositoryTest {
             val (home, board) = reloaded.boards.value.orEmpty()
             assertEquals(BoardRepository.DEFAULT_NAME, home.name, "the default board isn't given again")
             assertEquals("Ops", board.name)
+            assertEquals(uploaded, board.icon)
             assertEquals(Datapoint.DEPLOYS, board.widgets.single().datapoint)
             assertEquals(2, board.widgets.single().span)
         }
@@ -81,6 +84,7 @@ class BoardRepositoryTest {
                     .orEmpty()
                     .single()
             assertEquals(BoardRepository.DEFAULT_NAME, home.name)
+            assertEquals(BoardIcon.ofSymbol(BoardIcon.HOME), home.icon)
             assertEquals(defaultBoard("x", "x", "x") { "w" }.widgets.size, home.widgets.size)
             assertEquals(2, store.load().size, "one for each profile")
 

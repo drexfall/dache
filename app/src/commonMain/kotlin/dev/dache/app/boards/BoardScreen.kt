@@ -1,7 +1,12 @@
 package dev.dache.app.boards
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
@@ -24,6 +29,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import dev.dache.app.dashboard.ProviderErrorCard
@@ -31,6 +37,8 @@ import dev.dache.app.navigation.LocalAppNavigator
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.action_cancel
 import dev.dache.app.resources.action_connect_account
+import dev.dache.app.resources.board_customize
+import dev.dache.app.resources.board_customize_title
 import dev.dache.app.resources.board_delete
 import dev.dache.app.resources.board_delete_body
 import dev.dache.app.resources.board_delete_title
@@ -41,8 +49,6 @@ import dev.dache.app.resources.board_empty_title
 import dev.dache.app.resources.board_more
 import dev.dache.app.resources.board_name_label
 import dev.dache.app.resources.board_open_editor
-import dev.dache.app.resources.board_rename
-import dev.dache.app.resources.board_rename_title
 import dev.dache.app.resources.overview_empty_body
 import dev.dache.app.resources.overview_empty_title
 import dev.dache.app.resources.widget_save
@@ -52,6 +58,7 @@ import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
 import dev.dache.app.ui.layout.PageScaffold
 import dev.dache.core.boards.Board
+import dev.dache.core.boards.BoardIcon
 import dev.dache.core.boards.Widget
 import dev.dache.core.boards.WidgetData
 import dev.dache.core.dashboard.DashboardState
@@ -61,6 +68,8 @@ import kotlin.time.Clock
 /** Everything the board screen and its editor change; [BoardsViewModel] implements it, tests pass their own. */
 interface BoardActions {
     fun rename(name: String)
+
+    fun setIcon(icon: BoardIcon)
 
     fun delete()
 
@@ -87,7 +96,7 @@ fun BoardScreen(
     canDelete: Boolean = true,
     onConnectAccount: (() -> Unit)? = null,
 ) {
-    var renaming by remember { mutableStateOf(false) }
+    var customizing by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     val now = remember(state.lastUpdated) { Clock.System.now() }
 
@@ -101,7 +110,7 @@ fun BoardScreen(
             IconButton(onClick = { onEdit(null) }) {
                 Icon(Icons.Filled.Edit, contentDescription = stringResource(Res.string.board_edit))
             }
-            BoardMenu(onRename = { renaming = true }, onDelete = { deleting = true }.takeIf { canDelete })
+            BoardMenu(onCustomize = { customizing = true }, onDelete = { deleting = true }.takeIf { canDelete })
         },
     ) {
         if (state.accounts.isEmpty() && onConnectAccount != null) {
@@ -147,18 +156,25 @@ fun BoardScreen(
         }
     }
 
-    if (renaming) {
-        RenameDialog(board.name, onConfirm = actions::rename, onDismiss = { renaming = false })
+    if (customizing) {
+        CustomizeDialog(
+            board,
+            onConfirm = { name, icon ->
+                actions.rename(name)
+                actions.setIcon(icon)
+            },
+            onDismiss = { customizing = false },
+        )
     }
     if (deleting) {
         DeleteDialog(board.name, onConfirm = actions::delete, onDismiss = { deleting = false })
     }
 }
 
-/** Rename, and delete unless [onDelete] is null: the last board can't be deleted. */
+/** Name and icon, and delete unless [onDelete] is null: the last board can't be deleted. */
 @Composable
 private fun BoardMenu(
-    onRename: () -> Unit,
+    onCustomize: () -> Unit,
     onDelete: (() -> Unit)?,
 ) {
     var open by remember { mutableStateOf(false) }
@@ -167,9 +183,9 @@ private fun BoardMenu(
             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(Res.string.board_more))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(text = { Text(stringResource(Res.string.board_rename)) }, onClick = {
+            DropdownMenuItem(text = { Text(stringResource(Res.string.board_customize)) }, onClick = {
                 open = false
-                onRename()
+                onCustomize()
             })
             DropdownMenuItem(
                 text = { Text(stringResource(Res.string.board_delete)) },
@@ -183,28 +199,35 @@ private fun BoardMenu(
     }
 }
 
+/** [board]'s name and icon, both applied together on save. */
 @Composable
-private fun RenameDialog(
-    initial: String,
-    onConfirm: (String) -> Unit,
+private fun CustomizeDialog(
+    board: Board,
+    onConfirm: (String, BoardIcon) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var name by remember { mutableStateOf(initial) }
+    var name by remember { mutableStateOf(board.name) }
+    var icon by remember { mutableStateOf(board.icon ?: BoardIcon.ofSymbol(symbolOf(null).id)) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(Res.string.board_rename_title)) },
+        title = { Text(stringResource(Res.string.board_customize_title)) },
         text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it.take(Board.MAX_NAME_LENGTH) },
-                label = { Text(stringResource(Res.string.board_name_label)) },
-                singleLine = true,
-            )
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(Board.MAX_NAME_LENGTH) },
+                    label = { Text(stringResource(Res.string.board_name_label)) },
+                    leadingIcon = { BoardIconImage(icon) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                BoardIconPicker(icon, onSelect = { icon = it })
+            }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onConfirm(name)
+                    onConfirm(name, icon)
                     onDismiss()
                 },
                 enabled = name.isNotBlank(),

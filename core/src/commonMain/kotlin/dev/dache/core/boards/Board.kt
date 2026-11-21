@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 /**
  * A board the user put together: a grid of [widgets] in reading order, each [Widget.span] columns wide and
  * [Widget.effectiveHeight] rows tall, placed by [BoardGrid]. It belongs to one profile and shows that profile's
- * accounts.
+ * accounts. [icon] is shown beside its name; null shows the default.
  */
 @Serializable
 data class Board(
@@ -13,6 +13,7 @@ data class Board(
     val name: String,
     val profileId: String,
     val widgets: List<Widget> = emptyList(),
+    val icon: BoardIcon? = null,
 ) {
     fun widget(id: String): Widget? = widgets.firstOrNull { it.id == id }
 

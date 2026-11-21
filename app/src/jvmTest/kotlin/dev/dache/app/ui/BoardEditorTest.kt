@@ -19,6 +19,7 @@ import dev.dache.app.boards.BoardEditorScreen
 import dev.dache.app.navigation.AppNavigator
 import dev.dache.app.navigation.LocalAppNavigator
 import dev.dache.core.boards.Board
+import dev.dache.core.boards.BoardIcon
 import dev.dache.core.boards.Datapoint
 import dev.dache.core.boards.Widget
 import dev.dache.core.boards.WidgetChart
@@ -91,6 +92,12 @@ class BoardEditorTest {
             this.name = name
         }
 
+        var savedIcon: BoardIcon? = null
+
+        override fun setIcon(icon: BoardIcon) {
+            savedIcon = icon
+        }
+
         override fun delete() = Unit
 
         override fun saveWidgets(widgets: List<Widget>) {
@@ -146,6 +153,16 @@ class BoardEditorTest {
         rule.onNodeWithText("shop").assertExists().performClick()
         rule.onNodeWithContentDescription("Failing sites").assertIsSelected()
         rule.onNodeWithText("Show as").assertExists()
+    }
+
+    @Test
+    fun withNothingSelectedTheBoardsIconCanBeChanged() {
+        val harness = show(listOf(alpha))
+
+        rule.onNodeWithContentDescription("List").assertIsSelected()
+        rule.onNodeWithContentDescription("Star").performClick()
+        rule.waitForIdle()
+        assertEquals(BoardIcon.ofSymbol("star"), harness.savedIcon)
     }
 
     @Test

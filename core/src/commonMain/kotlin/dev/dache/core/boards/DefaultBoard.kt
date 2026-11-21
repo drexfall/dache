@@ -21,6 +21,7 @@ fun defaultBoard(
         id = id,
         name = name,
         profileId = profileId,
+        icon = BoardIcon.ofSymbol(BoardIcon.HOME),
         widgets =
             listOf(
                 widget(Datapoint.FAILING_SITES),

@@ -73,14 +73,14 @@ import org.jetbrains.compose.resources.stringResource
 
 /**
  * The selected widget's settings, each a row of choices rather than a menu, so every option is in view. With
- * nothing selected it shows the board's name and how to get started.
+ * nothing selected it shows the board's name and icon, and how to get started.
  */
 @Composable
 fun WidgetProperties(
     state: BoardEditorState,
     dashboard: DashboardState,
-    boardName: String,
-    onRename: (String) -> Unit,
+    board: Board,
+    actions: BoardActions,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -89,7 +89,7 @@ fun WidgetProperties(
     ) {
         val widget = state.selected
         if (widget == null) {
-            BoardSection(boardName, onRename)
+            BoardSection(board, actions)
         } else {
             WidgetSection(widget, state, dashboard)
         }
@@ -98,21 +98,23 @@ fun WidgetProperties(
 
 @Composable
 private fun BoardSection(
-    boardName: String,
-    onRename: (String) -> Unit,
+    board: Board,
+    actions: BoardActions,
 ) {
-    var name by remember(boardName) { mutableStateOf(boardName) }
+    var name by remember(board.name) { mutableStateOf(board.name) }
     Text(stringResource(Res.string.editor_board_section), style = MaterialTheme.typography.titleSmall)
     OutlinedTextField(
         value = name,
         onValueChange = {
             name = it.take(Board.MAX_NAME_LENGTH)
-            if (name.isNotBlank()) onRename(name)
+            if (name.isNotBlank()) actions.rename(name)
         },
         label = { Text(stringResource(Res.string.board_name_label)) },
+        leadingIcon = { BoardIconImage(board.icon) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
+    BoardIconPicker(board.icon, onSelect = actions::setIcon)
     Text(
         stringResource(Res.string.editor_nothing_selected),
         style = MaterialTheme.typography.bodySmall,

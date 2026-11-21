@@ -23,6 +23,7 @@ import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
 import dev.dache.app.ui.theme.DacheTheme
 import dev.dache.core.boards.Board
+import dev.dache.core.boards.BoardIcon
 import dev.dache.core.boards.BoardRepository
 import dev.dache.core.boards.Datapoint
 import dev.dache.core.boards.Widget
@@ -118,6 +119,9 @@ class RenderScreens {
         shot(File(dir, "board-editor-$suffix.png"), width, dark, form) {
             BoardEditorScreen(sampleBoard, state, NoBoardActions, initialSelection = "w6", onClose = {})
         }
+        shot(File(dir, "board-editor-icon-$suffix.png"), width, dark, form) {
+            BoardEditorScreen(sampleBoard, state, NoBoardActions, initialSelection = null, onClose = {})
+        }
     }
 
     private val homeBoard =
@@ -141,10 +145,13 @@ class RenderScreens {
                 Widget("w8", Datapoint.MONITORS, WidgetChart.LIST, span = 2),
                 Widget("w9", Datapoint.UPTIME, WidgetChart.STRIP, span = 2),
             ),
+            icon = BoardIcon.ofSymbol("check"),
         )
 
     private object NoBoardActions : BoardActions {
         override fun rename(name: String) = Unit
+
+        override fun setIcon(icon: BoardIcon) = Unit
 
         override fun delete() = Unit
 
