@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -55,13 +56,14 @@ class ContextMenuItem(
  * Wraps [content] so a secondary click (a right click, or a two-finger click on a trackpad) opens [items] as a
  * menu at the pointer. The menu key or Shift+F10 opens it under the focused content. [content] gets a modifier
  * to put on its clickable element: it offers the same entries to accessibility services as custom actions on that
- * element, so nothing here is mouse-only. A touch long press is left alone. With no items it draws [content] and
- * nothing else.
+ * element, so nothing here is mouse-only. A touch long press is left alone. [onOpen] runs each time the menu
+ * opens. With no items it draws [content] and nothing else.
  */
 @Composable
 fun ContextMenuArea(
     items: List<ContextMenuItem>,
     modifier: Modifier = Modifier,
+    onOpen: () -> Unit = {},
     content: @Composable (actions: Modifier) -> Unit,
 ) {
     if (items.isEmpty()) {
@@ -70,13 +72,18 @@ fun ContextMenuArea(
     }
     var anchor by remember { mutableStateOf<Offset?>(null) }
     var size by remember { mutableStateOf(IntSize.Zero) }
+    val currentOnOpen by rememberUpdatedState(onOpen)
+    val open = { at: Offset ->
+        anchor = at
+        currentOnOpen()
+    }
     Box(
         modifier
             .onSizeChanged { size = it }
-            .pointerInput(Unit) { awaitSecondaryPresses { anchor = it } }
+            .pointerInput(Unit) { awaitSecondaryPresses(open) }
             .onKeyEvent { event ->
                 if (event.opensContextMenu()) {
-                    anchor = Offset(0f, size.height.toFloat())
+                    open(Offset(0f, size.height.toFloat()))
                     true
                 } else {
                     false

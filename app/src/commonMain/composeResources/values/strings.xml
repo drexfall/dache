@@ -461,6 +461,11 @@
     <string name="editor_board_section">Board</string>
     <string name="editor_nothing_selected">Select a widget to change what it shows. Drag it to move it, or drag its edges to resize it.</string>
     <string name="widget_select">Select %1$s</string>
+    <string name="context_widget_edit">Edit widget</string>
+    <string name="context_widget_duplicate">Duplicate</string>
+    <string name="context_widget_remove">Remove widget</string>
+    <string name="context_move_earlier">Move earlier</string>
+    <string name="context_move_later">Move later</string>
     <string name="widget_field_size">Size</string>
     <string name="widget_field_height">Height</string>
     <string name="widget_height_rows">%1$d rows</string>

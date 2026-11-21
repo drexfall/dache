@@ -53,6 +53,7 @@ import dev.dache.app.resources.overview_empty_body
 import dev.dache.app.resources.overview_empty_title
 import dev.dache.app.resources.widget_save
 import dev.dache.app.status.StatusBanner
+import dev.dache.app.ui.components.ContextMenuArea
 import dev.dache.app.ui.components.EmptyState
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
@@ -150,7 +151,15 @@ fun BoardScreen(
                 val metrics = GridMetrics.of(maxWidth, columns, LocalDensity.current)
                 WidgetGrid(board.widgets, metrics) { widget, _ ->
                     val value = remember(widget, state, now) { WidgetData.evaluate(widget, state, now) }
-                    WidgetCard(widget = widget, value = value, onLongPress = { onEdit(widget.id) })
+                    val menu = boardWidgetMenu(widget, board, actions, onEdit, onCustomize = { customizing = true })
+                    ContextMenuArea(menu) { menuActions ->
+                        WidgetCard(
+                            widget = widget,
+                            value = value,
+                            modifier = menuActions,
+                            onLongPress = { onEdit(widget.id) },
+                        )
+                    }
                 }
             }
         }
