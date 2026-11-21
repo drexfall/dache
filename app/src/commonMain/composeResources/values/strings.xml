@@ -177,6 +177,7 @@
     <string name="action_collapse">Hide details</string>
     <string name="action_retry">Retry</string>
 
+    <string name="context_open">Open</string>
     <string name="context_visit">Visit %1$s</string>
     <string name="context_copy_link">Copy %1$s link</string>
     <string name="context_copy_address">Copy address</string>
