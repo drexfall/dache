@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import dev.dache.app.boards.BoardActions
 import dev.dache.app.boards.BoardEditorScreen
@@ -168,13 +169,15 @@ class BoardEditorTest {
     @Test
     fun propertiesChangeTheSelectedWidget() {
         val harness = show(listOf(alpha, beta), selected = "a")
+        // The properties pane scrolls, and how much of it fits depends on the fonts the machine has: scroll to each
+        // control first, or a click on one below the fold lands on nothing.
 
         rule.onNodeWithContentDescription("Move Alpha earlier").assertIsNotEnabled()
-        rule.onNodeWithText("Bars").performClick()
-        rule.onNodeWithContentDescription("Make Alpha wider").performClick()
-        rule.onNodeWithContentDescription("Make Alpha taller").performClick()
-        rule.onNodeWithText("30 days").performClick()
-        rule.onNodeWithText("All Netlify accounts").performClick()
+        rule.onNodeWithText("Bars").performScrollTo().performClick()
+        rule.onNodeWithContentDescription("Make Alpha wider").performScrollTo().performClick()
+        rule.onNodeWithContentDescription("Make Alpha taller").performScrollTo().performClick()
+        rule.onNodeWithText("30 days").performScrollTo().performClick()
+        rule.onNodeWithText("All Netlify accounts").performScrollTo().performClick()
         rule.waitForIdle()
 
         val changed = harness.saved.orEmpty().first { it.id == "a" }
@@ -184,11 +187,11 @@ class BoardEditorTest {
         assertEquals(30, changed.days)
         assertEquals("netlify", changed.scope.providerId)
 
-        rule.onNodeWithContentDescription("Move Alpha later").performClick()
+        rule.onNodeWithContentDescription("Move Alpha later").performScrollTo().performClick()
         rule.waitForIdle()
         assertEquals(listOf("b", "a"), harness.order())
 
-        rule.onNodeWithContentDescription("Remove Alpha").performClick()
+        rule.onNodeWithContentDescription("Remove Alpha").performScrollTo().performClick()
         rule.waitForIdle()
         assertEquals(listOf("b"), harness.order())
         rule.onNodeWithText("Board").assertExists()
