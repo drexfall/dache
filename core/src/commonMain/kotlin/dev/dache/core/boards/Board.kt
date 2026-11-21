@@ -3,7 +3,7 @@ package dev.dache.core.boards
 import kotlinx.serialization.Serializable
 
 /**
- * A dashboard the user put together: a grid of [widgets] in reading order, each [Widget.span] columns wide and
+ * A board the user put together: a grid of [widgets] in reading order, each [Widget.span] columns wide and
  * [Widget.effectiveHeight] rows tall, placed by [BoardGrid]. It belongs to one profile and shows that profile's
  * accounts.
  */

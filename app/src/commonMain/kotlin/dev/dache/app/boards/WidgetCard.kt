@@ -60,7 +60,7 @@ import dev.dache.core.boards.WidgetValue
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * One widget drawn from live data, the same on the dashboard and in the editor. It fills the box it's given, which
+ * One widget drawn from live data, the same on the board and in the editor. It fills the box it's given, which
  * the grid sizes from the widget's span and height. [onLongPress] is how a touch user opens the editor.
  */
 @Composable

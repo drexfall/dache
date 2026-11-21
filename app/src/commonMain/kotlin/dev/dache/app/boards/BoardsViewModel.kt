@@ -8,7 +8,7 @@ import dev.dache.core.boards.Widget
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-/** The active profile's dashboards and every change to them; each change is saved as it's made. */
+/** The active profile's boards and every change to them; each change is saved as it's made. */
 class BoardsViewModel(
     private val repository: BoardRepository,
 ) : ViewModel() {
@@ -30,8 +30,12 @@ class BoardsViewModel(
         viewModelScope.launch { repository.rename(id, name) }
     }
 
-    fun delete(id: String) {
-        viewModelScope.launch { repository.delete(id) }
+    /** Deletes board [id], unless it's the profile's last, and then runs [onDeleted]. */
+    fun delete(
+        id: String,
+        onDeleted: () -> Unit = {},
+    ) {
+        viewModelScope.launch { if (repository.delete(id)) onDeleted() }
     }
 
     /** Saves [widgets] as board [boardId]'s, in this order; the editor calls this after every change. */
@@ -50,10 +54,7 @@ class BoardsViewModel(
         object : BoardActions {
             override fun rename(name: String) = this@BoardsViewModel.rename(boardId, name)
 
-            override fun delete() {
-                this@BoardsViewModel.delete(boardId)
-                onDeleted()
-            }
+            override fun delete() = this@BoardsViewModel.delete(boardId, onDeleted)
 
             override fun saveWidgets(widgets: List<Widget>) = this@BoardsViewModel.saveWidgets(boardId, widgets)
 

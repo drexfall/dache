@@ -14,7 +14,6 @@ import dev.dache.app.boards.BoardEditorScreen
 import dev.dache.app.boards.BoardScreen
 import dev.dache.app.navigation.AppNavigator
 import dev.dache.app.navigation.LocalAppNavigator
-import dev.dache.app.overview.OverviewScreen
 import dev.dache.app.plugins.ConsentDialog
 import dev.dache.app.plugins.PluginsScreen
 import dev.dache.app.plugins.PluginsViewModel
@@ -24,10 +23,12 @@ import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
 import dev.dache.app.ui.theme.DacheTheme
 import dev.dache.core.boards.Board
+import dev.dache.core.boards.BoardRepository
 import dev.dache.core.boards.Datapoint
 import dev.dache.core.boards.Widget
 import dev.dache.core.boards.WidgetChart
 import dev.dache.core.boards.WidgetScope
+import dev.dache.core.boards.defaultBoard
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ResourceRef
@@ -57,7 +58,7 @@ import java.io.File
 import kotlin.test.Test
 
 /**
- * Renders the overview and each account page with mock data to PNGs, light and dark, for reviewing the UI
+ * Renders the default board and each account page with mock data to PNGs, light and dark, for reviewing the UI
  * without tokens. Runs only when `DACHE_RENDER_DIR` names an output directory:
  * `DACHE_RENDER_DIR=/tmp/shots ./gradlew :app:jvmTest --tests '*RenderScreens*'`.
  */
@@ -77,8 +78,8 @@ class RenderScreens {
             val mode = if (dark) "dark" else "light"
             for ((name, width) in listOf("desktop" to DESKTOP_WIDTH, "phone" to PHONE_WIDTH)) {
                 val form = if (width == DESKTOP_WIDTH) FormFactor.EXPANDED else FormFactor.COMPACT
-                shot(File(dir, "overview-$name-$mode.png"), width, dark, form) {
-                    OverviewScreen(state, onRefresh = {}, onOpenMenu = null, onConnectAccount = {})
+                shot(File(dir, "home-$name-$mode.png"), width, dark, form) {
+                    BoardScreen(homeBoard, state, NoBoardActions, onEdit = {}, onRefresh = {}, onOpenMenu = null)
                 }
                 shot(File(dir, "plugins-$name-$mode.png"), width, dark, form) {
                     val viewModel = remember { PluginsViewModel(plugins, registry) }
@@ -102,7 +103,7 @@ class RenderScreens {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    /** A sample dashboard, and its editor with a widget selected. */
+    /** A sample board, and its editor with a widget selected. */
     private fun boardShots(
         dir: File,
         suffix: String,
@@ -118,6 +119,11 @@ class RenderScreens {
             BoardEditorScreen(sampleBoard, state, NoBoardActions, initialSelection = "w6", onClose = {})
         }
     }
+
+    private val homeBoard =
+        generateSequence(0) { it + 1 }.iterator().let { ids ->
+            defaultBoard("home", BoardRepository.DEFAULT_NAME, "default") { "h${ids.next()}" }
+        }
 
     private val sampleBoard =
         Board(

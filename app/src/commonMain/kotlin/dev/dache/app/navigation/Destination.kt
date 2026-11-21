@@ -8,7 +8,11 @@ import dev.dache.core.model.ResourceRef
 
 /** Pages reachable from the sidebar. Every connected account is its own page. */
 sealed interface Destination {
-    data object Overview : Destination
+    /**
+     * Where the app starts: the active profile's first board. It stands in until the boards have loaded, then
+     * [keepingBoards] puts that board in its place.
+     */
+    data object Home : Destination
 
     data class Account(
         val accountId: String,
@@ -35,12 +39,12 @@ sealed interface Destination {
         val ref: ResourceRef,
     ) : Destination
 
-    /** A dashboard the user made. */
+    /** A board: widgets the user arranged, the default one included. */
     data class Board(
         val boardId: String,
     ) : Destination
 
-    /** The editor for dashboard [boardId], opened with [widgetId] selected if given. */
+    /** The editor for board [boardId], opened with [widgetId] selected if given. */
     data class BoardEditor(
         val boardId: String,
         val widgetId: String? = null,
@@ -71,21 +75,24 @@ fun BackStack.push(destination: Destination): BackStack {
 /** Back to the previous page; the first page stays. */
 fun BackStack.pop(): BackStack = if (size > 1) dropLast(1) else this
 
-/** Drops every page of a dashboard not in [boards]: deleted, or another profile's. Null (not loaded) keeps all. */
-fun BackStack.keepingBoards(boards: List<Board>?): BackStack =
-    if (boards ==
-        null
-    ) {
-        this
-    } else {
-        keepingBoardIds(boards.map { it.id })
-    }
+/**
+ * Drops every page of a board not in [boards] (deleted, or another profile's) and puts the first of [boards] in
+ * place of [Destination.Home]. Null or empty (not loaded) keeps the stack as it is.
+ */
+fun BackStack.keepingBoards(boards: List<Board>?): BackStack {
+    val home = Destination.Board(boards?.firstOrNull()?.id ?: return this)
+    val ids = boards.map { it.id }.toSet()
+    return keepingBoardIds(ids)
+        .map { if (it == Destination.Home) home else it }
+        .distinct()
+        .ifEmpty { listOf(home) }
+}
 
-/** Drops every page of a dashboard not in [boardIds]. */
+/** Drops every page of a board not in [boardIds]; with nothing left, goes home. */
 fun BackStack.keepingBoardIds(boardIds: Collection<String>): BackStack =
-    filter { it.boardId == null || it.boardId in boardIds }.ifEmpty { listOf(Destination.Overview) }
+    filter { it.boardId == null || it.boardId in boardIds }.ifEmpty { listOf(Destination.Home) }
 
-/** The dashboard this page shows or edits, if any. */
+/** The board this page shows or edits, if any. */
 val Destination.boardId: String?
     get() =
         when (this) {
@@ -96,7 +103,7 @@ val Destination.boardId: String?
 
 /** Drops every page about an account that is gone, so removing an account can't leave its pages open. */
 fun BackStack.keepingAccounts(accountIds: Collection<String>): BackStack =
-    filter { it.accountId == null || it.accountId in accountIds }.ifEmpty { listOf(Destination.Overview) }
+    filter { it.accountId == null || it.accountId in accountIds }.ifEmpty { listOf(Destination.Home) }
 
 private fun Destination.isSiblingOf(other: Destination): Boolean =
     isAccountPage && other.isAccountPage && accountId == other.accountId
@@ -123,7 +130,7 @@ val Destination.accountId: String?
             is Destination.Service -> accountId
             is Destination.AccountSettings -> accountId
             is Destination.Resource -> ref.accountId
-            Destination.Overview,
+            Destination.Home,
             Destination.ManageAccounts,
             Destination.Plugins,
             is Destination.Board,
@@ -135,12 +142,12 @@ val Destination.accountId: String?
 val BackStackSaver: Saver<BackStack, List<String>> =
     Saver(
         save = { stack -> ArrayList(stack.flatMap { it.tokens() }) },
-        restore = { tokens -> runCatching { decode(tokens) }.getOrDefault(listOf(Destination.Overview)) },
+        restore = { tokens -> runCatching { decode(tokens) }.getOrDefault(listOf(Destination.Home)) },
     )
 
 private fun Destination.tokens(): List<String> =
     when (this) {
-        Destination.Overview -> listOf("overview")
+        Destination.Home -> listOf("home")
         Destination.ManageAccounts -> listOf("accounts")
         Destination.Plugins -> listOf("plugins")
         is Destination.Account -> listOf("account", accountId)
@@ -157,7 +164,8 @@ private fun decode(tokens: List<String>): BackStack {
     while (rest.isNotEmpty()) {
         stack +=
             when (rest.removeFirst()) {
-                "overview" -> Destination.Overview
+                // "overview" is the page boards replaced; a stack saved before then opens home in its place.
+                "home", "overview" -> Destination.Home
                 "accounts" -> Destination.ManageAccounts
                 "plugins" -> Destination.Plugins
                 "account" -> Destination.Account(rest.removeFirst())
@@ -174,5 +182,5 @@ private fun decode(tokens: List<String>): BackStack {
                 else -> error("unknown page")
             }
     }
-    return stack.ifEmpty { listOf(Destination.Overview) }
+    return stack.ifEmpty { listOf(Destination.Home) }
 }

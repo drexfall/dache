@@ -1,6 +1,7 @@
 package dev.dache.app.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -98,18 +99,25 @@ class BoardScreenTest {
             }
     }
 
-    private fun show(board: Board): Harness {
+    private fun show(
+        board: Board,
+        dashboard: DashboardState = state,
+        canDelete: Boolean = true,
+        onConnectAccount: (() -> Unit)? = null,
+    ): Harness {
         val harness = Harness()
         rule.setContent {
             TestHost {
                 CompositionLocalProvider(LocalAppNavigator provides harness.navigator) {
                     BoardScreen(
                         board,
-                        state,
+                        dashboard,
                         harness,
                         onEdit = { harness.edits += it },
                         onRefresh = {},
                         onOpenMenu = null,
+                        canDelete = canDelete,
+                        onConnectAccount = onConnectAccount,
                     )
                 }
             }
@@ -121,9 +129,27 @@ class BoardScreenTest {
     fun anEmptyBoardOffersTheEditor() {
         val harness = show(Board("b", "Ops", "default"))
 
-        rule.onNodeWithText("Edit dashboard").performClick()
+        rule.onNodeWithText("Edit board").performClick()
         rule.waitForIdle()
         assertEquals(listOf<String?>(null), harness.edits)
+    }
+
+    @Test
+    fun theLastBoardCantBeDeleted() {
+        show(Board("b", "Ops", "default"), canDelete = false)
+
+        rule.onNodeWithContentDescription("More board actions").performClick()
+        rule.onNodeWithText("Delete board").assertIsNotEnabled()
+    }
+
+    @Test
+    fun withNoAccountsTheBoardAsksForOne() {
+        var connects = 0
+        show(Board("b", "Overview", "default"), DashboardState(), onConnectAccount = { connects++ })
+
+        rule.onNodeWithText("Connect an account").performClick()
+        rule.waitForIdle()
+        assertEquals(1, connects)
     }
 
     @Test

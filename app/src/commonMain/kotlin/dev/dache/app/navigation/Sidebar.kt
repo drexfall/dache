@@ -35,7 +35,6 @@ import dev.dache.app.resources.nav_boards_header
 import dev.dache.app.resources.nav_manage_accounts
 import dev.dache.app.resources.nav_new_board
 import dev.dache.app.resources.nav_no_accounts
-import dev.dache.app.resources.nav_overview
 import dev.dache.app.resources.nav_plugins
 import dev.dache.app.resources.nav_problems
 import dev.dache.app.resources.nav_refresh_failed
@@ -50,7 +49,10 @@ import dev.dache.core.model.ServicePage
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Clock
 
-/** The profile switcher, the overview, then one entry per account in the active profile, then account management. */
+/**
+ * The profile switcher, the active profile's boards, then one entry per account in the profile, then account
+ * management. The first board is home, so it carries the count of every problem.
+ */
 @Composable
 fun Sidebar(
     state: DashboardState,
@@ -77,15 +79,7 @@ fun Sidebar(
             actions = profileActions,
             modifier = Modifier.padding(bottom = 12.dp),
         )
-        val totalProblems = state.summary.problemCount
-        NavigationDrawerItem(
-            label = { Text(stringResource(Res.string.nav_overview)) },
-            icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-            selected = current == Destination.Overview,
-            onClick = { onSelect(Destination.Overview) },
-            badge = { ProblemBadge(totalProblems) },
-        )
-        if (onNewBoard != null) BoardItems(boards, current, onSelect, onNewBoard)
+        BoardItems(boards, current, onSelect, onNewBoard, state.summary.problemCount)
 
         Text(
             stringResource(Res.string.nav_accounts_header),
@@ -160,35 +154,40 @@ fun Sidebar(
     }
 }
 
-/** The active profile's dashboards, then a way to make another. */
+/** The active profile's boards, home first, then a way to make another. */
 @Composable
 private fun BoardItems(
     boards: List<Board>,
     current: Destination,
     onSelect: (Destination) -> Unit,
-    onNewBoard: () -> Unit,
+    onNewBoard: (() -> Unit)?,
+    totalProblems: Int,
 ) {
     Text(
         stringResource(Res.string.nav_boards_header),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
+        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
     )
-    boards.forEach { board ->
+    boards.forEachIndexed { index, board ->
         val destination = Destination.Board(board.id)
+        val home = index == 0
         NavigationDrawerItem(
             label = { Text(board.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
-            selected = current == destination,
+            icon = { Icon(if (home) Icons.Filled.Home else Icons.AutoMirrored.Filled.List, contentDescription = null) },
+            selected = current == destination || (home && current == Destination.Home),
             onClick = { onSelect(destination) },
+            badge = if (home) ({ ProblemBadge(totalProblems) }) else null,
         )
     }
-    NavigationDrawerItem(
-        label = { Text(stringResource(Res.string.nav_new_board)) },
-        icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-        selected = false,
-        onClick = onNewBoard,
-    )
+    if (onNewBoard != null) {
+        NavigationDrawerItem(
+            label = { Text(stringResource(Res.string.nav_new_board)) },
+            icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+            selected = false,
+            onClick = onNewBoard,
+        )
+    }
 }
 
 @Composable

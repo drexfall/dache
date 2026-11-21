@@ -134,7 +134,7 @@ class BoardEditorTest {
     @Test
     fun tappingALibraryWidgetAddsAndSelectsIt() {
         val harness = show(emptyList())
-        rule.onNodeWithText("Dashboard").assertExists()
+        rule.onNodeWithText("Board").assertExists()
 
         rule.onNodeWithContentDescription("Add Failing sites as List").performClick()
         rule.waitForIdle()
@@ -174,7 +174,7 @@ class BoardEditorTest {
         rule.onNodeWithContentDescription("Remove Alpha").performClick()
         rule.waitForIdle()
         assertEquals(listOf("b"), harness.order())
-        rule.onNodeWithText("Dashboard").assertExists()
+        rule.onNodeWithText("Board").assertExists()
     }
 
     @Test

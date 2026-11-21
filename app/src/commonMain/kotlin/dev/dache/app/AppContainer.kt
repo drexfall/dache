@@ -1,5 +1,7 @@
 package dev.dache.app
 
+import dev.dache.app.resources.Res
+import dev.dache.app.resources.board_home_name
 import dev.dache.app.security.AppLockController
 import dev.dache.core.account.AccountRepository
 import dev.dache.core.account.AccountStore
@@ -31,6 +33,7 @@ import dev.dache.plugin.runtime.providerFor
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 
 /** Where the app keeps what it persists. Several are often one store implementing more than one of these. */
 class AppStores(
@@ -47,7 +50,7 @@ class AppStores(
     val history: HistoryStore = HistoryStore.None,
     /** Fetched provider favicons, so they aren't fetched on every launch. */
     val icons: IconStore = IconStore.None,
-    /** The dashboards users make. */
+    /** The boards users make. */
     val boards: BoardStore = BoardStore.InMemory(),
 )
 
@@ -92,7 +95,13 @@ class AppContainer(
     val providerIcons =
         ProviderIconRepository(catalog, accountRepository.accounts, scope, stores.icons).apply { start() }
 
-    val boardRepository = BoardRepository(stores.boards, accountRepository.profiles, scope)
+    val boardRepository =
+        BoardRepository(
+            stores.boards,
+            accountRepository.profiles,
+            scope,
+            defaultName = { getString(Res.string.board_home_name) },
+        )
 
     val backgroundCheck = BackgroundCheck(dashboardRepository, alertStore)
     val actionService = ActionService(accountRepository, dashboardRepository, writeLog)

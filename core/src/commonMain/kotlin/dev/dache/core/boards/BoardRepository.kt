@@ -64,37 +64,48 @@ class FileBoardStore(
 }
 
 /**
- * The user's boards. [boards] are the active profile's, oldest first, and null until the profiles have loaded; a
- * board of a profile that is deleted goes with it. Every change is saved at once.
+ * The user's boards. [boards] are the active profile's, oldest first, and null until the profiles have loaded and
+ * the active one has its boards. Every profile always has at least one: a profile without any is given the
+ * [defaultBoard], named by [defaultName], and its last board can't be deleted. A board of a profile that is
+ * deleted goes with it. Every change is saved at once.
  */
 class BoardRepository(
     private val store: BoardStore,
     private val profiles: Flow<Profiles>,
     scope: CoroutineScope,
+    private val defaultName: suspend () -> String = { DEFAULT_NAME },
     private val newId: () -> String = ::randomBoardId,
 ) {
     private val all = MutableStateFlow(store.load().map { it.copy(widgets = it.widgets.map(Widget::normalized)) })
     private val lock = Mutex()
 
     val boards: StateFlow<List<Board>?> =
-        combine(all, profiles) { boards, profiles -> boards.filter { it.profileId == profiles.active.id } }
-            .stateIn(scope, SharingStarted.Eagerly, null)
+        combine(all, profiles) { boards, profiles ->
+            boards.filter { it.profileId == profiles.active.id }.ifEmpty { null }
+        }.stateIn(scope, SharingStarted.Eagerly, null)
 
     init {
-        scope.launch {
-            profiles.collect { current ->
-                val known = current.all.map { it.id }.toSet()
-                all.value.filter { it.profileId !in known }.forEach { delete(it.id) }
-            }
-        }
+        scope.launch { profiles.collect { reconcile(it) } }
     }
+
+    /** Drops the boards of profiles that are gone and gives every profile without a board the default one. */
+    private suspend fun reconcile(current: Profiles) =
+        lock.withLock {
+            val known = current.all.map { it.id }.toSet()
+            all.value.filter { it.profileId !in known }.forEach { removeLocked(it.id) }
+            val withBoards = all.value.map { it.profileId }.toSet()
+            val bare = current.all.filter { it.id !in withBoards }
+            if (bare.isEmpty()) return@withLock
+            val name = defaultName().cleanName().ifEmpty { DEFAULT_NAME }
+            bare.forEach { saveLocked(defaultBoard(newId(), name, it.id, newId)) }
+        }
 
     fun board(id: String): Board? = all.value.firstOrNull { it.id == id }
 
     /** A new empty board in the active profile. */
     suspend fun create(name: String): Board {
         val board = Board(newId(), name.cleanName(), profiles.first().active.id)
-        save(board)
+        lock.withLock { saveLocked(board) }
         return board
     }
 
@@ -114,22 +125,34 @@ class BoardRepository(
         store.save(changed)
     }
 
-    suspend fun delete(id: String) =
+    /** Deletes board [id] unless it's its profile's last; returns whether it was deleted. */
+    suspend fun delete(id: String): Boolean =
         lock.withLock {
-            all.update { boards -> boards.filterNot { it.id == id } }
-            store.delete(id)
+            val board = board(id) ?: return@withLock false
+            if (all.value.none { it.profileId == board.profileId && it.id != id }) return@withLock false
+            removeLocked(id)
+            true
         }
 
     /** An id for a new widget. */
     fun newWidgetId(): String = newId()
 
-    private suspend fun save(board: Board) =
-        lock.withLock {
-            all.update { it + board }
-            store.save(board)
-        }
+    private suspend fun saveLocked(board: Board) {
+        all.update { it + board }
+        store.save(board)
+    }
+
+    private suspend fun removeLocked(id: String) {
+        all.update { boards -> boards.filterNot { it.id == id } }
+        store.delete(id)
+    }
 
     private fun String.cleanName(): String = trim().take(Board.MAX_NAME_LENGTH)
+
+    companion object {
+        /** The default board's name where no localized one is given, e.g. in tests. */
+        const val DEFAULT_NAME = "Overview"
+    }
 }
 
 @OptIn(ExperimentalUuidApi::class)

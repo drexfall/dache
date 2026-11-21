@@ -49,7 +49,6 @@ import dev.dache.app.navigation.keepingBoards
 import dev.dache.app.navigation.pop
 import dev.dache.app.navigation.push
 import dev.dache.app.navigation.sidebarEntry
-import dev.dache.app.overview.OverviewScreen
 import dev.dache.app.plugins.PluginsScreen
 import dev.dache.app.plugins.PluginsViewModel
 import dev.dache.app.profiles.ProfilesViewModel
@@ -105,7 +104,7 @@ fun DacheApp(
     DacheTheme {
         val signals = rememberIntegritySignals(integrityChecker)
         // Above the lock, so the open pages are still there after unlocking.
-        val stackState = rememberSaveable(stateSaver = BackStackSaver) { mutableStateOf(listOf(Destination.Overview)) }
+        val stackState = rememberSaveable(stateSaver = BackStackSaver) { mutableStateOf(listOf(Destination.Home)) }
         val platform = Platform(signals, backgroundChecks, lockAuthenticator, backRequests)
         if (lockAuthenticator == null) {
             DacheContent(container, stackState, platform, securityCard = null)
@@ -254,8 +253,8 @@ private fun DacheContent(
     LaunchedEffect(state.accounts, state.accountsLoaded) {
         if (state.accountsLoaded) stack = stack.keepingAccounts(state.accounts.map { it.id })
     }
-    // A deleted board's page, or another profile's after a switch, has nothing to show.
-    LaunchedEffect(boards) { stack = stack.keepingBoards(boards) }
+    // A deleted board's page, or another profile's after a switch, has nothing to show; home is the first board.
+    LaunchedEffect(boards, stack) { stack = stack.keepingBoards(boards) }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val formFactor = if (maxWidth >= EXPANDED_MIN_WIDTH) FormFactor.EXPANDED else FormFactor.COMPACT
@@ -295,13 +294,8 @@ private fun DacheContent(
                 }
                 val page: @Composable (onOpenMenu: (() -> Unit)?) -> Unit = { onOpenMenu ->
                     when (val target = destination) {
-                        Destination.Overview ->
-                            OverviewScreen(
-                                state = state,
-                                onRefresh = dashboardViewModel::refresh,
-                                onOpenMenu = onOpenMenu,
-                                onConnectAccount = accountsViewModel::startAdding,
-                            )
+                        // Shown for a moment, until the boards load and the first one takes its place.
+                        Destination.Home -> Unit
                         is Destination.Account, is Destination.Service, is Destination.AccountSettings ->
                             state.accounts.firstOrNull { it.id == target.accountId }?.let { account ->
                                 AccountPage(
@@ -335,12 +329,14 @@ private fun DacheContent(
                                 board = boards.orEmpty().firstOrNull { it.id == target.boardId },
                                 state = state,
                                 viewModel = boardsViewModel,
+                                canDelete = boards.orEmpty().size > 1,
                                 onEdit = { widgetId -> open(Destination.BoardEditor(target.boardId, widgetId)) },
                                 onDeleted = { id ->
                                     stack = stack.keepingBoardIds(boards.orEmpty().map { it.id } - id)
                                 },
                                 onRefresh = dashboardViewModel::refresh,
                                 onOpenMenu = onOpenMenu,
+                                onConnectAccount = accountsViewModel::startAdding,
                             )
                         is Destination.BoardEditor ->
                             BoardEditorPage(

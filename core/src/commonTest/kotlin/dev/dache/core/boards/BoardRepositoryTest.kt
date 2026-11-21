@@ -12,7 +12,9 @@ import okio.Path.Companion.toPath
 import okio.fakefilesystem.FakeFileSystem
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BoardRepositoryTest {
@@ -42,7 +44,7 @@ class BoardRepositoryTest {
             boards.create("Work board")
 
             assertEquals(
-                listOf("Work board"),
+                listOf(BoardRepository.DEFAULT_NAME, "Work board"),
                 boards.boards.value
                     .orEmpty()
                     .map { it.name },
@@ -50,10 +52,8 @@ class BoardRepositoryTest {
 
             profileStore.updateProfiles { it.copy(activeId = Profile.DEFAULT_ID) }
             val reloaded = repository()
-            val board =
-                reloaded.boards.value
-                    .orEmpty()
-                    .single()
+            val (home, board) = reloaded.boards.value.orEmpty()
+            assertEquals(BoardRepository.DEFAULT_NAME, home.name, "the default board isn't given again")
             assertEquals("Ops", board.name)
             assertEquals(Datapoint.DEPLOYS, board.widgets.single().datapoint)
             assertEquals(2, board.widgets.single().span)
@@ -69,7 +69,56 @@ class BoardRepositoryTest {
             profileStore.updateProfiles { Profiles(listOf(Profile.DEFAULT)) }
 
             assertNull(boards.board(board.id))
-            assertEquals(emptyList(), store.load())
+            assertEquals(listOf(Profile.DEFAULT_ID), store.load().map { it.profileId })
+        }
+
+    @Test
+    fun everyProfileStartsWithTheDefaultBoard() =
+        testScope.runTest {
+            val boards = repository()
+            val home =
+                boards.boards.value
+                    .orEmpty()
+                    .single()
+            assertEquals(BoardRepository.DEFAULT_NAME, home.name)
+            assertEquals(defaultBoard("x", "x", "x") { "w" }.widgets.size, home.widgets.size)
+            assertEquals(2, store.load().size, "one for each profile")
+
+            val side = Profile("side", "Side")
+            profileStore.updateProfiles { it.copy(all = it.all + side, activeId = side.id) }
+            assertEquals(
+                listOf(BoardRepository.DEFAULT_NAME),
+                boards.boards.value
+                    .orEmpty()
+                    .map { it.name },
+            )
+        }
+
+    @Test
+    fun theLastBoardCantBeDeleted() =
+        testScope.runTest {
+            val boards = repository()
+            val home =
+                boards.boards.value
+                    .orEmpty()
+                    .single()
+            assertFalse(boards.delete(home.id))
+            assertEquals(
+                listOf(home.id),
+                boards.boards.value
+                    .orEmpty()
+                    .map { it.id },
+            )
+
+            val other = boards.create("Other")
+            assertTrue(boards.delete(home.id), "with another board, it can go")
+            assertEquals(
+                listOf(other.id),
+                boards.boards.value
+                    .orEmpty()
+                    .map { it.id },
+            )
+            assertFalse(boards.delete(other.id))
         }
 
     @Test
@@ -95,6 +144,11 @@ class BoardRepositoryTest {
             assertEquals(listOf("w2", "w1"), widgets().map { it.id })
 
             boards.delete(board.id)
-            assertEquals(emptyList(), boards.boards.value.orEmpty())
+            assertEquals(
+                listOf(BoardRepository.DEFAULT_NAME),
+                boards.boards.value
+                    .orEmpty()
+                    .map { it.name },
+            )
         }
 }

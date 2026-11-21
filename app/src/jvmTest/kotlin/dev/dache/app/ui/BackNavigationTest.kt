@@ -25,14 +25,14 @@ class BackNavigationTest {
     private fun hasDescription(text: String) =
         rule.onAllNodesWithContentDescription(text).fetchSemanticsNodes().isNotEmpty()
 
-    /** The overview is the only page where "Overview" shows twice: in the sidebar and as the title. */
-    private fun onOverview() = count("Overview") == 2
+    /** Home is the only page where its board's name, "Overview", shows twice: in the sidebar and as the title. */
+    private fun onHome() = count("Overview") == 2
 
     @Test
-    fun backRetracesOverviewAccountSettingsAndTheTopLevelPages() {
+    fun backRetracesHomeAccountSettingsAndTheTopLevelPages() {
         val container = testContainer(listOf(ConnectedAccount("acc-1", ProviderId.NETLIFY, "acme")))
         rule.setContent { TestHost { DacheApp(container, backRequests = back) } }
-        rule.waitUntil(TIMEOUT) { onOverview() }
+        rule.waitUntil(TIMEOUT) { onHome() }
 
         // Sidebar: the account's page, then its settings from the toolbar.
         rule.onAllNodesWithText("Netlify")[0].performClick()
@@ -40,11 +40,11 @@ class BackNavigationTest {
         rule.onNodeWithContentDescription("Account settings").performClick()
         rule.waitUntil(TIMEOUT) { count("Settings") >= 1 && !hasDescription("Account settings") }
 
-        // Back: settings -> account -> overview.
+        // Back: settings -> account -> home.
         back.request()
         rule.waitUntil(TIMEOUT) { hasDescription("Account settings") }
         back.request()
-        rule.waitUntil(TIMEOUT) { onOverview() }
+        rule.waitUntil(TIMEOUT) { onHome() }
 
         // Top-level pages stack too, and a page already open is gone back to rather than pushed again.
         rule.onNodeWithText("Manage accounts").performClick()
@@ -54,12 +54,12 @@ class BackNavigationTest {
         rule.onAllNodesWithText("Manage accounts")[0].performClick()
         rule.waitUntil(TIMEOUT) { count("Manage accounts") == 2 }
         back.request()
-        rule.waitUntil(TIMEOUT) { onOverview() }
+        rule.waitUntil(TIMEOUT) { onHome() }
 
         // With one page left, back changes nothing.
         back.request()
         rule.waitForIdle()
-        rule.waitUntil(TIMEOUT) { onOverview() }
+        rule.waitUntil(TIMEOUT) { onHome() }
     }
 
     private companion object {

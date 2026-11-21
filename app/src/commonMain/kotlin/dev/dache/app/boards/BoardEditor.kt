@@ -56,7 +56,7 @@ import kotlin.math.roundToInt
 import kotlin.time.Clock
 
 /**
- * The dashboard editor, a page of its own. Wide screens get three panes: the widget library on the left, the
+ * The board editor, a page of its own. Wide screens get three panes: the widget library on the left, the
  * board on a live canvas in the middle and the selected widget's properties on the right. Narrow screens put the
  * canvas on top and the library, or the selected widget's properties, along the bottom. Every change is saved as
  * it's made, so leaving, by Done or by going back, keeps it.

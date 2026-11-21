@@ -1,7 +1,6 @@
 <resources>
     <string name="app_name">Dache</string>
 
-    <string name="nav_overview">Overview</string>
     <string name="nav_accounts_header">Accounts</string>
     <string name="nav_add_account">Add account</string>
     <string name="nav_manage_accounts">Manage accounts</string>
@@ -94,7 +93,6 @@
     <string name="stat_dns_records">DNS records</string>
     <string name="stat_workers">Workers</string>
 
-    <string name="overview_title">Overview</string>
     <string name="overview_empty_title">No accounts connected</string>
     <string name="overview_empty_body">Connect Netlify, Vercel, Cloudflare, GitHub, DigitalOcean or UptimeRobot with a token to see everything in one place.</string>
     <string name="updated_at">Updated %1$s</string>
@@ -404,27 +402,28 @@
     <string name="status_banner">%1$s: %2$s</string>
     <string name="status_checked">Checked %1$s</string>
 
-    <!-- Custom dashboards (boards) -->
-    <string name="nav_boards_header">Dashboards</string>
-    <string name="nav_new_board">New dashboard</string>
-    <string name="board_default_name">Dashboard %1$d</string>
+    <!-- Boards -->
+    <string name="nav_boards_header">Boards</string>
+    <string name="nav_new_board">New board</string>
+    <string name="board_default_name">Board %1$d</string>
+    <string name="board_home_name">Overview</string>
     <string name="board_edit">Edit</string>
     <string name="board_done">Done</string>
     <string name="board_rename">Rename</string>
-    <string name="board_rename_title">Rename dashboard</string>
+    <string name="board_rename_title">Rename board</string>
     <string name="board_name_label">Name</string>
-    <string name="board_delete">Delete dashboard</string>
+    <string name="board_delete">Delete board</string>
     <string name="board_delete_title">Delete %1$s?</string>
-    <string name="board_delete_body">The dashboard and its widgets are removed. Your accounts and their data stay.</string>
-    <string name="board_more">More dashboard actions</string>
+    <string name="board_delete_body">The board and its widgets are removed. Your accounts and their data stay.</string>
+    <string name="board_more">More board actions</string>
     <string name="board_empty_title">Nothing here yet</string>
     <string name="board_empty_body">Add widgets to chart deploys, CI runs, monitors, costs and resources from your accounts.</string>
-    <string name="board_edit_hint">Long-press a widget to edit this dashboard.</string>
-    <string name="board_open_editor">Edit dashboard</string>
+    <string name="board_edit_hint">Long-press a widget to edit this board.</string>
+    <string name="board_open_editor">Edit board</string>
     <string name="editor_title">Editing %1$s</string>
     <string name="editor_close">Done editing</string>
     <string name="editor_library">Widgets</string>
-    <string name="editor_library_hint">Drag a widget onto the dashboard, or tap it to add it at the end.</string>
+    <string name="editor_library_hint">Drag a widget onto the board, or tap it to add it at the end.</string>
     <string name="editor_category_delivery">Delivery</string>
     <string name="editor_category_monitoring">Monitoring</string>
     <string name="editor_category_resources">Resources</string>
@@ -433,7 +432,7 @@
     <string name="editor_canvas_empty">Drag widgets here from the library.</string>
     <string name="editor_properties">Properties</string>
     <string name="editor_show_library">Back to widgets</string>
-    <string name="editor_board_section">Dashboard</string>
+    <string name="editor_board_section">Board</string>
     <string name="editor_nothing_selected">Select a widget to change what it shows. Drag it to move it, or drag its edges to resize it.</string>
     <string name="widget_select">Select %1$s</string>
     <string name="widget_field_size">Size</string>

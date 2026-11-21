@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -24,8 +26,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import dev.dache.app.dashboard.ProviderErrorCard
+import dev.dache.app.navigation.LocalAppNavigator
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.action_cancel
+import dev.dache.app.resources.action_connect_account
 import dev.dache.app.resources.board_delete
 import dev.dache.app.resources.board_delete_body
 import dev.dache.app.resources.board_delete_title
@@ -38,7 +43,10 @@ import dev.dache.app.resources.board_name_label
 import dev.dache.app.resources.board_open_editor
 import dev.dache.app.resources.board_rename
 import dev.dache.app.resources.board_rename_title
+import dev.dache.app.resources.overview_empty_body
+import dev.dache.app.resources.overview_empty_title
 import dev.dache.app.resources.widget_save
+import dev.dache.app.status.StatusBanner
 import dev.dache.app.ui.components.EmptyState
 import dev.dache.app.ui.layout.FormFactor
 import dev.dache.app.ui.layout.LocalFormFactor
@@ -63,8 +71,10 @@ interface BoardActions {
 }
 
 /**
- * A user-made dashboard: its widgets, live, on a grid of up to four columns (fewer on narrow screens). The edit
- * button, or a long press on a widget, opens the editor through [onEdit] with that widget selected.
+ * A board: its widgets, live, on a grid of up to four columns (fewer on narrow screens), under any provider
+ * incidents and failed refreshes. The edit button, or a long press on a widget, opens the editor through [onEdit]
+ * with that widget selected. With no accounts connected it asks for one through [onConnectAccount] instead.
+ * [canDelete] is false for the profile's last board, which has to stay.
  */
 @Composable
 fun BoardScreen(
@@ -74,6 +84,8 @@ fun BoardScreen(
     onEdit: (widgetId: String?) -> Unit,
     onRefresh: () -> Unit,
     onOpenMenu: (() -> Unit)?,
+    canDelete: Boolean = true,
+    onConnectAccount: (() -> Unit)? = null,
 ) {
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
@@ -89,9 +101,24 @@ fun BoardScreen(
             IconButton(onClick = { onEdit(null) }) {
                 Icon(Icons.Filled.Edit, contentDescription = stringResource(Res.string.board_edit))
             }
-            BoardMenu(onRename = { renaming = true }, onDelete = { deleting = true })
+            BoardMenu(onRename = { renaming = true }, onDelete = { deleting = true }.takeIf { canDelete })
         },
     ) {
+        if (state.accounts.isEmpty() && onConnectAccount != null) {
+            EmptyState(
+                icon = Icons.Filled.Home,
+                title = stringResource(Res.string.overview_empty_title),
+                body = stringResource(Res.string.overview_empty_body),
+            ) {
+                Button(onClick = onConnectAccount) { Text(stringResource(Res.string.action_connect_account)) }
+            }
+            return@PageScaffold
+        }
+        val navigator = LocalAppNavigator.current
+        StatusBanner(state.statuses.values) { status ->
+            state.accounts.firstOrNull { it.providerId == status.providerId }?.let { navigator.openAccount(it.id) }
+        }
+        state.results.filter { it.error != null }.forEach { ProviderErrorCard(it, onRefresh) }
         if (board.widgets.isEmpty()) {
             EmptyState(
                 icon = Icons.Filled.Add,
@@ -128,10 +155,11 @@ fun BoardScreen(
     }
 }
 
+/** Rename, and delete unless [onDelete] is null: the last board can't be deleted. */
 @Composable
 private fun BoardMenu(
     onRename: () -> Unit,
-    onDelete: () -> Unit,
+    onDelete: (() -> Unit)?,
 ) {
     var open by remember { mutableStateOf(false) }
     Box {
@@ -143,10 +171,14 @@ private fun BoardMenu(
                 open = false
                 onRename()
             })
-            DropdownMenuItem(text = { Text(stringResource(Res.string.board_delete)) }, onClick = {
-                open = false
-                onDelete()
-            })
+            DropdownMenuItem(
+                text = { Text(stringResource(Res.string.board_delete)) },
+                onClick = {
+                    open = false
+                    onDelete?.invoke()
+                },
+                enabled = onDelete != null,
+            )
         }
     }
 }
@@ -211,10 +243,12 @@ fun BoardPage(
     board: Board?,
     state: DashboardState,
     viewModel: BoardsViewModel,
+    canDelete: Boolean,
     onEdit: (widgetId: String?) -> Unit,
     onDeleted: (String) -> Unit,
     onRefresh: () -> Unit,
     onOpenMenu: (() -> Unit)?,
+    onConnectAccount: () -> Unit,
 ) {
     board ?: return
     key(board.id) {
@@ -225,6 +259,8 @@ fun BoardPage(
             onEdit = onEdit,
             onRefresh = onRefresh,
             onOpenMenu = onOpenMenu,
+            canDelete = canDelete,
+            onConnectAccount = onConnectAccount,
         )
     }
 }
