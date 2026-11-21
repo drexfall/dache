@@ -2,12 +2,15 @@ package dev.dache.app.boards
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.dache.app.resources.Res
+import dev.dache.app.resources.board_default_name
 import dev.dache.core.boards.Board
 import dev.dache.core.boards.BoardIcon
 import dev.dache.core.boards.BoardRepository
 import dev.dache.core.boards.Widget
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 
 /** The active profile's boards and every change to them; each change is saved as it's made. */
 class BoardsViewModel(
@@ -16,12 +19,16 @@ class BoardsViewModel(
     /** Null until the profiles have loaded, so an open board's page isn't closed before its board is known. */
     val boards: StateFlow<List<Board>?> = repository.boards
 
-    /** Creates a board named [name] and hands it to [onCreated], e.g. to open it. */
-    fun create(
-        name: String,
-        onCreated: (Board) -> Unit,
-    ) {
-        viewModelScope.launch { onCreated(repository.create(name)) }
+    /**
+     * Creates a board named "Board 1", "Board 2" and so on, taking the first number no board of the profile is
+     * named with, and hands it to [onCreated], e.g. to open it.
+     */
+    fun create(onCreated: (Board) -> Unit) {
+        viewModelScope.launch {
+            val taken = boards.value.orEmpty().map { it.name }
+            val name = firstFreeName(taken) { getString(Res.string.board_default_name, it) }
+            onCreated(repository.create(name))
+        }
     }
 
     fun rename(
@@ -74,5 +81,19 @@ class BoardsViewModel(
         transform: (Board) -> Board,
     ) {
         viewModelScope.launch { repository.update(boardId, transform) }
+    }
+}
+
+/** The first of [nameFor] 1, 2, 3… not among [taken]. Inline so [nameFor] can suspend, to look up a string. */
+inline fun firstFreeName(
+    taken: Collection<String>,
+    nameFor: (Int) -> String,
+): String {
+    val used = taken.map { it.trim() }.toSet()
+    var number = 1
+    while (true) {
+        val name = nameFor(number)
+        if (name !in used) return name
+        number++
     }
 }

@@ -53,8 +53,6 @@ import dev.dache.app.plugins.PluginsScreen
 import dev.dache.app.plugins.PluginsViewModel
 import dev.dache.app.profiles.ProfilesViewModel
 import dev.dache.app.resource.ResourceScreen
-import dev.dache.app.resources.Res
-import dev.dache.app.resources.board_default_name
 import dev.dache.app.security.AppLockCard
 import dev.dache.app.security.AppLockController
 import dev.dache.app.security.IntegrityNote
@@ -85,7 +83,6 @@ import dev.dache.core.security.IntegrityChecker
 import dev.dache.core.security.IntegritySignal
 import dev.dache.core.settings.AppLockSettings
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * Pass [lockAuthenticator] on platforms with a screen lock; without one the app lock isn't offered. Pass
@@ -230,7 +227,6 @@ private fun DacheContent(
     val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
     val boardsViewModel = viewModel { BoardsViewModel(container.boardRepository) }
     val boards by boardsViewModel.boards.collectAsStateWithLifecycle()
-    val newBoardName = stringResource(Res.string.board_default_name, boards.orEmpty().size + 1)
     val state by dashboardViewModel.state.collectAsStateWithLifecycle()
     val accountsState by accountsViewModel.state.collectAsStateWithLifecycle()
     val tokenChecks by accountsViewModel.tokenChecks.collectAsStateWithLifecycle()
@@ -284,7 +280,7 @@ private fun DacheContent(
                         profileActions = profilesViewModel.actions,
                         boards = boards.orEmpty(),
                         onNewBoard = {
-                            boardsViewModel.create(newBoardName) {
+                            boardsViewModel.create {
                                 open(Destination.Board(it.id))
                                 open(Destination.BoardEditor(it.id))
                             }
