@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,12 +38,16 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 
-/** One entry in a [ContextMenuArea]. A [destructive] entry is drawn in the error colour. */
+/**
+ * One entry in a [ContextMenuArea]. A [destructive] entry is drawn in the error colour, and one that [startsGroup]
+ * has a divider above it.
+ */
 class ContextMenuItem(
     val label: String,
     val icon: ImageVector? = null,
     val enabled: Boolean = true,
     val destructive: Boolean = false,
+    val startsGroup: Boolean = false,
     val onClick: () -> Unit,
 )
 
@@ -107,7 +112,8 @@ private fun ContextMenu(
     onDismiss: () -> Unit,
 ) {
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
-        items.forEach { item ->
+        items.forEachIndexed { index, item ->
+            if (item.startsGroup && index > 0) HorizontalDivider()
             // Unspecified leaves the item's own colours, including its disabled one.
             val color = if (item.destructive && item.enabled) MaterialTheme.colorScheme.error else Color.Unspecified
             DropdownMenuItem(

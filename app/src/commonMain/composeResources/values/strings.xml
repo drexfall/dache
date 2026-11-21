@@ -177,6 +177,11 @@
     <string name="action_collapse">Hide details</string>
     <string name="action_retry">Retry</string>
 
+    <string name="context_visit">Visit %1$s</string>
+    <string name="context_copy_link">Copy %1$s link</string>
+    <string name="context_copy_address">Copy address</string>
+    <string name="context_copy_name">Copy name</string>
+
     <string name="link_dialog_title">Leave Dache?</string>
     <string name="link_dialog_body">This opens %1$s in your browser.</string>
     <string name="link_dialog_dont_ask">Don’t ask again</string>
