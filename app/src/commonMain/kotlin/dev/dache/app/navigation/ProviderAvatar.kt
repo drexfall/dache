@@ -44,7 +44,7 @@ fun ProviderAvatar(
 ) {
     val icon = LocalProviderIcons.current.of(provider, accountId)
     val density = LocalDensity.current
-    val painter = remember(icon, density) { icon?.let { painterFor(it, density) } }
+    val painter = remember(icon, density) { icon?.let { iconPainter(it, density) } }
     if (painter != null) {
         Box(modifier.size(28.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
             Image(
@@ -77,11 +77,12 @@ internal expect fun decodeSvg(
 ): Painter?
 
 /**
- * Null when the bytes don't decode on this platform, so the letter is drawn instead. Decoders throw whatever their
- * platform throws on a corrupt image; any of it means "use the letter".
+ * [icon] as a painter, for provider and board icons alike. Null when the bytes don't decode on this platform, so
+ * a fallback is drawn instead. Decoders throw whatever their platform throws on a corrupt image; any of it means
+ * "use the fallback".
  */
 @Suppress("TooGenericExceptionCaught", "SwallowedException")
-private fun painterFor(
+internal fun iconPainter(
     icon: ProviderIcon,
     density: Density,
 ): Painter? =

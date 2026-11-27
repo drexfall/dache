@@ -34,7 +34,7 @@ actual fun rememberManifestFilePicker(
 }
 
 /** InputStream.readNBytes needs API 33. */
-private fun java.io.InputStream.readNBytesCompat(limit: Int): ByteArray {
+internal fun java.io.InputStream.readNBytesCompat(limit: Int): ByteArray {
     val out = java.io.ByteArrayOutputStream()
     val buffer = ByteArray(BUFFER_SIZE)
     while (out.size() < limit) {

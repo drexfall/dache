@@ -9,7 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
@@ -24,20 +23,23 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.dache.app.boards.BoardIconImage
 import dev.dache.app.profiles.ProfileActions
 import dev.dache.app.profiles.ProfileSwitcher
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.app_name
 import dev.dache.app.resources.nav_accounts_header
 import dev.dache.app.resources.nav_add_account
+import dev.dache.app.resources.nav_boards_header
 import dev.dache.app.resources.nav_manage_accounts
+import dev.dache.app.resources.nav_new_board
 import dev.dache.app.resources.nav_no_accounts
-import dev.dache.app.resources.nav_overview
 import dev.dache.app.resources.nav_plugins
 import dev.dache.app.resources.nav_problems
 import dev.dache.app.resources.nav_refresh_failed
 import dev.dache.app.service.pageTitle
 import dev.dache.app.service.problemsOn
+import dev.dache.core.boards.Board
 import dev.dache.core.dashboard.DashboardState
 import dev.dache.core.dashboard.DashboardSummary
 import dev.dache.core.model.Profiles
@@ -46,7 +48,10 @@ import dev.dache.core.model.ServicePage
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Clock
 
-/** The profile switcher, the overview, then one entry per account in the active profile, then account management. */
+/**
+ * The profile switcher, the active profile's boards, then one entry per account in the profile, then account
+ * management. The first board is home, so it carries the count of every problem.
+ */
 @Composable
 fun Sidebar(
     state: DashboardState,
@@ -56,6 +61,8 @@ fun Sidebar(
     modifier: Modifier = Modifier,
     profiles: Profiles = Profiles(),
     profileActions: ProfileActions = ProfileActions.None,
+    boards: List<Board> = emptyList(),
+    onNewBoard: (() -> Unit)? = null,
 ) {
     Column(
         modifier.fillMaxHeight().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 16.dp),
@@ -71,14 +78,7 @@ fun Sidebar(
             actions = profileActions,
             modifier = Modifier.padding(bottom = 12.dp),
         )
-        val totalProblems = state.summary.problemCount
-        NavigationDrawerItem(
-            label = { Text(stringResource(Res.string.nav_overview)) },
-            icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-            selected = current == Destination.Overview,
-            onClick = { onSelect(Destination.Overview) },
-            badge = { ProblemBadge(totalProblems) },
-        )
+        BoardItems(boards, current, onSelect, onNewBoard, state.summary.problemCount)
 
         Text(
             stringResource(Res.string.nav_accounts_header),
@@ -149,6 +149,42 @@ fun Sidebar(
             icon = { Icon(Icons.Filled.Build, contentDescription = null) },
             selected = current == Destination.Plugins,
             onClick = { onSelect(Destination.Plugins) },
+        )
+    }
+}
+
+/** The active profile's boards, home first, then a way to make another. */
+@Composable
+private fun BoardItems(
+    boards: List<Board>,
+    current: Destination,
+    onSelect: (Destination) -> Unit,
+    onNewBoard: (() -> Unit)?,
+    totalProblems: Int,
+) {
+    Text(
+        stringResource(Res.string.nav_boards_header),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+    )
+    boards.forEachIndexed { index, board ->
+        val destination = Destination.Board(board.id)
+        val home = index == 0
+        NavigationDrawerItem(
+            label = { Text(board.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            icon = { BoardIconImage(board.icon) },
+            selected = current == destination || (home && current == Destination.Home),
+            onClick = { onSelect(destination) },
+            badge = if (home) ({ ProblemBadge(totalProblems) }) else null,
+        )
+    }
+    if (onNewBoard != null) {
+        NavigationDrawerItem(
+            label = { Text(stringResource(Res.string.nav_new_board)) },
+            icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+            selected = false,
+            onClick = onNewBoard,
         )
     }
 }

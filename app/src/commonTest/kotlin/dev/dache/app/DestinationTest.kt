@@ -6,9 +6,12 @@ import dev.dache.app.navigation.Destination
 import dev.dache.app.navigation.accountId
 import dev.dache.app.navigation.current
 import dev.dache.app.navigation.keepingAccounts
+import dev.dache.app.navigation.keepingBoardIds
+import dev.dache.app.navigation.keepingBoards
 import dev.dache.app.navigation.pop
 import dev.dache.app.navigation.push
 import dev.dache.app.navigation.sidebarEntry
+import dev.dache.core.boards.Board
 import dev.dache.core.model.ProviderId
 import dev.dache.core.model.ResourceKind
 import dev.dache.core.model.ResourceRef
@@ -23,7 +26,7 @@ class DestinationTest {
         Destination.Resource(
             ResourceRef(ProviderId.CLOUDFLARE, "cf-acc", "worker-1", ResourceKind.WORKER),
         )
-    private val start = listOf<Destination>(Destination.Overview)
+    private val start = listOf<Destination>(Destination.Home)
 
     @Test
     fun openingPagesPushesThemAndBackPopsThem() {
@@ -31,9 +34,9 @@ class DestinationTest {
 
         val opened = start.push(vercel).push(record).push(worker)
 
-        assertEquals(listOf(Destination.Overview, vercel, record, worker), opened)
+        assertEquals(listOf(Destination.Home, vercel, record, worker), opened)
         assertEquals(worker, opened.current)
-        assertEquals(listOf(Destination.Overview, vercel, record), opened.pop())
+        assertEquals(listOf(Destination.Home, vercel, record), opened.pop())
     }
 
     @Test
@@ -47,7 +50,7 @@ class DestinationTest {
 
         assertEquals(atRecord, atRecord.push(worker).push(record))
         assertEquals(atRecord, atRecord.push(record))
-        assertEquals(start, atRecord.push(Destination.Overview))
+        assertEquals(start, atRecord.push(Destination.Home))
     }
 
     @Test
@@ -64,7 +67,7 @@ class DestinationTest {
                 .push(workers)
                 .push(settings)
 
-        assertEquals(listOf(Destination.Overview, account, settings), stack)
+        assertEquals(listOf(Destination.Home, account, settings), stack)
         // Another account's page is a new step, not a sibling.
         assertEquals(4, stack.push(Destination.Service("do-acc", "dns")).size)
     }
@@ -79,7 +82,7 @@ class DestinationTest {
                 .push(record)
                 .push(Destination.Plugins)
 
-        assertEquals(listOf(Destination.Overview, Destination.Plugins), stack.keepingAccounts(listOf("vercel-acc")))
+        assertEquals(listOf(Destination.Home, Destination.Plugins), stack.keepingAccounts(listOf("vercel-acc")))
         assertEquals(stack, stack.keepingAccounts(listOf("cf-acc")))
         assertEquals(start, listOf<Destination>(cf).keepingAccounts(emptyList()))
     }
@@ -101,6 +104,9 @@ class DestinationTest {
                 .push(Destination.Service("cf-acc", "r2"))
                 .push(worker)
                 .push(Destination.AccountSettings("cf-acc"))
+                .push(Destination.Board("board-1"))
+                .push(Destination.BoardEditor("board-1", widgetId = "w2"))
+                .push(Destination.BoardEditor("board-1"))
                 .push(Destination.Plugins)
         val scope = SaverScope { true }
 
@@ -110,9 +116,37 @@ class DestinationTest {
     }
 
     @Test
-    fun saverFallsBackToOverviewOnBadInput() {
-        assertEquals(start, BackStackSaver.restore(listOf("account")))
-        assertEquals(start, BackStackSaver.restore(listOf("overview", "nonsense")))
-        assertEquals(start, BackStackSaver.restore(emptyList()))
+    fun aDeletedOrOtherProfilesBoardLosesItsPage() {
+        val home = Destination.Board("home")
+        val board = Destination.Board("b1")
+        val stack = listOf(home, board, Destination.BoardEditor("b1", "w1"), Destination.Plugins)
+        val boards = listOf(board("home"), board("b1"))
+
+        assertEquals(stack, stack.keepingBoards(null), "boards not loaded yet: keep everything")
+        assertEquals(stack, stack.keepingBoards(emptyList()), "no boards yet: keep everything")
+        assertEquals(stack, stack.keepingBoards(boards))
+        assertEquals(listOf(home, Destination.Plugins), stack.keepingBoards(boards.take(1)))
+        assertEquals(listOf(Destination.Home), listOf<Destination>(board).keepingBoardIds(emptyList()))
+        assertEquals(board, Destination.BoardEditor("b1").sidebarEntry, "the editor highlights its board")
     }
+
+    @Test
+    fun homeBecomesTheFirstBoardOnceBoardsLoad() {
+        val home = Destination.Board("home")
+        val boards = listOf(board("home"), board("b1"))
+
+        assertEquals(listOf(home), start.keepingBoards(boards))
+        assertEquals(listOf(home, Destination.Plugins), start.push(Destination.Plugins).keepingBoards(boards))
+        assertEquals(listOf(home), listOf(Destination.Board("gone")).keepingBoards(boards), "nothing left: home")
+    }
+
+    @Test
+    fun saverFallsBackToHomeOnBadInput() {
+        assertEquals(start, BackStackSaver.restore(listOf("account")))
+        assertEquals(start, BackStackSaver.restore(listOf("home", "nonsense")))
+        assertEquals(start, BackStackSaver.restore(emptyList()))
+        assertEquals(start, BackStackSaver.restore(listOf("overview")), "a stack saved before boards opens home")
+    }
+
+    private fun board(id: String) = Board(id, id, "default")
 }

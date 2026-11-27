@@ -25,8 +25,8 @@ import androidx.compose.ui.unit.dp
 import dev.dache.app.resources.Res
 import dev.dache.app.resources.breadcrumb_current
 import dev.dache.app.resources.breadcrumb_settings
+import dev.dache.app.resources.nav_boards_header
 import dev.dache.app.resources.nav_manage_accounts
-import dev.dache.app.resources.nav_overview
 import dev.dache.app.resources.nav_plugins
 import dev.dache.app.service.pageTitle
 import dev.dache.core.dashboard.DashboardState
@@ -102,7 +102,6 @@ private fun crumbLabel(
     state: DashboardState,
 ): String =
     when (destination) {
-        Destination.Overview -> stringResource(Res.string.nav_overview)
         Destination.ManageAccounts -> stringResource(Res.string.nav_manage_accounts)
         Destination.Plugins -> stringResource(Res.string.nav_plugins)
         is Destination.Account ->
@@ -119,6 +118,8 @@ private fun crumbLabel(
                 ?.let { pageTitle(it) }
                 ?: destination.pageId
         is Destination.AccountSettings -> stringResource(Res.string.breadcrumb_settings)
+        Destination.Home, is Destination.Board, is Destination.BoardEditor ->
+            stringResource(Res.string.nav_boards_header)
     }
 
 private fun crumbProvider(

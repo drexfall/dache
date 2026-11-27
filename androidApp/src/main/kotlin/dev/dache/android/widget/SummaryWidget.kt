@@ -24,7 +24,7 @@ import dev.dache.android.R
 import dev.dache.core.dashboard.DashboardState
 import kotlin.time.Duration
 
-/** Four problem counters, the same ones at the top of the overview screen. */
+/** Four problem counters, the same ones at the top of the default board. */
 class SummaryWidget : GlanceAppWidget() {
     override suspend fun provideGlance(
         context: Context,
